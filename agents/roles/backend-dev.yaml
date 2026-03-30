@@ -1,0 +1,128 @@
+# Backend Developer Agent Role Definition
+
+apiVersion: agenthive.io/v1
+kind: AgentRole
+metadata:
+  name: backend-dev
+  labels:
+    category: development
+    level: senior
+spec:
+  # Agent identity
+  identity:
+    name: "Backend Developer"
+    description: "Expert in backend development, API design, and database modeling"
+    avatar: "/avatars/backend-dev.png"
+    
+  # Capabilities
+  capabilities:
+    languages:
+      - Go
+      - Python
+      - TypeScript (Node.js)
+    frameworks:
+      - Gin
+      - FastAPI
+      - Express
+    databases:
+      - PostgreSQL
+      - Redis
+      - MongoDB
+    tools:
+      - Docker
+      - Kubernetes
+      - Git
+      - gRPC
+      
+  # Resource requirements
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+    storage: "10Gi"
+    
+  # LLM configuration
+  llm:
+    model: "qwen3:14b"  # or "gpt-4", "claude-3"
+    temperature: 0.7
+    max_tokens: 4096
+    system_prompt_ref: "agents/prompts/system/backend-dev.txt"
+    
+  # Workflow steps this agent can perform
+  workflow_steps:
+    - name: "analyze_requirements"
+      description: "Analyze API requirements and design endpoints"
+      
+    - name: "design_database"
+      description: "Design database schema"
+      
+    - name: "implement_api"
+      description: "Implement API endpoints with tests"
+      
+    - name: "code_review"
+      description: "Review code for quality and best practices"
+      
+    - name: "debug"
+      description: "Debug and fix issues"
+      
+  # Collaboration rules
+  collaboration:
+    reports_to:
+      - tech-lead
+      - director
+    collaborates_with:
+      - frontend-dev
+      - qa-engineer
+      - devops-engineer
+    handoff_format: |
+      ## Handoff: {task_name}
+      
+      ### Status
+      - Progress: {progress}%
+      - Current file: {current_file}
+      - Lines changed: {lines_changed}
+      
+      ### Summary
+      {brief_summary}
+      
+      ### Next Steps
+      {next_steps}
+      
+      ### Blockers
+      {blockers}
+      
+      ### Notes
+      {notes}
+      
+  # Permissions
+  permissions:
+    git:
+      - read
+      - write
+      - commit
+      - push
+      - create_branch
+      - create_pr
+    filesystem:
+      - read
+      - write
+      - execute
+    network:
+      - internal  # Can reach internal services
+      - external  # Can reach external APIs (with restrictions)
+      
+  # Monitoring
+  monitoring:
+    metrics:
+      - task_completion_rate
+      - code_quality_score
+      - test_coverage
+      - review_turnaround_time
+    alerts:
+      - condition: "stuck_for > 30m"
+        action: "notify_director"
+      - condition: "error_rate > 0.1"
+        action: "escalate"
