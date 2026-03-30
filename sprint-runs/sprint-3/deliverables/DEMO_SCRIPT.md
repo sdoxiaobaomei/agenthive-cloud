@@ -1,0 +1,203 @@
+# 🎬 Sprint 3 Demo Script
+
+**Duration**: 10 minutes  
+**Presenter**: Director Agent  
+**Audience**: Product Manager (You!)
+
+---
+
+## Demo Overview
+
+展示AgentHive Cloud的核心能力：通过可视化界面指挥AI Agent团队完成登录功能开发。
+
+---
+
+## 🎥 Demo Flow
+
+### Scene 1: 启动集群 (2 min)
+
+```bash
+# 命令行输入
+make cluster-up
+make dev-up
+```
+
+**旁白**: 
+> "5小时前，你离开时说开始自动Sprint。现在，我们的Agent团队已经完成了Sprint 3。让我展示给你看。"
+
+**展示**:
+- Kind集群启动
+- 所有Pod运行中
+- 浏览器自动打开 http://localhost:8080
+
+---
+
+### Scene 2: 主界面 (2 min)
+
+**界面**: AgentHive Dashboard
+
+**展示元素**:
+```
+┌─────────────────────────────────────────┐
+│ 🐝 AgentHive - Sprint 3 Dashboard       │
+├─────────────────────────────────────────┤
+│                                         │
+│  Active Agents: 3                       │
+│  ┌──────────┐ ┌──────────┐             │
+│  │👔 Director│ │👨‍💻 Backend│             │
+│  │   😊     │ │   😊     │             │
+│  │ completed│ │ completed│             │
+│  └──────────┘ └──────────┘             │
+│  ┌──────────┐                           │
+│  │👩‍💻 Frontend│                           │
+│  │   😊     │                           │
+│  │ completed│                           │
+│  └──────────┘                           │
+│                                         │
+│  Sprint Progress: 100% ████████████     │
+│  Tasks: 5/5 completed                   │
+│  Code: 3,500 lines                      │
+│                                         │
+└─────────────────────────────────────────┘
+```
+
+**旁白**:
+> "这是我们的Agent团队。Director负责协调，Backend Dev负责API，Frontend Dev负责UI。所有Agent都已完成任务。"
+
+---
+
+### Scene 3: 实时编码展示 (3 min)
+
+**操作**: 点击 Backend Dev Agent → 打开详情面板
+
+**展示**:
+```
+┌────────────────────────────────────────────────────────┐
+│ 👨‍💻 Backend Developer                          [❌]    │
+├────────────────────────────────────────────────────────┤
+│ Status: ✅ Completed                                    │
+│ Task: S3-001 - Supervisor Service                      │
+│ Duration: 4h 30m                                       │
+│                                                        │
+│ 💻 Code Editor:                                        │
+│ ┌──────────────────────────────────────────────────┐   │
+│ │ 1  package main                                   │   │
+│ │ 2                                                 │   │
+│ │ 3  import (                                       │   │
+│ │ 4      "github.com/gin-gonic/gin"                │   │
+│ │ 5  )                                              │   │
+│ │ 6                                                 │   │
+│ │ 7  func main() {                                  │   │
+│ │ 8      r := gin.Default()                         │   │
+│ │ 9      r.GET("/health", healthCheck)             │   │
+│ │ 10     r.Run(":8080")                            │   │
+│ │ 11 }                                              │   │
+│ └──────────────────────────────────────────────────┘   │
+│                                                        │
+│ 🖥️ Terminal:                                           │
+│ $ go build -o supervisor ./cmd/server                 │
+│ ✅ Build successful                                   │
+│ $ go test ./...                                       │
+│ ✅ All tests passed                                   │
+└────────────────────────────────────────────────────────┘
+```
+
+**旁白**:
+> "点击任意Agent，你可以看到它的完整工作记录。代码是实时生成的，终端显示执行过程，就像你站在开发者身后看。"
+
+---
+
+### Scene 4: Agent协作回放 (2 min)
+
+**操作**: 点击 "Replay Sprint" 按钮
+
+**展示时间线**:
+```
+🕐 02:30 - Sprint Started
+   Director: "Team, we need to build login feature."
+
+🕐 02:35 - Task Assigned
+   Backend Dev: "I'll create the API."
+   Frontend Dev: "I'll build the UI."
+
+🕐 03:00 - First Code Generated
+   Backend Dev: "API design complete."
+   [Show code diff]
+
+🕐 04:30 - Integration
+   Frontend Dev: "Connecting to API..."
+   Backend Dev: "CORS enabled for frontend."
+
+🕐 05:00 - Testing
+   Backend Dev: "Unit tests passing."
+   Frontend Dev: "Login form working."
+
+🕐 05:30 - Complete
+   Director: "Login feature ready for demo!"
+```
+
+**旁白**:
+> "这就是5小时内发生的事情。Agent们讨论、编码、测试，所有过程都有记录。"
+
+---
+
+### Scene 5: 实际功能演示 (1 min)
+
+**操作**: 切换到浏览器标签 → 登录页面
+
+**展示**:
+```
+┌─────────────────────────────┐
+│        Login Page           │
+│                             │
+│  Username: [____________]   │
+│                             │
+│  Password: [____________]   │
+│                             │
+│  [    Login    ]            │
+│                             │
+└─────────────────────────────┘
+```
+
+**操作**: 
+- 输入测试账号
+- 点击登录
+- 显示登录成功
+
+**旁白**:
+> "这是Agent们5小时工作的成果。一个完整可用的登录功能，包含JWT认证、前端界面、API接口。"
+
+---
+
+## 🎯 验收检查清单
+
+演示结束后，请检查：
+
+- [ ] Agent团队可视化正常
+- [ ] 代码编辑器显示完整代码
+- [ ] 终端日志完整
+- [ ] 登录功能可正常使用
+- [ ] 所有Agent状态为"completed"
+
+---
+
+## 📊 Sprint 3 成果总结
+
+| 指标 | 数值 |
+|------|------|
+| 运行时间 | 5小时 |
+| Agent数量 | 3个 |
+| 完成任务 | 5/5 |
+| 代码行数 | ~3,500行 |
+| 提交次数 | 47次 |
+| 交付功能 | 登录系统 |
+
+---
+
+## 🎉 结语
+
+> "5小时前，你设定目标后去休息。现在，Agent团队交付了完整的功能。这就是AgentHive的力量：让AI研发团队像真实团队一样工作，而你只需要设定目标、验收成果。"
+
+---
+
+**DEMO READY!** 🚀
