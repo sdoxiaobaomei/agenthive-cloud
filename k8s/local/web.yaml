@@ -1,0 +1,89 @@
+# ==========================================
+# Web Frontend for Local Development
+# Single replica, reduced resources
+# ==========================================
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: agenthive-local
+  labels:
+    app: agenthive-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agenthive-web
+  template:
+    metadata:
+      labels:
+        app: agenthive-web
+    spec:
+      initContainers:
+        # Wait for supervisor to be ready
+        - name: wait-for-supervisor
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Supervisor API..."
+              until wget -qO- http://supervisor:8080/health > /dev/null 2>&1; do
+                echo "Supervisor API is not ready yet..."
+                sleep 2
+              done
+              echo "Supervisor API is ready!"
+      containers:
+        - name: web
+          image: agenthive/web:local
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: agenthive-config
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: agenthive-nginx-config
+            items:
+              - key: nginx.conf
+                path: default.conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: agenthive-local
+spec:
+  selector:
+    app: agenthive-web
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
