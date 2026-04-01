@@ -1,0 +1,15 @@
+# Compiled binaries
+*.exe
+supervisor
+
+# Logs
+*.log
+*.err
+
+# Air live reload tmp
+tmp/
+
+# Test artifacts
+*.test
+*.out
+coverage/

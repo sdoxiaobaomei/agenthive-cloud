@@ -1,0 +1,91 @@
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Dependencies
+**/node_modules
+**/vendor
+
+# Build outputs
+**/dist
+**/build
+**/bin
+**/*.exe
+
+# Development
+tmp/
+temp/
+.cache/
+*.tmp
+
+# Logs
+**/logs
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Testing
+**/coverage
+**/.nyc_output
+**/test-results
+**/*.spec.ts.snap
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Database
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup
+backups/
+*.backup
+*.bak
+
+# Secrets
+secrets/
+*.key
+*.pem
+*.crt
+
+# Playwright
+**/test-results/
+**/playwright-report/
+**/playwright/.cache/
+
+# Go
+*.out
+*.test
+vendor/
+
+# Docker volumes
+volumes/
+
+# Application logs
+apps/supervisor/*.err
+apps/supervisor/*.log
+apps/web/*.err
+apps/web/*.log
+
+# Compiled binaries
+apps/supervisor/*.exe
+apps/supervisor/supervisor
+
+# Sprint runs (optional - remove if needed)
+sprint-runs/*.log
