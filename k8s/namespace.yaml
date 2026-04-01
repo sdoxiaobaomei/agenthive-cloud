@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agenthive
+  labels:
+    app.kubernetes.io/name: agenthive
+    app.kubernetes.io/version: "0.1.0"

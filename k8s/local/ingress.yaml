@@ -1,0 +1,98 @@
+# ==========================================
+# Ingress for Local Development
+# Two options: NodePort (default) or Ingress Controller
+# ==========================================
+
+# Option 1: NodePort Service (No Ingress Controller Required)
+# This is the default for Docker Desktop local development
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-nodeport
+  namespace: agenthive-local
+spec:
+  selector:
+    app: agenthive-web
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: supervisor-nodeport
+  namespace: agenthive-local
+spec:
+  selector:
+    app: agenthive-supervisor
+  ports:
+    - port: 8080
+      targetPort: 8080
+      nodePort: 30808
+  type: NodePort
+
+# Option 2: Ingress (Requires NGINX Ingress Controller)
+# Uncomment below if you have NGINX Ingress Controller installed
+# ---
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: agenthive-ingress
+#   namespace: agenthive-local
+#   annotations:
+#     nginx.ingress.kubernetes.io/rewrite-target: /
+#     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+#     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+#     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+# spec:
+#   ingressClassName: nginx
+#   rules:
+#     - host: localhost
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: web
+#                 port:
+#                   number: 80
+#           - path: /api
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: supervisor
+#                 port:
+#                   number: 8080
+#           - path: /ws
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: supervisor
+#                 port:
+#                   number: 8080
+# ---
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: agenthive-ingress-localhost
+#   namespace: agenthive-local
+#   annotations:
+#     nginx.ingress.kubernetes.io/rewrite-target: /
+#     nginx.ingress.kubernetes.io/ssl-redirect: "false"
+# spec:
+#   ingressClassName: nginx
+#   rules:
+#     - host: agenthive.local
+#       http:
+#         paths:
+#           - path: /
+#             pathType: Prefix
+#             backend:
+#               service:
+#                 name: web
+#                 port:
+#                   number: 80
