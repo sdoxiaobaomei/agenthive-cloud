@@ -1,0 +1,5 @@
+dist
+node_modules
+*.log
+auto-imports.d.ts
+components.d.ts
