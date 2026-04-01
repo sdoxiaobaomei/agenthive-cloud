@@ -12,6 +12,8 @@ import (
 	"github.com/agenthive/supervisor/pkg/api"
 	"github.com/agenthive/supervisor/pkg/config"
 	"github.com/agenthive/supervisor/pkg/scheduler"
+	"github.com/agenthive/supervisor/pkg/store"
+	"github.com/agenthive/supervisor/pkg/websocket"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
@@ -34,15 +36,30 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load(*configPath)
 	if err != nil {
-		log.WithError(err).Fatal("Failed to load configuration")
+		log.WithError(err).Warn("Failed to load configuration, using defaults")
+		cfg = config.DefaultConfig()
 	}
+
+	// Initialize memory store
+	memStore := store.NewMemoryStore()
+	log.Info("Memory store initialized with mock data")
+
+	// Initialize WebSocket hub
+	hub := websocket.NewHub(log)
+	go hub.Run()
+	log.Info("WebSocket hub started")
 
 	// Initialize scheduler
 	sched := scheduler.New(cfg, log)
+	sched.SetWebSocketHub(hub)
 	go sched.Start(context.Background())
+	log.Info("Scheduler started")
+
+	// Create API handler
+	handler := api.NewHandler(memStore, sched)
 
 	// Setup HTTP server
-	router := setupRouter(log, sched)
+	router := setupRouter(log, handler, hub)
 
 	srv := &http.Server{
 		Addr:    ":" + *port,
@@ -72,16 +89,18 @@ func main() {
 		log.WithError(err).Error("Server forced to shutdown")
 	}
 
+	sched.Stop()
 	log.Info("Server exited")
 }
 
-func setupRouter(log *logrus.Logger, sched *scheduler.Scheduler) *gin.Engine {
-	if gin.Mode() == gin.ReleaseMode {
+func setupRouter(log *logrus.Logger, handler *api.Handler, hub *websocket.Hub) *gin.Engine {
+	// Set Gin mode
+	if os.Getenv("GIN_MODE") == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
 	r := gin.New()
-	r.Use(gin.Recovery())
+	r.Use(api.RecoveryMiddleware(log))
 	r.Use(api.LoggerMiddleware(log))
 	r.Use(api.CORSMiddleware())
 
@@ -91,42 +110,91 @@ func setupRouter(log *logrus.Logger, sched *scheduler.Scheduler) *gin.Engine {
 			"status":    "healthy",
 			"service":   "supervisor",
 			"timestamp": time.Now().UTC(),
+			"version":   "1.0.0",
 		})
 	})
 
-	// API routes
-	v1 := r.Group("/api/v1")
+	// API routes - match frontend expectations
+	// Frontend uses: /api/agents, /api/tasks, etc.
+	apiGroup := r.Group("/api")
 	{
 		// Agent management
-		agents := v1.Group("/agents")
+		agents := apiGroup.Group("/agents")
 		{
-			agents.GET("", api.ListAgents(sched))
-			agents.POST("", api.CreateAgent(sched))
-			agents.GET("/:id", api.GetAgent(sched))
-			agents.POST("/:id/command", api.SendCommand(sched))
-			agents.DELETE("/:id", api.DeleteAgent(sched))
+			agents.GET("", handler.ListAgents)
+			agents.POST("", handler.CreateAgent)
+			agents.GET("/:id", handler.GetAgent)
+			agents.PATCH("/:id", handler.UpdateAgent)
+			agents.DELETE("/:id", handler.DeleteAgent)
+			
+			// Agent control actions
+			agents.POST("/:id/start", handler.StartAgent)
+			agents.POST("/:id/stop", handler.StopAgent)
+			agents.POST("/:id/pause", handler.PauseAgent)
+			agents.POST("/:id/resume", handler.ResumeAgent)
+			
+			// Command and logs
+			agents.POST("/:id/command", handler.SendCommand)
+			agents.GET("/:id/logs", handler.GetAgentLogs)
 		}
 
 		// Task management
-		tasks := v1.Group("/tasks")
+		tasks := apiGroup.Group("/tasks")
 		{
-			tasks.GET("", api.ListTasks(sched))
-			tasks.POST("", api.CreateTask(sched))
-			tasks.GET("/:id", api.GetTask(sched))
+			tasks.GET("", handler.ListTasks)
+			tasks.POST("", handler.CreateTask)
+			tasks.GET("/:id", handler.GetTask)
+			tasks.PATCH("/:id", handler.UpdateTask)
+			tasks.DELETE("/:id", handler.DeleteTask)
 		}
 
-		// Sprint management
+		// Sprint management (mock for now)
+		sprints := apiGroup.Group("/sprints")
+		{
+			sprints.GET("", handler.ListSprints)
+			sprints.POST("", handler.CreateSprint)
+			sprints.GET("/:id", handler.GetSprint)
+			sprints.PUT("/:id", handler.UpdateSprint)
+		}
+	}
+
+	// Legacy API routes for backward compatibility
+	v1 := r.Group("/api/v1")
+	{
+		agents := v1.Group("/agents")
+		{
+			agents.GET("", handler.ListAgents)
+			agents.POST("", handler.CreateAgent)
+			agents.GET("/:id", handler.GetAgent)
+			agents.POST("/:id/command", handler.SendCommand)
+			agents.DELETE("/:id", handler.DeleteAgent)
+		}
+
+		tasks := v1.Group("/tasks")
+		{
+			tasks.GET("", handler.ListTasks)
+			tasks.POST("", handler.CreateTask)
+			tasks.GET("/:id", handler.GetTask)
+		}
+
 		sprints := v1.Group("/sprints")
 		{
-			sprints.GET("", api.ListSprints)
-			sprints.POST("", api.CreateSprint)
-			sprints.GET("/:id", api.GetSprint)
-			sprints.PUT("/:id", api.UpdateSprint)
+			sprints.GET("", handler.ListSprints)
+			sprints.POST("", handler.CreateSprint)
+			sprints.GET("/:id", handler.GetSprint)
+			sprints.PUT("/:id", handler.UpdateSprint)
 		}
 	}
 
 	// WebSocket endpoint for real-time updates
-	r.GET("/ws", api.WebSocketHandler(sched, log))
+	r.GET("/ws", func(c *gin.Context) {
+		websocket.ServeWs(hub, c.Writer, c.Request, log)
+	})
+
+	// WebSocket endpoint with /api prefix for consistency
+	r.GET("/api/ws", func(c *gin.Context) {
+		websocket.ServeWs(hub, c.Writer, c.Request, log)
+	})
 
 	return r
 }
