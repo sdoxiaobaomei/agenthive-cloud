@@ -1,5 +1,12 @@
 <template>
-  <div class="ticket-card" :class="[`status-${ticket.status}`, { active: isActive }]" @click="$emit('click', ticket.id)">
+  <div
+    class="ticket-card"
+    :class="[`status-${ticket.status}`, { active: isActive, dragging: isDragging }]"
+    draggable="true"
+    @click="$emit('click', ticket.id)"
+    @dragstart="$emit('dragstart', $event)"
+    @dragend="$emit('dragend', $event)"
+  >
     <div class="ticket-header">
       <AgentAvatar :role="avatarRole" :size="28" />
       <span class="ticket-id">{{ ticket.id }}</span>
@@ -31,10 +38,13 @@ import { Warning, Document } from '@element-plus/icons-vue'
 const props = defineProps<{
   ticket: ExecutionTicket
   isActive?: boolean
+  isDragging?: boolean
 }>()
 
 defineEmits<{
   click: [ticketId: string]
+  dragstart: [event: DragEvent]
+  dragend: [event: DragEvent]
 }>()
 
 const avatarRole = computed(() => {
@@ -87,6 +97,11 @@ const statusTagType = computed(() => {
 .ticket-card.active {
   border-color: var(--el-color-primary);
   box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+.ticket-card.dragging {
+  opacity: 0.6;
+  border: 2px dashed var(--el-color-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 .ticket-header {
   display: flex;

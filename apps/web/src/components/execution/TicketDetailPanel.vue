@@ -141,6 +141,29 @@
           <div v-if="!recentLogs.length" class="no-logs">暂无日志</div>
         </div>
       </div>
+
+      <!-- Log Stream -->
+      <div class="detail-section">
+        <el-collapse v-model="logStreamExpanded">
+          <el-collapse-item name="log-stream">
+            <template #title>
+              <span class="section-title" style="margin-bottom: 0;">Log Stream</span>
+            </template>
+            <div ref="logStreamRef" class="log-stream">
+              <div
+                v-for="log in ticketLogs"
+                :key="log.id"
+                class="log-stream-item"
+              >
+                <span class="log-stream-time">{{ formatTime(log.timestamp) }}</span>
+                <el-tag :type="logLevelTagType(log.level)" size="small" class="log-stream-level">{{ log.level }}</el-tag>
+                <span class="log-stream-msg">{{ log.message }}</span>
+              </div>
+              <div v-if="!ticketLogs.length" class="no-logs">暂无日志</div>
+            </div>
+          </el-collapse-item>
+        </el-collapse>
+      </div>
     </template>
 
     <!-- QA Dialog -->
@@ -181,8 +204,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import type { ExecutionTicket, WorkerRole, QAResult } from '@/types/execution'
+import { computed, ref, watch, nextTick } from 'vue'
+import type { ExecutionTicket, WorkerRole, QAResult, LogLevel } from '@/types/execution'
 import { useExecutionStore, roleToName, getDefaultChecklist } from '@/stores/execution'
 import AgentAvatar from '@/components/agent/AgentAvatar.vue'
 import { QuestionFilled, Document } from '@element-plus/icons-vue'
@@ -258,14 +281,39 @@ const recentLogs = computed(() => {
     .reverse()
 })
 
+const ticketLogs = computed(() => {
+  if (!props.ticket || !store.currentSession) return []
+  return store.currentSession.logs.filter(l => l.ticketId === props.ticket!.id)
+})
+
+const logStreamExpanded = ref<string[]>(['log-stream'])
+const logStreamRef = ref<HTMLElement | null>(null)
+
+watch(ticketLogs, async () => {
+  await nextTick()
+  if (logStreamRef.value && logStreamExpanded.value.includes('log-stream')) {
+    logStreamRef.value.scrollTop = logStreamRef.value.scrollHeight
+  }
+}, { deep: true })
+
 function formatTime(iso: string) {
   const d = new Date(iso)
-  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
 }
 
 function issueSeverityType(s: string) {
   const map: Record<string, any> = { critical: 'danger', warning: 'warning', suggestion: 'info' }
   return map[s] || 'info'
+}
+
+function logLevelTagType(level: LogLevel): string {
+  const map: Record<LogLevel, string> = {
+    info: 'info',
+    warn: 'warning',
+    error: 'danger',
+    success: 'success',
+  }
+  return map[level] || 'info'
 }
 
 // Checklist (local state per ticket)
@@ -496,5 +544,34 @@ function submitQA() {
   gap: 8px;
   align-items: center;
   margin-bottom: 6px;
+}
+.log-stream {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  background: var(--el-fill-color-lighter);
+  border-radius: 6px;
+}
+.log-stream-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+.log-stream-time {
+  color: var(--el-text-color-secondary);
+  white-space: nowrap;
+  font-family: monospace;
+}
+.log-stream-level {
+  flex-shrink: 0;
+}
+.log-stream-msg {
+  color: var(--el-text-color-primary);
+  word-break: break-all;
 }
 </style>

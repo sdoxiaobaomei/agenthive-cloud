@@ -10,6 +10,7 @@ import type {
   WorkerChecklistItem,
   WorkerRole,
   FileConflict,
+  TicketStatus,
 } from '@/types/execution'
 
 const STORAGE_KEY = 'agenthive:execution-sessions'
@@ -64,7 +65,14 @@ function now(): string {
 function loadSessions(): ExecutionSession[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
+    const sessions: ExecutionSession[] = raw ? JSON.parse(raw) : []
+    // 归一化 order 字段
+    sessions.forEach(s => {
+      s.plan.tickets.forEach((t, idx) => {
+        if (typeof t.order !== 'number') t.order = idx
+      })
+    })
+    return sessions
   } catch {
     return []
   }
@@ -104,6 +112,9 @@ export const useExecutionStore = defineStore('execution', () => {
     }
     currentTickets.value.forEach(t => {
       map[t.status].push(t)
+    })
+    Object.keys(map).forEach(k => {
+      map[k].sort((a, b) => (a.order || 0) - (b.order || 0))
     })
     return map
   })
@@ -146,11 +157,13 @@ export const useExecutionStore = defineStore('execution', () => {
   // Actions
 
   function createSession(plan: Omit<ExecutionPlan, 'id' | 'createdAt'>): ExecutionSession {
+    const ticketsWithOrder = plan.tickets.map((t, idx) => ({ ...t, order: typeof t.order === 'number' ? t.order : idx }))
     const session: ExecutionSession = {
       id: generateId('session'),
       name: plan.name || `Session ${sessions.value.length + 1}`,
       plan: {
         ...plan,
+        tickets: ticketsWithOrder,
         id: generateId('plan'),
         createdAt: now(),
       },
@@ -258,6 +271,24 @@ export const useExecutionStore = defineStore('execution', () => {
     }
   }
 
+  function reorderTicketWithinColumn(ticketId: string, newIndex: number, columnStatus: TicketStatus) {
+    if (!currentSession.value) return
+    const ticketsInColumn = currentSession.value.plan.tickets.filter(t => t.status === columnStatus)
+    const ticket = ticketsInColumn.find(t => t.id === ticketId)
+    if (!ticket) return
+
+    // 移除当前 ticket
+    const others = ticketsInColumn.filter(t => t.id !== ticketId)
+    // 插入到新位置
+    others.splice(newIndex, 0, ticket)
+    // 重新分配 order（步长 10，留间隙）
+    others.forEach((t, idx) => {
+      t.order = idx * 10
+    })
+
+    saveSessions(sessions.value)
+  }
+
   function completeSession() {
     if (!currentSession.value) return
     currentSession.value.isCompleted = true
@@ -334,6 +365,7 @@ export const useExecutionStore = defineStore('execution', () => {
     addLog,
     setTicketChangedFiles,
     setFileConflicts,
+    reorderTicketWithinColumn,
     completeSession,
     deleteSession,
     exportSessionMarkdown,
