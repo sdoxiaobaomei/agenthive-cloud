@@ -94,6 +94,12 @@
       "#server/*": [
         "../server/*"
       ],
+      "@agenthive/ui": [
+        "../../../../packages/ui/src/index"
+      ],
+      "@agenthive/types": [
+        "../../../../packages/types/src/index"
+      ],
       "#app": [
         "../node_modules/nuxt/dist/app"
       ],
@@ -160,7 +166,9 @@
     "./nuxt.d.ts",
     "../node_modules/runtime",
     "../node_modules/dist/runtime",
-    ".."
+    "..",
+    "../../../../packages/ui/src/index",
+    "../../../../packages/types/src/index"
   ],
   "exclude": [
     "../dist",

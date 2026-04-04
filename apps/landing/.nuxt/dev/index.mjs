@@ -636,12 +636,6 @@ const _inlineRuntimeConfig = {
       "/__nuxt_error": {
         "cache": false
       },
-      "/app/**": {
-        "proxy": {
-          "to": "http://127.0.0.1:5173",
-          "_proxyStripBase": "/app"
-        }
-      },
       "/**": {
         "prerender": true
       },
@@ -2050,7 +2044,7 @@ const _9G7whVzujBpfEZ7ssFl83a61bqA7oU524lPJicUSXC4 = (function(nitro) {
 
 const rootDir = "E:/Git/ai-digital-twin/agenthive-cloud/apps/landing";
 
-const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1"},{"charset":"utf-8"},{"name":"theme-color","content":"#409EFF"}],"link":[{"rel":"icon","type":"image/x-icon","href":"/favicon.ico"},{"rel":"apple-touch-icon","href":"/apple-touch-icon.png"}],"style":[],"script":[],"noscript":[],"charset":"utf-8","viewport":"width=device-width, initial-scale=1"};
+const appHead = {"meta":[{"name":"viewport","content":"width=device-width, initial-scale=1"},{"charset":"utf-8"},{"name":"description","content":"AgentHive Cloud 是一个AI驱动的智能开发团队管理平台，帮助您管理和协调多个AI Agent，实现自动化软件开发。"},{"name":"theme-color","content":"#409EFF"},{"property":"og:site_name","content":"AgentHive Cloud"},{"property":"og:title","content":"AgentHive Cloud - AI驱动的智能开发团队"},{"property":"og:description","content":"管理和协调多个AI Agent，实现自动化软件开发"},{"property":"og:image","content":"/og-image.png"},{"name":"twitter:card","content":"summary_large_image"}],"link":[{"rel":"icon","type":"image/x-icon","href":"/favicon.ico"},{"rel":"apple-touch-icon","href":"/apple-touch-icon.png"}],"style":[],"script":[],"noscript":[],"charset":"utf-8","viewport":"width=device-width, initial-scale=1","titleTemplate":"%s | AgentHive Cloud","defaultTitle":"AgentHive Cloud - AI驱动的智能开发团队"};
 
 const appRootTag = "div";
 

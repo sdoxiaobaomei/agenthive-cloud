@@ -14,23 +14,6 @@ type HydrationStrategies = {
 type LazyComponent<T> = DefineComponent<HydrationStrategies, {}, {}, {}, {}, {}, {}, { hydrated: () => void }> & T
 
 interface _GlobalComponents {
-  AgentTracker: typeof import("../../components/AgentTracker.vue")['default']
-  AppFooter: typeof import("../../components/AppFooter.vue")['default']
-  AppHeader: typeof import("../../components/AppHeader.vue")['default']
-  CTASection: typeof import("../../components/CTASection.vue")['default']
-  ColorSchemePicker: typeof import("../../components/ColorSchemePicker.vue")['default']
-  DeployPipeline: typeof import("../../components/DeployPipeline.vue")['default']
-  DocCard: typeof import("../../components/DocCard.vue")['default']
-  FeatureCard: typeof import("../../components/FeatureCard.vue")['default']
-  FeatureDetail: typeof import("../../components/FeatureDetail.vue")['default']
-  FeaturesSection: typeof import("../../components/FeaturesSection.vue")['default']
-  HeroSection: typeof import("../../components/HeroSection.vue")['default']
-  PricingCard: typeof import("../../components/PricingCard.vue")['default']
-  PropertyPanel: typeof import("../../components/PropertyPanel.vue")['default']
-  RequirementWizard: typeof import("../../components/RequirementWizard.vue")['default']
-  StudioCanvas: typeof import("../../components/StudioCanvas.vue")['default']
-  WorkflowSection: typeof import("../../components/WorkflowSection.vue")['default']
-  WorkflowStep: typeof import("../../components/WorkflowStep.vue")['default']
   NuxtWelcome: typeof import("../../node_modules/nuxt/dist/app/components/welcome.vue")['default']
   NuxtLayout: typeof import("../../node_modules/nuxt/dist/app/components/nuxt-layout")['default']
   NuxtErrorBoundary: typeof import("../../node_modules/nuxt/dist/app/components/nuxt-error-boundary.vue")['default']
@@ -54,23 +37,6 @@ interface _GlobalComponents {
   Html: typeof import("../../node_modules/nuxt/dist/head/runtime/components")['Html']
   Body: typeof import("../../node_modules/nuxt/dist/head/runtime/components")['Body']
   NuxtIsland: typeof import("../../node_modules/nuxt/dist/app/components/nuxt-island")['default']
-  LazyAgentTracker: LazyComponent<typeof import("../../components/AgentTracker.vue")['default']>
-  LazyAppFooter: LazyComponent<typeof import("../../components/AppFooter.vue")['default']>
-  LazyAppHeader: LazyComponent<typeof import("../../components/AppHeader.vue")['default']>
-  LazyCTASection: LazyComponent<typeof import("../../components/CTASection.vue")['default']>
-  LazyColorSchemePicker: LazyComponent<typeof import("../../components/ColorSchemePicker.vue")['default']>
-  LazyDeployPipeline: LazyComponent<typeof import("../../components/DeployPipeline.vue")['default']>
-  LazyDocCard: LazyComponent<typeof import("../../components/DocCard.vue")['default']>
-  LazyFeatureCard: LazyComponent<typeof import("../../components/FeatureCard.vue")['default']>
-  LazyFeatureDetail: LazyComponent<typeof import("../../components/FeatureDetail.vue")['default']>
-  LazyFeaturesSection: LazyComponent<typeof import("../../components/FeaturesSection.vue")['default']>
-  LazyHeroSection: LazyComponent<typeof import("../../components/HeroSection.vue")['default']>
-  LazyPricingCard: LazyComponent<typeof import("../../components/PricingCard.vue")['default']>
-  LazyPropertyPanel: LazyComponent<typeof import("../../components/PropertyPanel.vue")['default']>
-  LazyRequirementWizard: LazyComponent<typeof import("../../components/RequirementWizard.vue")['default']>
-  LazyStudioCanvas: LazyComponent<typeof import("../../components/StudioCanvas.vue")['default']>
-  LazyWorkflowSection: LazyComponent<typeof import("../../components/WorkflowSection.vue")['default']>
-  LazyWorkflowStep: LazyComponent<typeof import("../../components/WorkflowStep.vue")['default']>
   LazyNuxtWelcome: LazyComponent<typeof import("../../node_modules/nuxt/dist/app/components/welcome.vue")['default']>
   LazyNuxtLayout: LazyComponent<typeof import("../../node_modules/nuxt/dist/app/components/nuxt-layout")['default']>
   LazyNuxtErrorBoundary: LazyComponent<typeof import("../../node_modules/nuxt/dist/app/components/nuxt-error-boundary.vue")['default']>
