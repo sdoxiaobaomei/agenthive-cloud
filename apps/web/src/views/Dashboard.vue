@@ -110,6 +110,34 @@
       </el-card>
     </div>
     
+    <!-- 柴犬团队展示 -->
+    <el-card class="shiba-team-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <div class="header-title">
+            <span>🐕</span>
+            <span>柴犬装修队</span>
+            <el-tag size="small" type="warning">核心成员</el-tag>
+          </div>
+          <span class="shiba-subtitle">点击成员查看详情</span>
+        </div>
+      </template>
+      <div class="shiba-team">
+        <div
+          v-for="member in shibaTeam"
+          :key="member.role"
+          class="shiba-member"
+          @click="navigateTo('/agents')"
+        >
+          <div class="shiba-avatar-wrap">
+            <AgentAvatar :role="member.role" :size="80" />
+          </div>
+          <div class="shiba-name">{{ member.name }}</div>
+          <el-tag size="small" :type="member.tagType">{{ member.label }}</el-tag>
+        </div>
+      </div>
+    </el-card>
+    
     <!-- 主要内容区 -->
     <div class="dashboard-content">
       <div class="content-left">
@@ -167,6 +195,41 @@
               </div>
               <el-icon class="mini-arrow"><ArrowRight /></el-icon>
             </div>
+          </div>
+        </el-card>
+        
+        <!-- Agent 工作流状态 -->
+        <el-card class="agent-workflow" shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <div class="header-title">
+                <el-icon><Connection /></el-icon>
+                <span>Agent 工作流状态</span>
+                <el-tag size="small" type="info">SOP</el-tag>
+              </div>
+              <el-tooltip content="基于 MetaGPT SOP 流程" placement="top">
+                <el-icon><InfoFilled /></el-icon>
+              </el-tooltip>
+            </div>
+          </template>
+          
+          <div v-if="activeAgents.length === 0" class="empty-wrapper">
+            <el-empty description="暂无工作中的 Agent" />
+          </div>
+          
+          <div v-else class="workflow-list">
+            <AgentWorkflowCard 
+              v-for="agent in activeAgents.slice(0, 3)" 
+              :key="agent.id"
+              :agent="agent"
+            />
+          </div>
+          
+          <div v-if="activeAgents.length > 3" class="view-more">
+            <el-button link type="primary" @click="navigateTo('/agents')">
+              查看全部 {{ activeAgents.length }} 个工作中的 Agent
+              <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+            </el-button>
           </div>
         </el-card>
         
@@ -333,6 +396,17 @@
           </el-scrollbar>
         </el-card>
         
+        <!-- 消息中心 -->
+        <div class="message-hub-wrapper">
+          <MessageHub
+            :messages="messageHubStore.allMessages"
+            @mark-read="messageHubStore.markAsRead"
+            @mark-all-read="messageHubStore.markAllAsRead"
+            @delete="messageHubStore.deleteMessage"
+            @clear="messageHubStore.clearMessages"
+          />
+        </div>
+        
         <!-- 快速操作 -->
         <el-card class="quick-actions" shadow="hover">
           <template #header>
@@ -369,13 +443,16 @@ import {
   Refresh, Plus, Loading, Timer, Warning, List, ArrowRight,
   UserFilled, CircleCheck, CircleClose, Connection, User,
   Document, Monitor, Bell, Clock, ChatDotRound,
-  Calendar, Setting
+  Calendar, Setting, InfoFilled
 } from '@element-plus/icons-vue'
 import { useAgentStore } from '@/stores/agent'
 import { useTaskStore } from '@/stores/task'
 import { useWebSocketStore } from '@/stores/websocket'
+import { useMessageHubStore } from '@/stores/messageHub'
 import AgentAvatar from '@/components/agent/AgentAvatar.vue'
+import AgentWorkflowCard from '@/components/agent/AgentWorkflowCard.vue'
 import CreateAgentDialog from '@/components/agent/CreateAgentDialog.vue'
+import MessageHub from '@/components/common/MessageHub.vue'
 import type { Agent } from '@/types'
 import { formatStatus, formatRelativeTime, truncate } from '@/utils/format'
 import { TASK_STATUS, TASK_PRIORITIES } from '@/utils/constants'
@@ -384,6 +461,7 @@ const router = useRouter()
 const agentStore = useAgentStore()
 const taskStore = useTaskStore()
 const wsStore = useWebSocketStore()
+const messageHubStore = useMessageHubStore()
 
 const loading = ref(false)
 const showCreateDialog = ref(false)
@@ -437,6 +515,14 @@ const activityLogs = ref<ActivityLog[]>([
   { id: '2', time: '10:20', message: 'Backend Dev 开始新任务', type: 'info' },
   { id: '3', time: '10:15', message: 'Director 创建了 Sprint', type: 'info' },
 ])
+
+// 柴犬团队
+const shibaTeam = [
+  { role: 'tech_lead' as const, name: '阿黄', label: '技术负责人', tagType: 'primary' },
+  { role: 'frontend_dev' as const, name: '小花', label: '前端开发', tagType: 'danger' },
+  { role: 'backend_dev' as const, name: '阿铁', label: '后端开发', tagType: 'success' },
+  { role: 'qa_engineer' as const, name: '阿镜', label: '质量保障', tagType: 'warning' },
+]
 
 // 快速操作
 const quickActions = [
@@ -609,6 +695,52 @@ onUnmounted(() => {
   margin-bottom: 24px;
 }
 
+.shiba-team-card {
+  margin-bottom: 16px;
+}
+
+.shiba-team-card :deep(.el-card__body) {
+  padding: 20px;
+}
+
+.shiba-subtitle {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.shiba-team {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.shiba-member {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.shiba-member:hover {
+  transform: translateY(-4px);
+}
+
+.shiba-avatar-wrap {
+  transition: transform 0.3s ease;
+}
+
+.shiba-member:hover .shiba-avatar-wrap {
+  transform: scale(1.08) translateY(-6px);
+}
+
+.shiba-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+
 .stat-card {
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -759,6 +891,22 @@ onUnmounted(() => {
 .agent-mini-item.error::before {
   height: 60%;
   background: var(--agent-error);
+}
+
+/* Agent 工作流 */
+.agent-workflow {
+  .workflow-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .view-more {
+    text-align: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--el-border-color-light);
+    margin-top: 16px;
+  }
 }
 
 .mini-info {
@@ -927,6 +1075,12 @@ onUnmounted(() => {
 
 .log-icon {
   flex-shrink: 0;
+}
+
+/* 消息中心 */
+.message-hub-wrapper {
+  height: 400px;
+  margin-bottom: 16px;
 }
 
 /* 快速操作 */

@@ -23,7 +23,7 @@
       >
         <el-menu-item index="/">
           <el-icon><Odometer /></el-icon>
-          <template #title>仪表板</template>
+          <template #title>工作区</template>
         </el-menu-item>
         
         <el-menu-item index="/agents">
@@ -42,21 +42,25 @@
         </el-menu-item>
         
         <el-divider />
-        
-        <el-menu-item index="/code">
-          <el-icon><Document /></el-icon>
-          <template #title>代码查看</template>
-        </el-menu-item>
-        
-        <el-menu-item index="/terminal">
-          <el-icon><TerminalIcon /></el-icon>
-          <template #title>终端</template>
-        </el-menu-item>
-        
-        <el-menu-item index="/chat">
-          <el-icon><ChatDotRound /></el-icon>
-          <template #title>对话</template>
-        </el-menu-item>
+
+        <el-sub-menu index="/tools">
+          <template #title>
+            <el-icon><Tools /></el-icon>
+            <span>工具箱</span>
+          </template>
+          <el-menu-item index="/code">
+            <el-icon><Document /></el-icon>
+            <template #title>代码查看</template>
+          </el-menu-item>
+          <el-menu-item index="/terminal">
+            <el-icon><TerminalIcon /></el-icon>
+            <template #title>终端</template>
+          </el-menu-item>
+          <el-menu-item index="/chat">
+            <el-icon><ChatDotRound /></el-icon>
+            <template #title>对话</template>
+          </el-menu-item>
+        </el-sub-menu>
       </el-menu>
     </el-scrollbar>
     
@@ -90,7 +94,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import {
   Orange, Odometer, UserFilled, List, Calendar,
-  Document, ChatDotRound, Setting,
+  Document, ChatDotRound, Setting, Tools,
   Expand, Fold, Monitor as TerminalIcon
 } from '@element-plus/icons-vue'
 

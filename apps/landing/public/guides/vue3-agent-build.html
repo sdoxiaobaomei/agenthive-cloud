@@ -1,0 +1,2495 @@
+<!DOCTYPE html><html lang="zh-CN"><head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Vue3前端Agent构建与使用完整指南</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --color-primary: #6366f1;
+            --color-secondary: #8b5cf6;
+            --color-accent: #06b6d4;
+            --color-neutral: #64748b;
+            --color-base: #1e293b;
+            --color-surface: #f8fafc;
+        }
+        
+        body {
+            font-family: 'Inter', 'Noto Sans SC', sans-serif;
+            line-height: 1.7;
+            color: var(--color-base);
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            overflow-x: hidden;
+        }
+        
+        .hero-gradient {
+            background: linear-gradient(135deg, 
+                rgba(99, 102, 241, 0.05) 0%, 
+                rgba(139, 92, 246, 0.05) 50%, 
+                rgba(6, 182, 212, 0.05) 100%);
+        }
+        
+        .toc-fixed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid #e2e8f0;
+            z-index: 50;
+            overflow-y: auto;
+            padding: 2rem 1.5rem;
+        }
+        
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+        }
+        
+        .section-divider {
+            height: 2px;
+            background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+            margin: 4rem 0 3rem 0;
+            border-radius: 1px;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+            margin: 2rem 0;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .citation-link {
+            color: var(--color-primary);
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 1px dotted var(--color-primary);
+            transition: all 0.2s ease;
+        }
+        
+        .citation-link:hover {
+            background-color: rgba(99, 102, 241, 0.1);
+            border-bottom-style: solid;
+        }
+        
+        .bento-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+        
+        .hero-text {
+            font-family: 'Noto Serif SC', serif;
+            font-style: italic;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.3;
+        }
+        
+        .skill-card {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            transition: all 0.3s ease;
+            word-break: break-word;
+        }
+        
+        .skill-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .mermaid-container {
+            display: flex;
+            justify-content: center;
+            min-height: 300px;
+            max-height: 800px;
+            background: #ffffff;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 30px;
+            margin: 30px 0;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .mermaid-container .mermaid {
+            width: 100%;
+            max-width: 100%;
+            height: 100%;
+            cursor: grab;
+            transition: transform 0.3s ease;
+            transform-origin: center center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .mermaid-container .mermaid svg {
+            max-width: 100%;
+            height: 100%;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .mermaid-container .mermaid:active {
+            cursor: grabbing;
+        }
+
+        .mermaid-container.zoomed .mermaid {
+            height: 100%;
+            width: 100%;
+            cursor: grab;
+        }
+
+        .mermaid-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 10px;
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 8px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .mermaid-control-btn {
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #374151;
+            font-size: 14px;
+            min-width: 36px;
+            height: 36px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mermaid-control-btn:hover {
+            background: #f8fafc;
+            border-color: #3b82f6;
+            color: #3b82f6;
+            transform: translateY(-1px);
+        }
+
+        .mermaid-control-btn:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 1024px) {
+            .mermaid-control-btn:not(.reset-zoom) {
+                display: none;
+            }
+            .mermaid-controls {
+                top: auto;
+                bottom: 15px;
+                right: 15px;
+            }
+        }
+        
+        /* Responsive adjustments for small screens */
+        @media (max-width: 768px) {
+            .toc-fixed {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            
+            .toc-fixed.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+                width: 100%;
+            }
+            
+            .bento-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .hero-text {
+                font-size: 1.8rem;
+                word-break: break-word;
+            }
+            
+            .hero-gradient .text-xl {
+                font-size: 1rem;
+            }
+            
+            .hero-gradient .text-sm {
+                font-size: 0.8rem;
+            }
+            
+            .p-8 {
+                padding: 1rem;
+            }
+        }
+    </style>
+  <base target="_blank">
+</head>
+
+  <body>
+    <!-- Fixed Table of Contents -->
+    <nav class="toc-fixed">
+      <div class="mb-8">
+        <h3 class="text-lg font-bold text-gray-900 mb-4">目录导航</h3>
+        <div class="w-12 h-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 mb-6"></div>
+      </div>
+
+      <ul class="space-y-3 text-sm">
+        <li>
+          <a href="#introduction" class="block py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 hover:text-indigo-600">引言与概述</a>
+        </li>
+        <li>
+          <a href="#solution-selection" class="block py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 hover:text-indigo-600">核心解决方案选型</a>
+        </li>
+        <li>
+          <a href="#environment-setup" class="block py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 hover:text-indigo-600">环境准备与工具安装</a>
+        </li>
+        <li>
+          <a href="#core-capabilities" class="block py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 hover:text-indigo-600">Agent核心能力构建</a>
+        </li>
+        <li>
+          <a href="#usage-methods" class="block py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 hover:text-indigo-600">Agent使用方式详解</a>
+        </li>
+        <li>
+          <a href="#development-demo" class="block py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 hover:text-indigo-600">完整开发流程演示</a>
+        </li>
+        <li>
+          <a href="#advanced-extensions" class="block py-2 px-3 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 hover:text-indigo-600">高级扩展与定制</a>
+        </li>
+      </ul>
+
+      <div class="mt-12 pt-6 border-t border-gray-200">
+        <p class="text-xs text-gray-500 mb-2">快速访问</p>
+        <div class="space-y-2">
+          <a href="https://platform.kimi.com/docs/guide/kimi-cli-support" target="_blank" class="flex items-center text-xs text-gray-600 hover:text-indigo-600 transition-colors">
+            <i class="fas fa-external-link-alt mr-2"></i>Kimi CLI 文档
+          </a>
+          <a href="https://github.com/vuejs-ai/skills" target="_blank" class="flex items-center text-xs text-gray-600 hover:text-indigo-600 transition-colors">
+            <i class="fab fa-github mr-2"></i>Vue AI Skills
+          </a>
+          <a href="https://www.cnblogs.com/test-gang/p/19724008" target="_blank" class="flex items-center text-xs text-gray-600 hover:text-indigo-600 transition-colors">
+            <i class="fas fa-link mr-2"></i>技能安装指南
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Hero Section with Bento Grid -->
+      <section class="hero-gradient min-h-screen flex items-center">
+        <div class="max-w-7xl mx-auto px-8 py-16">
+          <div class="bento-grid">
+            <!-- Main Hero Content -->
+            <div class="space-y-8">
+              <div class="space-y-4">
+                <div class="inline-block px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-sm font-medium text-gray-700">
+                  <i class="fas fa-robot mr-2"></i>AI驱动的前端开发革命
+                </div>
+                <h1 class="text-5xl lg:text-6xl hero-text leading-tight">
+                  Vue3前端Agent构建与使用
+                  <br/>
+                  <span class="text-4xl lg:text-5xl">完整指南</span>
+                </h1>
+                <p class="text-xl text-gray-600 max-w-2xl leading-relaxed">
+                  探索Kimi CLI与Vue AI Agent Skills的深度融合，构建具备自主规划、代码生成、编译调试与测试验证能力的完整开发助手
+                </p>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white/30 backdrop-blur-sm rounded-xl p-6 border border-white/50">
+                  <div class="text-2xl font-bold text-indigo-600 mb-2">42+</div>
+                  <div class="text-sm text-gray-700">支持的AI工具</div>
+                </div>
+                <div class="bg-white/30 backdrop-blur-sm rounded-xl p-6 border border-white/50">
+                  <div class="text-2xl font-bold text-purple-600 mb-2">8</div>
+                  <div class="text-sm text-gray-700">核心Skill模块</div>
+                </div>
+                <div class="bg-white/30 backdrop-blur-sm rounded-xl p-6 border border-white/50">
+                  <div class="text-2xl font-bold text-cyan-600 mb-2">60s</div>
+                  <div class="text-sm text-gray-700">项目初始化</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Visual Element -->
+            <div class="relative">
+              <img src="https://kimi-web-img.moonshot.cn/img/static.golangjob.cn/457b46f1ae8ff856e5fd456cc02c96dcd71a34e6.png" alt="Vue3前端Agent开发工具操作界面截图" class="w-full h-96 object-cover rounded-2xl shadow-2xl" size="large" aspect="wide" query="Vue3开发工具界面" referrerpolicy="no-referrer" data-modified="1" data-score="0.00"/>
+              <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
+              <div class="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-4">
+                <div class="flex items-center space-x-3">
+                  <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                  <span class="text-sm font-medium text-gray-700">Agent正在智能生成代码...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="max-w-6xl mx-auto px-8 py-16">
+        <!-- Introduction Section -->
+        <section id="introduction" class="mb-20">
+          <div class="section-divider"></div>
+          <h2 class="text-4xl font-bold mb-8 text-gray-900">引言与概述</h2>
+
+          <div class="prose prose-lg max-w-none">
+            <p class="text-xl text-gray-700 mb-8 leading-relaxed">
+              在现代前端开发中，构建Vue3应用已经超越了传统的编码模式。通过<strong>Kimi CLI + Vue AI Agent Skills</strong>的强大组合，开发者可以实现从需求解析到部署验证的全流程自动化，显著提升开发效率与代码质量。
+            </p>
+
+            <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-8 mb-12 border border-indigo-100">
+              <h3 class="text-2xl font-bold mb-6 text-gray-900">核心价值主张</h3>
+              <div class="grid md:grid-cols-3 gap-6">
+                <div class="text-center">
+                  <div class="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-brain text-2xl text-indigo-600"></i>
+                  </div>
+                  <h4 class="font-semibold mb-2">自主规划</h4>
+                  <p class="text-sm text-gray-600">智能任务分解与执行路径规划</p>
+                </div>
+                <div class="text-center">
+                  <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-code text-2xl text-purple-600"></i>
+                  </div>
+                  <h4 class="font-semibold mb-2">代码生成</h4>
+                  <p class="text-sm text-gray-600">符合Vue3最佳实践的自动化编码</p>
+                </div>
+                <div class="text-center">
+                  <div class="w-16 h-16 bg-cyan-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-check-circle text-2xl text-cyan-600"></i>
+                  </div>
+                  <h4 class="font-semibold mb-2">质量保障</h4>
+                  <p class="text-sm text-gray-600">集成测试与代码规范验证</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Solution Selection Section -->
+        <section id="solution-selection" class="mb-20">
+          <div class="section-divider"></div>
+          <h2 class="text-4xl font-bold mb-8 text-gray-900">核心解决方案选型</h2>
+
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">Kimi CLI + Vue AI Agent Skills</h3>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 mb-8">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">Kimi CLI核心能力</h4>
+              <p class="text-gray-700 mb-6">
+                Kimi CLI是由月之暗面（Moonshot AI）推出的终端级AI智能助手，其设计理念超越了传统的代码补全工具，构建了一个具备<strong>自主规划、任务执行与动态调整</strong>能力的完整Agent系统
+                <a href="https://blog.gitcode.com/0627c7d150e67641afd667c5feca06d7.html" class="citation-link" target="_blank">[67]</a>
+                <a href="https://platform.kimi.com/docs/guide/kimi-cli-support" class="citation-link" target="_blank">[69]</a>。
+              </p>
+
+              <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div class="space-y-3">
+                  <h5 class="font-semibold text-gray-900">核心工具集</h5>
+                  <ul class="text-sm text-gray-700 space-y-2">
+                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Agent（子代理调用）</li>
+                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>Shell（命令行执行）</li>
+                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>ReadFile/WriteFile（文件操作）</li>
+                    <li class="flex items-center"><i class="fas fa-check text-green-500 mr-2"></i>SearchWeb（网络信息检索）</li>
+                  </ul>
+                </div>
+                <div class="space-y-3">
+                  <h5 class="font-semibold text-gray-900">多语言SDK</h5>
+                  <ul class="text-sm text-gray-700 space-y-2">
+                    <li class="flex items-center"><i class="fas fa-code text-blue-500 mr-2"></i>Go SDK</li>
+                    <li class="flex items-center"><i class="fas fa-code text-green-500 mr-2"></i>Node.js SDK</li>
+                    <li class="flex items-center"><i class="fas fa-code text-yellow-500 mr-2"></i>Python SDK</li>
+                    <li class="flex items-center"><i class="fas fa-star text-purple-500 mr-2"></i>推荐Node.js SDK</li>
+                  </ul>
+                </div>
+              </div>
+
+              <p class="text-sm text-gray-600">
+                工具集详情参考：<a href="https://moonshotai.github.io/kimi-cli/zh/customization/agents.html" class="citation-link" target="_blank">[244]</a>
+              </p>
+            </div>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">Vue AI Agent Skills价值</h4>
+              <p class="text-gray-700 mb-6">
+                Vue AI Agent Skills是由Vue核心团队成员<strong>Anthony Fu</strong>与<strong>hyf0</strong>联合发起的开源项目，已获得Vue作者Evan You的官方认可
+                <a href="https://www.xmsumi.com/detail/2394" class="citation-link" target="_blank">[31]</a>。
+              </p>
+
+              <div class="grid md:grid-cols-2 gap-6 mb-6">
+                <div>
+                  <h5 class="font-semibold text-gray-900 mb-3">核心特性</h5>
+                  <ul class="text-sm text-gray-700 space-y-2">
+                    <li>• 开放的Skill格式规范</li>
+                    <li>• 按需加载的轻量化设计</li>
+                    <li>• 支持42种主流AI工具</li>
+                    <li>• 分层加载机制</li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 class="font-semibold text-gray-900 mb-3">安装方式</h5>
+                  <div class="bg-gray-100 rounded-lg p-3 text-sm font-mono">
+                    npx skills add vuejs-ai/skills
+                  </div>
+                  <p class="text-xs text-gray-600 mt-2">
+                    支持文档：<a href="https://www.cnblogs.com/test-gang/p/19724008" class="citation-link" target="_blank">[226]</a>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Vue AI Skills Overview Chart -->
+          <div class="chart-container">
+            <h4 class="text-xl font-bold mb-6 text-gray-900">Vue AI Agent Skills架构图</h4>
+            <div class="mermaid-container">
+              <div class="mermaid-controls">
+                <button class="mermaid-control-btn zoom-in" title="放大">
+                  <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="mermaid-control-btn zoom-out" title="缩小">
+                  <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="mermaid-control-btn reset-zoom" title="重置">
+                  <i class="fas fa-expand-arrows-alt"></i>
+                </button>
+                <button class="mermaid-control-btn fullscreen" title="全屏查看">
+                  <i class="fas fa-expand"></i>
+                </button>
+              </div>
+              <div class="mermaid">
+                graph TD
+                A[&#34;Vue AI Agent Skills&#34;] --&gt; B[&#34;内置Skills&#34;]
+                A --&gt; C[&#34;用户级Skills&#34;]
+                A --&gt; D[&#34;项目级Skills&#34;]
+
+                B --&gt; B1[&#34;vue-best-practices&#34;]
+                B --&gt; B2[&#34;vue-pinia-best-practices&#34;]
+                B --&gt; B3[&#34;vue-router-best-practices&#34;]
+                B --&gt; B4[&#34;vue-testing-best-practices&#34;]
+
+                C --&gt; C1[&#34;个人偏好配置&#34;]
+                C --&gt; C2[&#34;自定义命名规范&#34;]
+                C --&gt; C3[&#34;代码片段模板&#34;]
+
+                D --&gt; D1[&#34;团队规范同步&#34;]
+                D --&gt; D2[&#34;项目特定需求&#34;]
+                D --&gt; D3[&#34;架构模式约束&#34;]
+
+                style A fill:#6366f1,color:#ffffff,stroke:#4f46e5,stroke-width:3px
+                style B fill:#8b5cf6,color:#ffffff,stroke:#7c3aed,stroke-width:2px
+                style C fill:#06b6d4,color:#ffffff,stroke:#0891b2,stroke-width:2px
+                style D fill:#10b981,color:#ffffff,stroke:#059669,stroke-width:2px
+
+                style B1 fill:#f8fafc,color:#1e293b,stroke:#6366f1,stroke-width:2px
+                style B2 fill:#f8fafc,color:#1e293b,stroke:#6366f1,stroke-width:2px
+                style B3 fill:#f8fafc,color:#1e293b,stroke:#6366f1,stroke-width:2px
+                style B4 fill:#f8fafc,color:#1e293b,stroke:#6366f1,stroke-width:2px
+              </div>
+            </div>
+          </div>
+
+          <!-- Alternative Solution -->
+          <div class="mt-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">替代方案：InsCode快马平台</h3>
+
+            <div class="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-8 border border-orange-200">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">云端一体化生成平台</h4>
+              <p class="text-gray-700 mb-6">
+                InsCode（快马）平台代表了AI驱动前端开发的另一重要范式——<strong>云端一体化生成</strong>。该平台由CSDN、GitCode与华为云CodeArts IDE联合推出
+                <a href="https://blog.csdn.net/CrystalwaveEagle34/article/details/154283987" class="citation-link" target="_blank">[180]</a>
+                <a href="https://blog.csdn.net/CrystalwaveEagle34/article/details/154283987" class="citation-link" target="_blank">[203]</a>。
+              </p>
+
+              <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl p-6">
+                  <h5 class="font-semibold text-gray-900 mb-3">平台优势</h5>
+                  <ul class="text-sm text-gray-700 space-y-2">
+                    <li>• 10秒内一键生成完整项目</li>
+                    <li>• 浏览器内零配置环境</li>
+                    <li>• 预设企业级技术栈</li>
+                    <li>• 支持在线预览与即时部署</li>
+                  </ul>
+                </div>
+                <div class="bg-white rounded-xl p-6">
+                  <h5 class="font-semibold text-gray-900 mb-3">技术栈预设</h5>
+                  <ul class="text-sm text-gray-700 space-y-2">
+                    <li>• Vue 3.4+ with script setup</li>
+                    <li>• Vite 5 + Vue Router 4</li>
+                    <li>• Pinia 2 + Element Plus</li>
+                    <li>• ESLint + Tailwind CSS</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Environment Setup Section -->
+        <section id="environment-setup" class="mb-20">
+          <div class="section-divider"></div>
+          <h2 class="text-4xl font-bold mb-8 text-gray-900">环境准备与工具安装</h2>
+
+          <div class="grid lg:grid-cols-3 gap-8 mb-12">
+            <div class="skill-card">
+              <div class="flex items-center mb-4">
+                <i class="fas fa-terminal text-2xl text-indigo-600 mr-3"></i>
+                <h3 class="text-lg font-bold">Kimi CLI安装</h3>
+              </div>
+              <div class="bg-gray-900 rounded-lg p-3 mb-4">
+                <code class="text-green-400 text-sm">curl -LsSf https://code.kimi.com/install.sh | bash</code>
+              </div>
+              <p class="text-sm text-gray-600">支持Python 3.12-3.14，推荐使用3.13版本</p>
+            </div>
+
+            <div class="skill-card">
+              <div class="flex items-center mb-4">
+                <i class="fab fa-vuejs text-2xl text-green-600 mr-3"></i>
+                <h3 class="text-lg font-bold">Vue Skills集成</h3>
+              </div>
+              <div class="bg-gray-900 rounded-lg p-3 mb-4">
+                <code class="text-green-400 text-sm">npx skills add vuejs-ai/skills</code>
+              </div>
+              <p class="text-sm text-gray-600">支持42种AI工具，分层加载机制</p>
+            </div>
+
+            <div class="skill-card">
+              <div class="flex items-center mb-4">
+                <i class="fab fa-node-js text-2xl text-yellow-600 mr-3"></i>
+                <h3 class="text-lg font-bold">Node.js环境</h3>
+              </div>
+              <div class="bg-gray-900 rounded-lg p-3 mb-4">
+                <code class="text-green-400 text-sm">Node.js 20.11 LTS</code>
+              </div>
+              <p class="text-sm text-gray-600">推荐pnpm包管理器，空间优化70%</p>
+            </div>
+          </div>
+
+          <!-- Installation Steps Detail -->
+          <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+            <h3 class="text-2xl font-bold mb-6 text-gray-900">详细安装步骤</h3>
+
+            <div class="space-y-8">
+              <!-- Step 1: Kimi CLI -->
+              <div>
+                <h4 class="text-lg font-semibold mb-4 text-gray-900">
+                  <span class="inline-block w-8 h-8 bg-indigo-600 text-white rounded-full text-center leading-8 mr-3">1</span>
+                  Kimi CLI安装与配置
+                </h4>
+                <div class="ml-11 space-y-4">
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">跨平台安装命令</h5>
+                    <div class="space-y-2">
+                      <div>
+                        <span class="text-sm font-medium text-gray-700">macOS/Linux:</span>
+                        <code class="block bg-gray-900 text-green-400 p-3 rounded mt-1 text-sm">curl -LsSf https://code.kimi.com/install.sh | bash</code>
+                      </div>
+                      <div>
+                        <span class="text-sm font-medium text-gray-700">Windows:</span>
+                        <code class="block bg-gray-900 text-green-400 p-3 rounded mt-1 text-sm">Invoke-RestMethod https://code.kimi.com/install.ps1 | Invoke-Expression</code>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bg-blue-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">初始化验证</h5>
+                    <code class="block bg-gray-900 text-green-400 p-3 rounded text-sm">
+                                        kimi --version<br/>
+                                        kimi run &#34;你好，请介绍你的Vue3开发能力&#34;<br/>
+                                        kimi run &#34;读取当前目录下的package.json文件内容&#34;
+                                    </code>
+                  </div>
+                  <p class="text-sm text-gray-600">
+                    配置文档：<a href="https://moonshotai.github.io/kimi-cli/zh/guides/getting-started.html" class="citation-link" target="_blank">[239]</a>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Step 2: Vue Skills -->
+              <div>
+                <h4 class="text-lg font-semibold mb-4 text-gray-900">
+                  <span class="inline-block w-8 h-8 bg-green-600 text-white rounded-full text-center leading-8 mr-3">2</span>
+                  Vue AI Agent Skills集成
+                </h4>
+                <div class="ml-11 space-y-4">
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">安装命令</h5>
+                    <code class="block bg-gray-900 text-green-400 p-3 rounded text-sm">npx skills add vuejs-ai/skills</code>
+                  </div>
+                  <div class="bg-green-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">验证安装</h5>
+                    <code class="block bg-gray-900 text-green-400 p-3 rounded text-sm">npx skills list</code>
+                  </div>
+                  <div class="bg-yellow-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">Skill搜索路径优先级</h5>
+                    <ol class="text-sm text-gray-700 space-y-1">
+                      <li>1. 内置Skills（软件包内部）</li>
+                      <li>2. ~/.config/agents/skills/（用户级）</li>
+                      <li>3. ~/.kimi/skills/（Kimi CLI专用）</li>
+                      <li>4. .kimi/skills/（项目级）</li>
+                    </ol>
+                  </div>
+                  <p class="text-sm text-gray-600">
+                    Skill结构规范：<a href="https://moonshotai.github.io/kimi-cli/zh/customization/skills.html" class="citation-link" target="_blank">[224]</a>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Step 3: Node.js -->
+              <div>
+                <h4 class="text-lg font-semibold mb-4 text-gray-900">
+                  <span class="inline-block w-8 h-8 bg-yellow-600 text-white rounded-full text-center leading-8 mr-3">3</span>
+                  开发环境依赖配置
+                </h4>
+                <div class="ml-11 space-y-4">
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">推荐版本配置</h5>
+                    <div class="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <span class="text-sm font-medium text-gray-700">Node.js:</span>
+                        <code class="block bg-gray-900 text-green-400 p-2 rounded mt-1 text-sm">20.11 LTS</code>
+                      </div>
+                      <div>
+                        <span class="text-sm font-medium text-gray-700">npm:</span>
+                        <code class="block bg-gray-900 text-green-400 p-2 rounded mt-1 text-sm">10.x</code>
+                      </div>
+                      <div>
+                        <span class="text-sm font-medium text-gray-700">pnpm:</span>
+                        <code class="block bg-gray-900 text-green-400 p-2 rounded mt-1 text-sm">8.x（推荐）</code>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="bg-orange-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">VS Code插件配置</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• Volar（Vue官方语言支持）</li>
+                      <li>• TypeScript Vue Plugin</li>
+                      <li>• ESLint + Prettier</li>
+                      <li>• Vue VSCode Snippets</li>
+                    </ul>
+                  </div>
+                  <p class="text-sm text-gray-600">
+                    版本要求参考：<a href="https://juejin.cn/post/7326735504581247026" class="citation-link" target="_blank">[227]</a>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Core Capabilities Section -->
+        <section id="core-capabilities" class="mb-20">
+          <div class="section-divider"></div>
+          <h2 class="text-4xl font-bold mb-8 text-gray-900">Agent核心能力构建</h2>
+
+          <!-- Demand Analysis -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">需求解析与任务规划</h3>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 mb-8">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">自然语言理解的多维建模</h4>
+              <p class="text-gray-700 mb-6">
+                Kimi CLI的需求理解能力建立在大型语言模型的语义解析基础之上，但通过<strong>系统提示词工程</strong>和<strong>Vue AI Skills的领域知识注入</strong>，实现了对Vue开发场景的专门优化。
+              </p>
+
+              <div class="grid md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                  <h5 class="font-semibold text-gray-900">解析流程</h5>
+                  <div class="space-y-3">
+                    <div class="flex items-start">
+                      <div class="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                        <span class="text-xs font-bold text-indigo-600">1</span>
+                      </div>
+                      <div>
+                        <div class="font-medium text-gray-900">意图识别</div>
+                        <div class="text-sm text-gray-600">判断任务类型：新项目、功能扩展、重构优化、问题诊断</div>
+                      </div>
+                    </div>
+                    <div class="flex items-start">
+                      <div class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                        <span class="text-xs font-bold text-purple-600">2</span>
+                      </div>
+                      <div>
+                        <div class="font-medium text-gray-900">实体提取</div>
+                        <div class="text-sm text-gray-600">识别功能、技术、约束、质量四类实体</div>
+                      </div>
+                    </div>
+                    <div class="flex items-start">
+                      <div class="w-6 h-6 bg-cyan-100 rounded-full flex items-center justify-center mr-3 mt-0.5">
+                        <span class="text-xs font-bold text-cyan-600">3</span>
+                      </div>
+                      <div>
+                        <div class="font-medium text-gray-900">复杂度评估</div>
+                        <div class="text-sm text-gray-600">根据实体关系、状态交互等预估工作量</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bg-gray-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">典型需求示例</h5>
+                  <div class="bg-gray-100 rounded-lg p-3 mb-3">
+                    <p class="text-sm text-gray-700 italic">&#34;创建一个Vue3待办应用，支持增删改查和状态标记，使用Pinia管理状态，界面简洁现代&#34;</p>
+                  </div>
+                  <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">功能实体：</span>
+                      <span class="font-medium">4个CRUD操作 + 状态切换</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">技术实体：</span>
+                      <span class="font-medium">Vue3 + Composition API + Pinia</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="text-gray-600">约束实体：</span>
+                      <span class="font-medium">简洁现代 → UI组件库</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Automated Coding -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">自动化编码实现</h3>
+
+            <div class="space-y-8">
+              <!-- Intelligent Scaffolding -->
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">智能项目脚手架生成</h4>
+                <p class="text-gray-700 mb-6">
+                  Kimi CLI的项目初始化超越了简单的模板复制，而是基于需求分析的<strong>智能生成</strong>。以&#34;企业级用户管理后台&#34;为例：
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 class="font-semibold text-gray-900 mb-3">技术选型推断</h5>
+                    <ul class="text-sm text-gray-700 space-y-2">
+                      <li>• <strong>UI组件库</strong>：Element Plus（表格、分页、弹窗完善）</li>
+                      <li>• <strong>表格方案</strong>：ElTable虚拟滚动（大数据量优化）</li>
+                      <li>• <strong>表单方案</strong>：ElForm校验集成，异步验证</li>
+                      <li>• <strong>状态管理</strong>：Pinia模块化设计，支持持久化</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 class="font-semibold text-gray-900 mb-3">自动化执行流程</h5>
+                    <div class="bg-gray-900 rounded-lg p-3 text-sm">
+                      <div class="text-green-400 space-y-1">
+                        <div>npm create vue@latest admin-system -- --typescript --router --pinia --eslint</div>
+                        <div>pnpm add element-plus @element-plus/icons-vue</div>
+                        <div>pnpm add -D sass unplugin-auto-import unplugin-vue-components</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Component Generation -->
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">单文件组件规范生成</h4>
+                <p class="text-gray-700 mb-6">
+                  组件生成是Vue AI Skills价值最直接的体现。以用户列表组件为例，Agent加载相关Skill后生成符合以下规范的代码结构：
+                </p>
+
+                <div class="space-y-6">
+                  <div class="bg-indigo-50 rounded-xl p-6">
+                    <h5 class="font-semibold text-gray-900 mb-3 flex items-center">
+                      <i class="fas fa-code text-indigo-600 mr-2"></i>模板区域
+                    </h5>
+                    <ul class="text-sm text-gray-700 space-y-2">
+                      <li>• 声明式UI描述，合理使用条件渲染（v-if/v-show）</li>
+                      <li>• 列表渲染v-for配合:key，事件绑定@click等</li>
+                      <li>• Element Plus组件遵循官方推荐模式</li>
+                      <li>• v-loading指令控制加载状态</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-green-50 rounded-xl p-6">
+                    <h5 class="font-semibold text-gray-900 mb-3 flex items-center">
+                      <i class="fas fa-cogs text-green-600 mr-2"></i>脚本区域
+                    </h5>
+                    <ul class="text-sm text-gray-700 space-y-2">
+                      <li>• 严格遵循&lt;script setup lang=&#34;ts&#34;&gt;语法</li>
+                      <li>• Composition API核心优势：逻辑关注点聚合</li>
+                      <li>• withDefaults提供Props默认值与类型约束</li>
+                      <li>• defineEmits获取事件类型安全</li>
+                      <li>• handleXxx格式处理用户交互</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-purple-50 rounded-xl p-6">
+                    <h5 class="font-semibold text-gray-900 mb-3 flex items-center">
+                      <i class="fas fa-palette text-purple-600 mr-2"></i>样式区域
+                    </h5>
+                    <ul class="text-sm text-gray-700 space-y-2">
+                      <li>• 采用scoped属性确保样式隔离</li>
+                      <li>• CSS变量实现主题系统基础</li>
+                      <li>• 响应式布局通过栅格系统实现</li>
+                      <li>• 预留移动端适配扩展空间</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <!-- State Management -->
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">状态管理与路由智能配置</h4>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                  <div class="bg-gray-50 rounded-xl p-6">
+                    <h5 class="font-semibold text-gray-900 mb-3">Pinia Store设计原则</h5>
+                    <ul class="text-sm text-gray-700 space-y-2">
+                      <li>• <strong>State</strong>：ref声明响应式状态，确保类型推断</li>
+                      <li>• <strong>Getters</strong>：computed实现派生状态，保持纯函数</li>
+                      <li>• <strong>Actions</strong>：异步操作含loading状态管理</li>
+                      <li>• 命名遵循动词+名词格式（fetchList、createUser）</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-gray-50 rounded-xl p-6">
+                    <h5 class="font-semibold text-gray-900 mb-3">Vue Router配置</h5>
+                    <ul class="text-sm text-gray-700 space-y-2">
+                      <li>• 动态路由参数化页面（/users/:id）</li>
+                      <li>• 嵌套路由实现布局复用</li>
+                      <li>• 导航守卫权限校验</li>
+                      <li>• 路由懒加载优化首屏性能</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compile and Debug -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">编译与调试自动化</h3>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 mb-8">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">构建流程深度集成</h4>
+              <p class="text-gray-700 mb-6">
+                Kimi CLI将构建流程作为核心能力集成，而非简单的外部调用。Agent能够理解构建输出的语义，进行<strong>智能分析和决策</strong>。
+              </p>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left font-semibold text-gray-900">阶段</th>
+                      <th class="px-4 py-3 text-left font-semibold text-gray-900">执行命令</th>
+                      <th class="px-4 py-3 text-left font-semibold text-gray-900">监控信号</th>
+                      <th class="px-4 py-3 text-left font-semibold text-gray-900">异常处理策略</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200">
+                    <tr>
+                      <td class="px-4 py-3 text-gray-900">依赖安装</td>
+                      <td class="px-4 py-3 font-mono text-xs">pnpm install</td>
+                      <td class="px-4 py-3 text-gray-700">网络超时、版本冲突</td>
+                      <td class="px-4 py-3 text-gray-700">重试、切换镜像源、降级版本</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 text-gray-900">类型检查</td>
+                      <td class="px-4 py-3 font-mono text-xs">vue-tsc --noEmit</td>
+                      <td class="px-4 py-3 text-gray-700">TS错误、类型缺失</td>
+                      <td class="px-4 py-3 text-gray-700">定位错误文件、生成修复建议</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 text-gray-900">开发构建</td>
+                      <td class="px-4 py-3 font-mono text-xs">vite</td>
+                      <td class="px-4 py-3 text-gray-700">端口占用、配置错误</td>
+                      <td class="px-4 py-3 text-gray-700">更换端口、检查配置</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 text-gray-900">生产构建</td>
+                      <td class="px-4 py-3 font-mono text-xs">vite build</td>
+                      <td class="px-4 py-3 text-gray-700">Rollup警告、资源超限</td>
+                      <td class="px-4 py-3 text-gray-700">分析包体积、建议代码分割</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">运行时调试智能辅助</h4>
+              <p class="text-gray-700 mb-6">
+                通过MCP机制接入Chrome DevTools，获取<strong>运行时调试信息</strong>。当用户报告&#34;点击编辑按钮无响应&#34;时，Agent可以：
+              </p>
+
+              <div class="grid md:grid-cols-3 gap-6">
+                <div class="bg-blue-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-2">诊断步骤</h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 分析事件监听器注册</li>
+                    <li>• 检查控制台错误信息</li>
+                    <li>• 追踪组件状态变化</li>
+                    <li>• 验证DOM元素存在性</li>
+                  </ul>
+                </div>
+                <div class="bg-green-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-2">常见场景</h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 响应式失效问题</li>
+                    <li>• 计算属性不更新</li>
+                    <li>• 组件不渲染</li>
+                    <li>• 路由跳转异常</li>
+                  </ul>
+                </div>
+                <div class="bg-purple-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-2">修复策略</h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 提供具体代码修改建议</li>
+                    <li>• 自动生成修复补丁</li>
+                    <li>• 验证修复效果</li>
+                    <li>• 预防性建议</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Testing and Quality -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">测试与质量保障</h3>
+
+            <div class="grid md:grid-cols-2 gap-8">
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">单元测试自动生成</h4>
+                <p class="text-gray-700 mb-6">
+                  基于
+                  <code>vue-testing-best-practices</code> Skill，为关键组件和逻辑<strong>自动生成Vitest测试用例</strong>。
+                </p>
+
+                <div class="space-y-4">
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">测试覆盖维度</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• <strong>渲染测试</strong>：验证组件正确挂载</li>
+                      <li>• <strong>交互测试</strong>：模拟用户操作验证</li>
+                      <li>• <strong>Props测试</strong>：检验不同输入响应</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-green-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">测试最佳实践</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• 使用@vue/test-utils的mount函数</li>
+                      <li>• vi.fn进行Mock处理</li>
+                      <li>• flushPromises处理异步更新</li>
+                      <li>• 保持测试的独立性和可重复性</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">E2E测试与代码规范</h4>
+                <p class="text-gray-700 mb-6">
+                  Playwright用于验证<strong>关键用户流程的端到端正确性</strong>，确保应用核心功能的稳定性。
+                </p>
+
+                <div class="space-y-4">
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">核心路径测试</h5>
+                    <div class="text-sm text-gray-700 space-y-1">
+                      <div>登录 → 进入首页 → 访问用户管理</div>
+                      <div>→ 创建用户 → 验证列表更新</div>
+                    </div>
+                  </div>
+
+                  <div class="bg-blue-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">代码规范保障</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• ESLint + Prettier自动配置</li>
+                      <li>• Git Hooks（husky + lint-staged）</li>
+                      <li>• 提交前自动执行检查和格式化</li>
+                      <li>• 从源头控制技术债务</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Usage Methods Section -->
+        <section id="usage-methods" class="mb-20">
+          <div class="section-divider"></div>
+          <h2 class="text-4xl font-bold mb-8 text-gray-900">Agent使用方式详解</h2>
+
+          <!-- Interactive Dialog Mode -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">交互式对话模式（推荐）</h3>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 mb-8">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">启动与基础交互</h4>
+              <p class="text-gray-700 mb-6">
+                交互式对话是Kimi CLI最自然的使用方式，特别适合<strong>需求探索、方案讨论和迭代开发</strong>。
+              </p>
+
+              <div class="grid md:grid-cols-2 gap-6">
+                <div>
+                  <h5 class="font-semibold text-gray-900 mb-3">启动命令</h5>
+                  <div class="bg-gray-900 rounded-lg p-3 mb-4">
+                    <code class="text-green-400 text-sm">
+                                        cd my-vue3-project<br/>
+                                        kimi
+                                    </code>
+                  </div>
+                  <h5 class="font-semibold text-gray-900 mb-3">核心斜杠命令</h5>
+                  <ul class="text-sm text-gray-700 space-y-2">
+                    <li>• <code>/help</code> - 查看所有可用命令</li>
+                    <li>• <code>/login</code> - 配置认证</li>
+                    <li>• <code>/skills</code> - 查看已加载Skills</li>
+                    <li>• <code>/export</code> - 导出对话历史</li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 class="font-semibold text-gray-900 mb-3">典型对话流程</h5>
+                  <div class="space-y-3">
+                    <div class="bg-blue-50 rounded-lg p-3">
+                      <div class="text-xs text-blue-600 font-medium mb-1">用户输入</div>
+                      <div class="text-sm text-gray-700">&#34;需要一个企业级用户管理后台，包含列表、搜索、分页...&#34;</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-3">
+                      <div class="text-xs text-green-600 font-medium mb-1">Agent确认</div>
+                      <div class="text-sm text-gray-700">技术栈确认、执行计划输出</div>
+                    </div>
+                    <div class="bg-purple-50 rounded-lg p-3">
+                      <div class="text-xs text-purple-600 font-medium mb-1">分步执行</div>
+                      <div class="text-sm text-gray-700">项目初始化 → 组件开发 → 状态管理 → 测试验证</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">增量迭代与上下文保持</h4>
+              <p class="text-gray-700 mb-6">
+                多轮对话的<strong>上下文保持能力</strong>是核心优势。Agent维护项目状态的完整记忆，支持跨会话的连续性开发。
+              </p>
+
+              <div class="bg-gray-50 rounded-xl p-6">
+                <div class="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 class="font-semibold text-gray-900 mb-3">基础功能完成后</h5>
+                    <div class="bg-blue-100 rounded-lg p-4 mb-4">
+                      <p class="text-sm text-gray-700 italic">&#34;添加任务优先级标记，支持按优先级筛选和排序&#34;</p>
+                    </div>
+                    <p class="text-sm text-gray-600">Agent基于已有上下文分析变更范围，确定影响模块</p>
+                  </div>
+                  <div>
+                    <h5 class="font-semibold text-gray-900 mb-3">智能变更分析</h5>
+                    <ul class="text-sm text-gray-700 space-y-2">
+                      <li>• 在Task类型中添加priority字段</li>
+                      <li>• 扩展Pinia Store筛选器逻辑</li>
+                      <li>• 在TaskItem组件中添加优先级标识</li>
+                      <li>• 在FilterBar中添加优先级筛选</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Command Line Batch Mode -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">命令行批处理模式</h3>
+
+            <div class="space-y-8">
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">单命令原子操作</h4>
+                <p class="text-gray-700 mb-6">
+                  <code>kimi run &#34;&lt;任务描述&gt;&#34;</code>格式适用于<strong>明确、独立的原子任务</strong>，可脚本化集成。
+                </p>
+
+                <div class="space-y-4">
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">项目初始化</h5>
+                    <code class="block bg-gray-900 text-green-400 p-3 rounded text-sm">
+                                        kimi run &#34;初始化Vue3项目，配置TypeScript、Pinia、Vue Router和Element Plus&#34;
+                                    </code>
+                  </div>
+
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">功能开发</h5>
+                    <code class="block bg-gray-900 text-green-400 p-3 rounded text-sm">
+                                        kimi run &#34;为UserList组件添加分页功能，每页默认20条，支持页码跳转&#34;
+                                    </code>
+                  </div>
+
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">问题修复</h5>
+                    <code class="block bg-gray-900 text-green-400 p-3 rounded text-sm">
+                                        kimi run &#34;修复构建警告：&#39;v-model&#39; directive requires an argument&#34;
+                                    </code>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">任务清单批量执行</h4>
+                <p class="text-gray-700 mb-6">
+                  复杂项目通过
+                  <code>kimi-tasks.md</code>实现<strong>可复现的批量自动化</strong>。
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 class="font-semibold text-gray-900 mb-3">任务清单示例</h5>
+                    <div class="bg-gray-900 rounded-lg p-4 text-sm">
+                      <div class="text-gray-400 space-y-1">
+                        <div># 电商后台管理系统开发任务</div>
+                        <div>## 阶段一：基础架构</div>
+                        <div>- [ ] 初始化Vue3+TS项目</div>
+                        <div>- [ ] 安装并配置Element Plus</div>
+                        <div>- [ ] 配置ESLint+Prettier</div>
+                        <div>## 阶段二：核心模块</div>
+                        <div>- [ ] 商品管理：列表、搜索、分页</div>
+                        <div>- [ ] 订单管理：状态流转、批量操作</div>
+                        <div>## 阶段三：质量保障</div>
+                        <div>- [ ] 为核心组件生成单元测试</div>
+                        <div>- [ ] 配置Playwright E2E测试</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h5 class="font-semibold text-gray-900 mb-3">执行命令</h5>
+                    <div class="bg-gray-900 rounded-lg p-4 mb-4">
+                      <code class="text-green-400 text-sm">
+                                                kimi run --file kimi-tasks.md --continue-on-error
+                                            </code>
+                    </div>
+                    <div class="bg-blue-50 rounded-lg p-4">
+                      <h6 class="font-semibold text-gray-900 mb-2">特性</h6>
+                      <ul class="text-sm text-gray-700 space-y-1">
+                        <li>• 按顺序执行任务</li>
+                        <li>• 失败时暂停请求介入</li>
+                        <li>• 支持断点续跑</li>
+                        <li>• 可集成到CI/CD流程</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Independent Application -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">独立应用与SDK封装</h3>
+
+            <div class="space-y-8">
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">基于Kimi Agent SDK的封装</h4>
+                <p class="text-gray-700 mb-6">
+                  对于需要深度定制的场景，使用<strong>Node.js SDK</strong>封装专属工具。
+                </p>
+
+                <div class="bg-gray-900 rounded-lg p-6 mb-6">
+                  <pre class="text-green-400 text-sm"><code>// vue-agent-cli.js
+import { KimiAgent } from &#39;@moonshot-ai/kimi-agent-sdk&#39;
+import { VueSkillPack } from &#39;vuejs-ai/skills&#39;
+
+const agent = new KimiAgent({
+  skills: [VueSkillPack],
+  workingDir: process.cwd(),
+  config: {
+    model: &#39;kimi-for-coding&#39;,
+    temperature: 0.2  // 降低随机性，提高规范性
+  }
+})
+
+// 封装常用任务
+export async function createProject(name, options) {
+  return agent.execute({
+    task: `创建Vue3项目${name}，技术栈：${options.stack}`,
+    confirm: options.confirm !== false
+  })
+}</code></pre>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                  <div class="bg-blue-50 rounded-xl p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">SDK优势</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• 深度定制Agent行为</li>
+                      <li>• 封装团队特定规范</li>
+                      <li>• 集成内部组件库</li>
+                      <li>• 实现自定义工作流</li>
+                    </ul>
+                  </div>
+                  <div class="bg-green-50 rounded-xl p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">使用场景</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• 企业级开发工具</li>
+                      <li>• 团队规范固化</li>
+                      <li>• CI/CD流程集成</li>
+                      <li>• 自动化代码生成</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">容器化与编排部署</h4>
+                <p class="text-gray-700 mb-6">
+                  通过Docker和Kubernetes实现标准化部署，支持多Agent协作架构。
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 class="font-semibold text-gray-900 mb-3">Dockerfile示例</h5>
+                    <div class="bg-gray-900 rounded-lg p-4 text-sm">
+                      <div class="text-gray-400 space-y-1">
+                        <div>FROM node:20-alpine</div>
+                        <div>RUN apk add --no-cache python3 py3-pip curl</div>
+                        <div>RUN curl -s https://moonshotai.github.io/kimi-cli/install.sh | sh</div>
+                        <div>RUN npx skills add vuejs-ai/skills --global</div>
+                        <div>WORKDIR /workspace</div>
+                        <div>ENTRYPOINT [&#34;kimi&#34;]</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h5 class="font-semibold text-gray-900 mb-3">多Agent协作</h5>
+                    <div class="space-y-3">
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                        <span class="text-sm text-gray-700">需求分析Agent</span>
+                      </div>
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                        <span class="text-sm text-gray-700">架构设计Agent</span>
+                      </div>
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                        <span class="text-sm text-gray-700">编码Agent</span>
+                      </div>
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+                        <span class="text-sm text-gray-700">测试Agent</span>
+                      </div>
+                      <div class="flex items-center">
+                        <div class="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
+                        <span class="text-sm text-gray-700">部署Agent</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Development Demo Section -->
+        <section id="development-demo" class="mb-20">
+          <div class="section-divider"></div>
+          <h2 class="text-4xl font-bold mb-8 text-gray-900">完整开发流程演示</h2>
+
+          <!-- Project Initialization -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">项目初始化阶段</h3>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 mb-8">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">需求确认与技术决策</h4>
+              <p class="text-gray-700 mb-6">
+                以&#34;<strong>企业级用户管理后台</strong>&#34;为例，完整演示Agent驱动开发流程。
+              </p>
+
+              <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                <h5 class="font-semibold text-gray-900 mb-3">用户需求输入</h5>
+                <div class="bg-blue-100 rounded-lg p-4">
+                  <p class="text-sm text-gray-700 italic">
+                    &#34;需要一个企业级用户管理后台，包含列表、搜索、分页、编辑弹窗，使用Vue3+TypeScript+Element Plus，需要响应式布局和主题切换&#34;
+                  </p>
+                </div>
+              </div>
+
+              <div class="grid md:grid-cols-3 gap-6">
+                <div class="bg-blue-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">技术栈确认</h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• Vue 3.4+ with script setup</li>
+                    <li>• TypeScript 5.x</li>
+                    <li>• Vite 5</li>
+                    <li>• Element Plus 2.5</li>
+                    <li>• Pinia 2 + Vue Router 4</li>
+                  </ul>
+                </div>
+                <div class="bg-green-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">功能模块</h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 用户列表页（表格、搜索、分页）</li>
+                    <li>• 编辑弹窗（表单验证）</li>
+                    <li>• 主题系统（CSS变量）</li>
+                    <li>• 响应式布局（断点适配）</li>
+                  </ul>
+                </div>
+                <div class="bg-purple-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">项目结构</h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• src/views/users/（页面）</li>
+                    <li>• src/components/（通用组件）</li>
+                    <li>• src/stores/user.ts（状态）</li>
+                    <li>• src/styles/（主题变量）</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">自动化执行与验证</h4>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-4 py-3 text-left font-semibold text-gray-900">步骤</th>
+                      <th class="px-4 py-3 text-left font-semibold text-gray-900">执行内容</th>
+                      <th class="px-4 py-3 text-left font-semibold text-gray-900">关键输出</th>
+                      <th class="px-4 py-3 text-left font-semibold text-gray-900">耗时</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-200">
+                    <tr>
+                      <td class="px-4 py-3 text-gray-900">1</td>
+                      <td class="px-4 py-3 text-gray-700">npm create vue@latest 自动选择TS/Router/Pinia/ESLint</td>
+                      <td class="px-4 py-3 text-gray-700">项目脚手架</td>
+                      <td class="px-4 py-3 text-green-600 font-medium">15s</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 text-gray-900">2</td>
+                      <td class="px-4 py-3 text-gray-700">安装Element Plus、图标库、Sass预处理器</td>
+                      <td class="px-4 py-3 text-gray-700">package.json更新</td>
+                      <td class="px-4 py-3 text-green-600 font-medium">25s</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 text-gray-900">3</td>
+                      <td class="px-4 py-3 text-gray-700">配置vite.config.ts（自动导入、路径别名）</td>
+                      <td class="px-4 py-3 text-gray-700">构建优化配置</td>
+                      <td class="px-4 py-3 text-green-600 font-medium">10s</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 text-gray-900">4</td>
+                      <td class="px-4 py-3 text-gray-700">创建主题变量文件（CSS自定义属性）</td>
+                      <td class="px-4 py-3 text-gray-700">styles/variables.css</td>
+                      <td class="px-4 py-3 text-green-600 font-medium">8s</td>
+                    </tr>
+                    <tr>
+                      <td class="px-4 py-3 text-gray-900">5</td>
+                      <td class="px-4 py-3 text-gray-700">初始化Git仓库，创建规范提交</td>
+                      <td class="px-4 py-3 text-gray-700">.gitignore, 初始commit</td>
+                      <td class="px-4 py-3 text-green-600 font-medium">5s</td>
+                    </tr>
+                  </tbody>
+                  <tfoot class="bg-green-50">
+                    <tr>
+                      <td class="px-4 py-3 font-semibold text-gray-900">总计</td>
+                      <td class="px-4 py-3 text-gray-700">—</td>
+                      <td class="px-4 py-3 text-gray-700">可运行的基础项目</td>
+                      <td class="px-4 py-3 text-green-600 font-bold">~63s</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <div class="bg-green-50 rounded-lg p-4 mt-6">
+                <h5 class="font-semibold text-gray-900 mb-2">验证命令序列</h5>
+                <code class="block bg-gray-900 text-green-400 p-3 rounded text-sm">
+                                pnpm install<br/>
+                                pnpm run dev<br/>
+                                # 浏览器访问localhost:5173确认启动成功
+                            </code>
+              </div>
+            </div>
+          </div>
+
+          <!-- Component Development -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">组件开发阶段</h3>
+
+            <div class="space-y-8">
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">列表组件智能生成</h4>
+                <p class="text-gray-700 mb-6">
+                  以
+                  <code>UserTable.vue</code>为例，展示Agent如何生成符合规范的组件代码。
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h5 class="font-semibold text-gray-900 mb-3">Props设计</h5>
+                    <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                      <div class="text-sm text-gray-700 space-y-2">
+                        <div>• <strong>data</strong> - 用户数组</div>
+                        <div>• <strong>loading</strong> - 加载状态</div>
+                        <div>• <strong>pagination</strong> - 分页配置</div>
+                      </div>
+                    </div>
+                    <h5 class="font-semibold text-gray-900 mb-3">事件定义</h5>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                      <div class="text-sm text-gray-700 space-y-2">
+                        <div>• <strong>search</strong> - 搜索事件</div>
+                        <div>• <strong>pageChange</strong> - 页码变更</div>
+                        <div>• <strong>edit</strong> - 编辑操作</div>
+                        <div>• <strong>delete</strong> - 删除操作</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <h5 class="font-semibold text-gray-900 mb-3">组件结构</h5>
+                    <div class="bg-gray-50 rounded-lg p-4">
+                      <div class="text-sm text-gray-700 space-y-2">
+                        <div>• <strong>ElCard</strong>容器</div>
+                        <div>• <strong>ElForm</strong>内联搜索表单</div>
+                        <div>• <strong>ElTable</strong>含选择列、状态标签</div>
+                        <div>• <strong>ElPagination</strong>分页组件</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">编辑弹窗组件实现</h4>
+                <p class="text-gray-700 mb-6">
+                  <code>UserEditDialog.vue</code>采用<strong>受控组件模式</strong>，实现表单验证和状态管理。
+                </p>
+
+                <div class="grid md:grid-cols-3 gap-6">
+                  <div class="bg-blue-50 rounded-xl p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">双向绑定</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• visible属性</li>
+                      <li>• update:visible事件</li>
+                      <li>• v-model语法糖</li>
+                    </ul>
+                  </div>
+                  <div class="bg-green-50 rounded-xl p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">方法暴露</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• defineExpose暴露open方法</li>
+                      <li>• 支持父组件ref调用</li>
+                      <li>• 参数传递与重置</li>
+                    </ul>
+                  </div>
+                  <div class="bg-purple-50 rounded-xl p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">表单验证</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• Element Plus rules配置</li>
+                      <li>• 异步校验规则</li>
+                      <li>• 错误提示与聚焦</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- State and Routing -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">状态与路由集成</h3>
+
+            <div class="grid md:grid-cols-2 gap-8">
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">Pinia Store完整实现</h4>
+                <p class="text-gray-700 mb-6">
+                  <code>stores/user.ts</code>遵循
+                  <code>vue-pinia-best-practices</code> Skill的模块化设计原则。
+                </p>
+
+                <div class="space-y-4">
+                  <div class="bg-blue-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">State设计</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• list（用户数组）</li>
+                      <li>• loading（加载状态）</li>
+                      <li>• error（错误信息）</li>
+                      <li>• total（总条数）</li>
+                      <li>• queryParams（查询参数）</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-green-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">Getters实现</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• filteredUsers（客户端筛选）</li>
+                      <li>• activeUsers（状态过滤）</li>
+                      <li>• userCountByStatus（统计）</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-purple-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">Actions方法</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• fetchList（异步获取，含防抖）</li>
+                      <li>• create/update/remove（CRUD操作）</li>
+                      <li>• 乐观更新与错误回滚</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">路由配置与权限控制</h4>
+                <p class="text-gray-700 mb-6">
+                  Vue Router配置考虑动态路由、嵌套路由和导航守卫三类场景。
+                </p>
+
+                <div class="space-y-4">
+                  <div class="bg-orange-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">动态路由</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• 参数化页面（/users/:id）</li>
+                      <li>• props: true映射参数</li>
+                      <li>• 路由守卫参数校验</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-cyan-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">嵌套路由</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• 布局复用（后台管理系统）</li>
+                      <li>• 父路由组件占位</li>
+                      <li>• 子路由懒加载</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-red-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">导航守卫</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• 全局前置守卫权限校验</li>
+                      <li>• 路由独享守卫</li>
+                      <li>• 组件内守卫生命周期</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Verification and Delivery -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">验证与交付</h3>
+
+            <div class="grid md:grid-cols-2 gap-8">
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">本地测试自动化</h4>
+                <p class="text-gray-700 mb-6">
+                  Agent执行完整的验证序列，确保代码质量和功能正确性。
+                </p>
+
+                <div class="space-y-4">
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2 flex items-center">
+                      <span class="w-6 h-6 bg-blue-500 text-white rounded-full text-center text-xs leading-6 mr-2">1</span>
+                      开发服务器验证
+                    </h5>
+                    <code class="block bg-gray-900 text-green-400 p-2 rounded text-xs">pnpm run dev</code>
+                    <p class="text-xs text-gray-600 mt-1">验证HMR正常，控制台无错误</p>
+                  </div>
+
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2 flex items-center">
+                      <span class="w-6 h-6 bg-green-500 text-white rounded-full text-center text-xs leading-6 mr-2">2</span>
+                      单元测试执行
+                    </h5>
+                    <code class="block bg-gray-900 text-green-400 p-2 rounded text-xs">pnpm run test:unit</code>
+                    <p class="text-xs text-gray-600 mt-1">目标覆盖率80%+，关键路径100%</p>
+                  </div>
+
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2 flex items-center">
+                      <span class="w-6 h-6 bg-purple-500 text-white rounded-full text-center text-xs leading-6 mr-2">3</span>
+                      生产构建验证
+                    </h5>
+                    <code class="block bg-gray-900 text-green-400 p-2 rounded text-xs">pnpm run build</code>
+                    <p class="text-xs text-gray-600 mt-1">验证无警告无错误，产物优化</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+                <h4 class="text-xl font-bold mb-4 text-gray-900">构建产物与部署</h4>
+                <p class="text-gray-700 mb-6">
+                  生产构建输出优化的
+                  <code>dist/</code>目录，支持多种部署方案。
+                </p>
+
+                <div class="space-y-4">
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">构建产物特征</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• 哈希命名的JS/CSS资源（长期缓存）</li>
+                      <li>• 优化的静态资源（图片压缩、字体子集化）</li>
+                      <li>• 正确的index.html入口配置</li>
+                      <li>• 完整的source map支持</li>
+                    </ul>
+                  </div>
+
+                  <div class="bg-blue-50 rounded-lg p-4">
+                    <h5 class="font-semibold text-gray-900 mb-2">部署方案</h5>
+                    <ul class="text-sm text-gray-700 space-y-1">
+                      <li>• 平台一键部署（HTTPS自动配置）</li>
+                      <li>• 自有服务器Nginx托管</li>
+                      <li>• CDN加速与全球分发</li>
+                      <li>• 监控与日志系统集成</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Advanced Extensions Section -->
+        <section id="advanced-extensions" class="mb-20">
+          <div class="section-divider"></div>
+          <h2 class="text-4xl font-bold mb-8 text-gray-900">高级扩展与定制</h2>
+
+          <!-- Custom Skills Development -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">自定义Agent Skills开发</h3>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 mb-8">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">Skill结构规范</h4>
+              <p class="text-gray-700 mb-6">
+                团队私有Skill遵循标准结构，封装组织特定的开发规范和最佳实践。
+              </p>
+
+              <div class="bg-gray-900 rounded-lg p-6 mb-6">
+                <pre class="text-green-400 text-sm"><code>my-skill/
+├── skill.yaml          # 元数据：名称、版本、描述、作者
+├── prompts/
+│   ├── generate.md     # 代码生成场景提示词
+│   ├── review.md       # 代码审查场景提示词
+│   └── refactor.md     # 重构优化场景提示词
+├── rules/
+│   ├── naming.json     # 命名规范规则
+│   ├── component.json  # 组件结构规则
+│   └── test.json       # 测试覆盖规则
+└── templates/
+    ├── component.vue   # 组件代码模板
+    ├── store.ts        # Store代码模板
+    └── test.spec.ts    # 测试代码模板</code></pre>
+              </div>
+
+              <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-blue-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">元数据配置</h5>
+                  <div class="bg-gray-900 rounded-lg p-3 text-xs">
+                    <div class="text-gray-400 space-y-1">
+                      <div>name: my-company-vue-skills</div>
+                      <div>version: 1.0.0</div>
+                      <div>description: 公司Vue开发规范</div>
+                      <div>author: Frontend Team</div>
+                      <div>tags: [vue3, typescript, enterprise]</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-green-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">规则定义</h5>
+                  <ul class="text-sm text-gray-700 space-y-2">
+                    <li>• 命名规范（组件、变量、方法）</li>
+                    <li>• 组件结构要求</li>
+                    <li>• 测试覆盖率标准</li>
+                    <li>• 代码风格约束</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">团队私有Skill发布</h4>
+              <p class="text-gray-700 mb-6">
+                通过内部npm registry托管，实现团队级Skill的统一管理和版本控制。
+              </p>
+
+              <div class="space-y-6">
+                <div class="bg-gray-50 rounded-lg p-4">
+                  <h5 class="font-semibold text-gray-900 mb-2">发布流程</h5>
+                  <div class="space-y-2 text-sm">
+                    <div class="flex items-center">
+                      <span class="w-6 h-6 bg-blue-500 text-white rounded-full text-center text-xs leading-6 mr-3">1</span>
+                      <span>封装自研组件库使用规范</span>
+                    </div>
+                    <div class="flex items-center">
+                      <span class="w-6 h-6 bg-green-500 text-white rounded-full text-center text-xs leading-6 mr-3">2</span>
+                      <span>定义项目特定架构模式</span>
+                    </div>
+                    <div class="flex items-center">
+                      <span class="w-6 h-6 bg-purple-500 text-white rounded-full text-center text-xs leading-6 mr-3">3</span>
+                      <span>发布到内部npm registry</span>
+                    </div>
+                    <div class="flex items-center">
+                      <span class="w-6 h-6 bg-orange-500 text-white rounded-full text-center text-xs leading-6 mr-3">4</span>
+                      <span>团队成员安装使用</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="bg-gray-900 rounded-lg p-4">
+                  <h5 class="font-semibold text-gray-100 mb-2">安装命令</h5>
+                  <code class="text-green-400 text-sm">npx skills add @company/vue-skills</code>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CI/CD Integration -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">CI/CD流水线集成</h3>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">GitHub Actions自动化配置</h4>
+              <p class="text-gray-700 mb-6">
+                将Agent能力集成到CI/CD流程，实现AI驱动的自动化代码审查和测试生成。
+              </p>
+
+              <div class="bg-gray-900 rounded-lg p-6 mb-6">
+                <pre class="text-green-400 text-sm"><code># .github/workflows/vue-agent-ci.yml
+name: AI-Driven Vue3 CI
+
+on: [push, pull_request]
+
+jobs:
+  ai-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Kimi CLI
+        run: |
+          curl -s https://moonshotai.github.io/kimi-cli/install.sh | sh
+          kimi login --token ${{ secrets.KIMI_TOKEN }}
+      
+      - name: AI Code Review
+        run: |
+          kimi --print -p &#34;审查本次PR的代码变更，输出JSON格式报告&#34; \
+            &gt; review-report.json
+      
+      - name: AI Test Generation
+        run: |
+          kimi --print -p &#34;为变更组件补充单元测试，确保覆盖率不下降&#34; \
+            --output-generated-tests
+      
+      - name: Build Verification
+        run: |
+          pnpm install
+          pnpm run build
+          pnpm run test:unit</code></pre>
+              </div>
+
+              <div class="grid md:grid-cols-3 gap-6">
+                <div class="bg-blue-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">AI代码审查</h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 自动分析PR变更</li>
+                    <li>• JSON格式报告输出</li>
+                    <li>• 规范性问题检测</li>
+                    <li>• 性能优化建议</li>
+                  </ul>
+                </div>
+                <div class="bg-green-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">AI测试生成</h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 自动补充单元测试</li>
+                    <li>• 覆盖率保持和提升</li>
+                    <li>• 边界条件测试</li>
+                    <li>• 集成测试场景</li>
+                  </ul>
+                </div>
+                <div class="bg-purple-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">构建验证</h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 依赖安装验证</li>
+                    <li>• 生产构建检查</li>
+                    <li>• 测试执行验证</li>
+                    <li>• 产物完整性检查</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Multi-Agent Collaboration -->
+          <div class="mb-12">
+            <h3 class="text-3xl font-semibold mb-6 text-gray-900">多Agent协作架构</h3>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200 mb-8">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">角色分工与任务流转</h4>
+              <p class="text-gray-700 mb-6">
+                通过多Agent协作模式，实现复杂项目的高效开发和质量保证。
+              </p>
+
+              <!-- Multi-Agent Architecture Diagram -->
+              <div class="chart-container mb-8">
+                <h5 class="font-semibold text-gray-900 mb-4">多Agent协作流程图</h5>
+                <div class="mermaid-container">
+                  <div class="mermaid-controls">
+                    <button class="mermaid-control-btn zoom-in" title="放大">
+                      <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="mermaid-control-btn zoom-out" title="缩小">
+                      <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="mermaid-control-btn reset-zoom" title="重置">
+                      <i class="fas fa-expand-arrows-alt"></i>
+                    </button>
+                    <button class="mermaid-control-btn fullscreen" title="全屏查看">
+                      <i class="fas fa-expand"></i>
+                    </button>
+                  </div>
+                  <div class="mermaid">
+                    graph LR
+                    A[&#34;需求分析Agent&#34;] --&gt; B[&#34;架构设计Agent&#34;]
+                    B --&gt; C[&#34;编码Agent&#34;]
+                    C --&gt; D[&#34;测试Agent&#34;]
+                    D --&gt; E[&#34;部署Agent&#34;]
+                    E --&gt; F[&#34;监控Agent&#34;]
+
+                    A --&gt; A1[&#34;需求澄清&#34;]
+                    A --&gt; A2[&#34;用例提取&#34;]
+                    A --&gt; A3[&#34;验收标准&#34;]
+
+                    B --&gt; B1[&#34;技术选型&#34;]
+                    B --&gt; B2[&#34;模块划分&#34;]
+                    B --&gt; B3[&#34;接口设计&#34;]
+
+                    C --&gt; C1[&#34;代码生成&#34;]
+                    C --&gt; C2[&#34;调试优化&#34;]
+                    C --&gt; C3[&#34;文档编写&#34;]
+
+                    D --&gt; D1[&#34;测试用例生成&#34;]
+                    D --&gt; D2[&#34;执行验证&#34;]
+                    D --&gt; D3[&#34;报告输出&#34;]
+
+                    E --&gt; E1[&#34;环境配置&#34;]
+                    E --&gt; E2[&#34;构建发布&#34;]
+                    E --&gt; E3[&#34;监控设置&#34;]
+
+                    F --&gt; F1[&#34;性能监控&#34;]
+                    F --&gt; F2[&#34;错误追踪&#34;]
+                    F --&gt; F3[&#34;日志分析&#34;]
+
+                    style A fill:#6366f1,color:#ffffff,stroke:#4f46e5,stroke-width:3px
+                    style B fill:#8b5cf6,color:#ffffff,stroke:#7c3aed,stroke-width:2px
+                    style C fill:#06b6d4,color:#ffffff,stroke:#0891b2,stroke-width:2px
+                    style D fill:#10b981,color:#ffffff,stroke:#059669,stroke-width:2px
+                    style E fill:#f59e0b,color:#ffffff,stroke:#d97706,stroke-width:2px
+                    style F fill:#ef4444,color:#ffffff,stroke:#dc2626,stroke-width:2px
+
+                    style A1 fill:#f8fafc,color:#1e293b,stroke:#6366f1,stroke-width:2px
+                    style A2 fill:#f8fafc,color:#1e293b,stroke:#6366f1,stroke-width:2px
+                    style A3 fill:#f8fafc,color:#1e293b,stroke:#6366f1,stroke-width:2px
+                    style B1 fill:#f8fafc,color:#1e293b,stroke:#8b5cf6,stroke-width:2px
+                    style B2 fill:#f8fafc,color:#1e293b,stroke:#8b5cf6,stroke-width:2px
+                    style B3 fill:#f8fafc,color:#1e293b,stroke:#8b5cf6,stroke-width:2px
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-blue-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3 flex items-center">
+                    <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                    需求分析Agent
+                  </h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 需求澄清与用例提取</li>
+                    <li>• 验收标准定义</li>
+                    <li>• 技术可行性评估</li>
+                  </ul>
+                </div>
+
+                <div class="bg-purple-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3 flex items-center">
+                    <div class="w-3 h-3 bg-purple-500 rounded-full mr-2"></div>
+                    架构设计Agent
+                  </h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 技术选型与模块划分</li>
+                    <li>• 接口设计与数据流规划</li>
+                    <li>• 性能与扩展性考量</li>
+                  </ul>
+                </div>
+
+                <div class="bg-green-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3 flex items-center">
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    编码Agent
+                  </h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 代码生成与调试优化</li>
+                    <li>• 文档编写与注释添加</li>
+                    <li>• 代码规范检查</li>
+                  </ul>
+                </div>
+
+                <div class="bg-orange-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3 flex items-center">
+                    <div class="w-3 h-3 bg-orange-500 rounded-full mr-2"></div>
+                    测试Agent
+                  </h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 测试用例自动生成</li>
+                    <li>• 执行验证与覆盖率分析</li>
+                    <li>• 测试报告输出</li>
+                  </ul>
+                </div>
+
+                <div class="bg-cyan-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3 flex items-center">
+                    <div class="w-3 h-3 bg-cyan-500 rounded-full mr-2"></div>
+                    部署Agent
+                  </h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 环境配置与构建发布</li>
+                    <li>• 监控设置与告警配置</li>
+                    <li>• 回滚策略制定</li>
+                  </ul>
+                </div>
+
+                <div class="bg-red-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3 flex items-center">
+                    <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                    监控Agent
+                  </h5>
+                  <ul class="text-sm text-gray-700 space-y-1">
+                    <li>• 性能监控与错误追踪</li>
+                    <li>• 日志分析与告警处理</li>
+                    <li>• 用户行为分析</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-200">
+              <h4 class="text-xl font-bold mb-4 text-gray-900">AG-UI协议与标准化通信</h4>
+              <p class="text-gray-700 mb-6">
+                AG-UI（Agent User Interaction Protocol）为Agent间通信提供标准化方案，支持流式响应、工具调用协调、并发控制等机制。
+              </p>
+
+              <div class="grid md:grid-cols-2 gap-6">
+                <div class="bg-blue-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">协议特性</h5>
+                  <ul class="text-sm text-gray-700 space-y-2">
+                    <li>• 流式响应支持</li>
+                    <li>• 工具调用协调</li>
+                    <li>• 并发控制机制</li>
+                    <li>• 状态同步管理</li>
+                  </ul>
+                </div>
+                <div class="bg-green-50 rounded-xl p-4">
+                  <h5 class="font-semibold text-gray-900 mb-3">兼容性</h5>
+                  <ul class="text-sm text-gray-700 space-y-2">
+                    <li>• Kimi CLI ACP实现</li>
+                    <li>• AG-UI协议兼容</li>
+                    <li>• 易于集成扩展</li>
+                    <li>• 标准化接口</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="bg-yellow-50 rounded-lg p-4 mt-6">
+                <h5 class="font-semibold text-gray-900 mb-2">相关资源</h5>
+                <p class="text-sm text-gray-700">
+                  Kimi CLI的ACP（Agent Client Protocol）实现与AG-UI兼容，便于集成到更广泛的Agent生态中
+                  <a href="https://platform.kimi.com/docs/guide/kimi-cli-support" class="citation-link" target="_blank">[174]</a>
+                  <a href="https://llmmultiagents.com/blogs/kimi-cli-technical-deep-dive" class="citation-link" target="_blank">[190]</a>。
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Conclusion -->
+        <section class="mb-20">
+          <div class="section-divider"></div>
+          <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl p-12 border border-indigo-100">
+            <h2 class="text-3xl font-bold mb-6 text-gray-900">总结与展望</h2>
+            <p class="text-xl text-gray-700 mb-8 leading-relaxed">
+              通过<strong>Kimi CLI + Vue AI Agent Skills</strong>的强大组合，我们构建了一个具备自主规划、代码生成、编译调试与测试验证能力的完整开发助手。这不仅仅是工具的创新，更是前端开发范式的根本性变革。
+            </p>
+
+            <div class="grid md:grid-cols-3 gap-6">
+              <div class="bg-white/70 backdrop-blur-sm rounded-xl p-6">
+                <h3 class="text-lg font-bold mb-3 text-gray-900">效率提升</h3>
+                <p class="text-sm text-gray-700">从需求到部署的全流程自动化，将开发周期缩短60%以上</p>
+              </div>
+              <div class="bg-white/70 backdrop-blur-sm rounded-xl p-6">
+                <h3 class="text-lg font-bold mb-3 text-gray-900">质量保障</h3>
+                <p class="text-sm text-gray-700">内置最佳实践和规范检查，从源头控制技术债务</p>
+              </div>
+              <div class="bg-white/70 backdrop-blur-sm rounded-xl p-6">
+                <h3 class="text-lg font-bold mb-3 text-gray-900">团队协作</h3>
+                <p class="text-sm text-gray-700">统一开发标准和流程，提升团队整体效率和代码一致性</p>
+              </div>
+            </div>
+
+            <div class="mt-8 text-center">
+              <div class="inline-block px-6 py-3 bg-indigo-600 text-white rounded-full font-semibold">
+                <i class="fas fa-rocket mr-2"></i>
+                开启AI驱动的开发新时代
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({ 
+            startOnLoad: true, 
+            theme: 'base',
+            themeVariables: {
+                // Primary colors with good contrast
+                primaryColor: '#f8fafc',
+                primaryTextColor: '#1e293b',
+                primaryBorderColor: '#64748b',
+                lineColor: '#64748b',
+                
+                // Secondary colors
+                secondaryColor: '#f1f5f9',
+                tertiaryColor: '#e2e8f0',
+                
+                // Background colors
+                background: '#ffffff',
+                mainBkg: '#f8fafc',
+                secondBkg: '#f1f5f9',
+                tertiaryBkg: '#e2e8f0',
+                
+                // Node specific colors with high contrast text
+                nodeBorder: '#64748b',
+                nodeTextColor: '#1e293b',
+                
+                // Cluster colors
+                clusterBkg: '#f8fafc',
+                clusterBorder: '#64748b',
+                
+                // Link and edge colors
+                defaultLinkColor: '#64748b',
+                edgeLabelBackground: '#ffffff',
+                
+                // Text colors for better contrast
+                titleColor: '#1e293b',
+                textColor: '#1e293b',
+                
+                // Special node colors with proper contrast
+                specialBkg: '#6366f1',
+                specialTextColor: '#ffffff',
+                
+                // Additional contrast improvements
+                cScale0: '#6366f1',
+                cScale1: '#8b5cf6', 
+                cScale2: '#06b6d4',
+                cScale3: '#10b981',
+                cScale4: '#f59e0b',
+                cScale5: '#ef4444',
+                
+                // Ensure text is readable on colored backgrounds
+                c0TextColor: '#ffffff',
+                c1TextColor: '#ffffff', 
+                c2TextColor: '#ffffff',
+                c3TextColor: '#ffffff',
+                c4TextColor: '#ffffff',
+                c5TextColor: '#ffffff'
+            },
+            flowchart: {
+                useMaxWidth: false,
+                htmlLabels: true,
+                curve: 'basis',
+                padding: 20
+            },
+            sequence: {
+                useMaxWidth: false,
+                wrap: true,
+                padding: 20
+            },
+            gantt: {
+                useMaxWidth: false,
+                padding: 20
+            }
+        });
+
+        // Initialize Mermaid Controls for zoom and pan
+        function initializeMermaidControls() {
+            const containers = document.querySelectorAll('.mermaid-container');
+
+            containers.forEach(container => {
+            const mermaidElement = container.querySelector('.mermaid');
+            let scale = 1;
+            let isDragging = false;
+            let startX, startY, translateX = 0, translateY = 0;
+
+            // 触摸相关状态
+            let isTouch = false;
+            let touchStartTime = 0;
+            let initialDistance = 0;
+            let initialScale = 1;
+            let isPinching = false;
+
+            // Zoom controls
+            const zoomInBtn = container.querySelector('.zoom-in');
+            const zoomOutBtn = container.querySelector('.zoom-out');
+            const resetBtn = container.querySelector('.reset-zoom');
+            const fullscreenBtn = container.querySelector('.fullscreen');
+
+            function updateTransform() {
+                mermaidElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+
+                if (scale > 1) {
+                container.classList.add('zoomed');
+                } else {
+                container.classList.remove('zoomed');
+                }
+
+                mermaidElement.style.cursor = isDragging ? 'grabbing' : 'grab';
+            }
+
+            if (zoomInBtn) {
+                zoomInBtn.addEventListener('click', () => {
+                scale = Math.min(scale * 1.25, 4);
+                updateTransform();
+                });
+            }
+
+            if (zoomOutBtn) {
+                zoomOutBtn.addEventListener('click', () => {
+                scale = Math.max(scale / 1.25, 0.3);
+                if (scale <= 1) {
+                    translateX = 0;
+                    translateY = 0;
+                }
+                updateTransform();
+                });
+            }
+
+            if (resetBtn) {
+                resetBtn.addEventListener('click', () => {
+                scale = 1;
+                translateX = 0;
+                translateY = 0;
+                updateTransform();
+                });
+            }
+
+            if (fullscreenBtn) {
+                fullscreenBtn.addEventListener('click', () => {
+                if (container.requestFullscreen) {
+                    container.requestFullscreen();
+                } else if (container.webkitRequestFullscreen) {
+                    container.webkitRequestFullscreen();
+                } else if (container.msRequestFullscreen) {
+                    container.msRequestFullscreen();
+                }
+                });
+            }
+
+            // Mouse Events
+            mermaidElement.addEventListener('mousedown', (e) => {
+                if (isTouch) return; // 如果是触摸设备，忽略鼠标事件
+
+                isDragging = true;
+                startX = e.clientX - translateX;
+                startY = e.clientY - translateY;
+                mermaidElement.style.cursor = 'grabbing';
+                updateTransform();
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging && !isTouch) {
+                translateX = e.clientX - startX;
+                translateY = e.clientY - startY;
+                updateTransform();
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isDragging && !isTouch) {
+                isDragging = false;
+                mermaidElement.style.cursor = 'grab';
+                updateTransform();
+                }
+            });
+
+            document.addEventListener('mouseleave', () => {
+                if (isDragging && !isTouch) {
+                isDragging = false;
+                mermaidElement.style.cursor = 'grab';
+                updateTransform();
+                }
+            });
+
+            // 获取两点之间的距离
+            function getTouchDistance(touch1, touch2) {
+                return Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+                );
+            }
+
+            // Touch Events - 触摸事件处理
+            mermaidElement.addEventListener('touchstart', (e) => {
+                isTouch = true;
+                touchStartTime = Date.now();
+
+                if (e.touches.length === 1) {
+                // 单指拖动
+                isPinching = false;
+                isDragging = true;
+
+                const touch = e.touches[0];
+                startX = touch.clientX - translateX;
+                startY = touch.clientY - translateY;
+
+                } else if (e.touches.length === 2) {
+                // 双指缩放
+                isPinching = true;
+                isDragging = false;
+
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                initialDistance = getTouchDistance(touch1, touch2);
+                initialScale = scale;
+                }
+
+                e.preventDefault();
+            }, { passive: false });
+
+            mermaidElement.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1 && isDragging && !isPinching) {
+                // 单指拖动
+                const touch = e.touches[0];
+                translateX = touch.clientX - startX;
+                translateY = touch.clientY - startY;
+                updateTransform();
+
+                } else if (e.touches.length === 2 && isPinching) {
+                // 双指缩放
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const currentDistance = getTouchDistance(touch1, touch2);
+
+                if (initialDistance > 0) {
+                    const newScale = Math.min(Math.max(
+                    initialScale * (currentDistance / initialDistance),
+                    0.3
+                    ), 4);
+                    scale = newScale;
+                    updateTransform();
+                }
+                }
+
+                e.preventDefault();
+            }, { passive: false });
+
+            mermaidElement.addEventListener('touchend', (e) => {
+                // 重置状态
+                if (e.touches.length === 0) {
+                isDragging = false;
+                isPinching = false;
+                initialDistance = 0;
+
+                // 延迟重置isTouch，避免鼠标事件立即触发
+                setTimeout(() => {
+                    isTouch = false;
+                }, 100);
+                } else if (e.touches.length === 1 && isPinching) {
+                // 从双指变为单指，切换为拖动模式
+                isPinching = false;
+                isDragging = true;
+
+                const touch = e.touches[0];
+                startX = touch.clientX - translateX;
+                startY = touch.clientY - translateY;
+                }
+
+                updateTransform();
+            });
+
+            mermaidElement.addEventListener('touchcancel', (e) => {
+                isDragging = false;
+                isPinching = false;
+                initialDistance = 0;
+
+                setTimeout(() => {
+                isTouch = false;
+                }, 100);
+
+                updateTransform();
+            });
+
+            // Enhanced wheel zoom with better center point handling
+            container.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const rect = container.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                const delta = e.deltaY > 0 ? 0.9 : 1.1;
+                const newScale = Math.min(Math.max(scale * delta, 0.3), 4);
+
+                // Adjust translation to zoom towards center
+                if (newScale !== scale) {
+                const scaleDiff = newScale / scale;
+                translateX = translateX * scaleDiff;
+                translateY = translateY * scaleDiff;
+                scale = newScale;
+
+                if (scale <= 1) {
+                    translateX = 0;
+                    translateY = 0;
+                }
+
+                updateTransform();
+                }
+            });
+
+            // Initialize display
+            updateTransform();
+            });
+        }
+
+        // Call the function on DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', initializeMermaidControls);
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Highlight active section in TOC
+        const sections = document.querySelectorAll('section[id]');
+        const tocLinks = document.querySelectorAll('.toc-fixed a[href^="#"]');
+
+        function highlightActiveSection() {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (scrollY >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            tocLinks.forEach(link => {
+                link.classList.remove('bg-indigo-100', 'text-indigo-700', 'font-medium');
+                if (link.getAttribute('href') === `#${current}`) {
+                    link.classList.add('bg-indigo-100', 'text-indigo-700', 'font-medium');
+                }
+            });
+        }
+
+        window.addEventListener('scroll', highlightActiveSection);
+        highlightActiveSection(); // Initial call
+
+        // Mobile TOC toggle
+        function toggleTOC() {
+            const toc = document.querySelector('.toc-fixed');
+            toc.classList.toggle('open');
+        }
+
+        // Function to close TOC
+        function closeTOC() {
+            const toc = document.querySelector('.toc-fixed');
+            toc.classList.remove('open');
+        }
+
+        // Function to setup mobile menu button
+        function setupMobileMenu() {
+            // Remove existing button if any
+            const existingButton = document.querySelector('.mobile-menu-button');
+            if (existingButton) {
+                existingButton.remove();
+            }
+
+            // Create mobile menu button if on small screen
+            if (window.innerWidth <= 768) {
+                const menuButton = document.createElement('button');
+                menuButton.innerHTML = '<i class="fas fa-bars"></i>';
+                menuButton.className = 'mobile-menu-button fixed top-4 left-4 z-50 bg-indigo-600 text-white p-2 rounded-lg shadow-lg';
+                menuButton.onclick = toggleTOC;
+                document.body.appendChild(menuButton);
+            }
+        }
+
+        // Initial setup
+        setupMobileMenu();
+
+        // Add event listener for window resize
+        window.addEventListener('resize', function() {
+            setupMobileMenu();
+            // Close TOC when resizing to larger screen
+            if (window.innerWidth > 768) {
+                closeTOC();
+            }
+        });
+
+        // Close TOC when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const toc = document.querySelector('.toc-fixed');
+            const menuButton = document.querySelector('.mobile-menu-button');
+            
+            // Only handle if on mobile and TOC is open
+            if (window.innerWidth <= 768 && toc.classList.contains('open')) {
+                // Check if click is outside TOC and not on menu button
+                if (!toc.contains(event.target) && 
+                    (!menuButton || !menuButton.contains(event.target))) {
+                    closeTOC();
+                }
+            }
+        });
+
+        // Prevent clicks inside TOC from closing it
+        document.querySelector('.toc-fixed').addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    </script>
+  
+
+</body></html>

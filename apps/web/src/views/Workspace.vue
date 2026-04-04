@@ -21,7 +21,7 @@
 
     <!-- Overview -->
     <div v-if="currentMode === 'overview'" class="workspace-panel">
-      <Dashboard />
+      <ExecutionBoard />
     </div>
 
     <!-- Studio -->
@@ -34,59 +34,7 @@
           <CodeViewer embedded />
         </div>
         <div class="studio-right">
-          <el-card class="right-card" shadow="hover">
-            <template #header>
-              <div class="right-header">
-                <el-icon><List /></el-icon>
-                <span>最近任务</span>
-              </div>
-            </template>
-            <div v-if="recentTasks.length === 0" class="empty-tiny">
-              <el-empty description="暂无任务" :image-size="60" />
-            </div>
-            <div v-else class="tiny-task-list">
-              <div
-                v-for="task in recentTasks"
-                :key="task.id"
-                class="tiny-task-item"
-              >
-                <div class="tiny-dot" :class="task.status" />
-                <div class="tiny-info">
-                  <div class="tiny-title" :title="task.title">{{ truncate(task.title, 18) }}</div>
-                  <div class="tiny-meta">
-                    <el-tag size="small" :type="getTaskStatusType(task.status)">
-                      {{ task.status }}
-                    </el-tag>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </el-card>
-
-          <el-card class="right-card" shadow="hover">
-            <template #header>
-              <div class="right-header">
-                <el-icon><Monitor /></el-icon>
-                <span>系统状态</span>
-              </div>
-            </template>
-            <div class="tiny-status">
-              <div class="tiny-status-row">
-                <span>WebSocket</span>
-                <el-tag :type="wsStore.isConnected ? 'success' : 'danger'" size="small">
-                  {{ wsStore.isConnected ? '在线' : '离线' }}
-                </el-tag>
-              </div>
-              <div class="tiny-status-row">
-                <span>Agent 总数</span>
-                <span class="num">{{ agents.length }}</span>
-              </div>
-              <div class="tiny-status-row">
-                <span>任务总数</span>
-                <span class="num">{{ tasks.length }}</span>
-              </div>
-            </div>
-          </el-card>
+          <TicketDetailPanel :ticket="activeTicket" />
         </div>
       </div>
 
@@ -126,28 +74,21 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Grid, Monitor, List, FullScreen, ArrowDown } from '@element-plus/icons-vue'
-import Dashboard from './Dashboard.vue'
+import { Grid, Monitor, FullScreen, ArrowDown } from '@element-plus/icons-vue'
+import ExecutionBoard from '@/components/execution/ExecutionBoard.vue'
+import TicketDetailPanel from '@/components/execution/TicketDetailPanel.vue'
 import ChatView from './ChatView.vue'
 import CodeViewer from './CodeViewer.vue'
 import TerminalView from './TerminalView.vue'
 import AgentAvatar from '@/components/agent/AgentAvatar.vue'
-import { useAgentStore } from '@/stores/agent'
-import { useTaskStore } from '@/stores/task'
-import { useWebSocketStore } from '@/stores/websocket'
-import { truncate } from '@/utils/format'
-import { TASK_STATUS } from '@/utils/constants'
+import { useExecutionStore } from '@/stores/execution'
 
 const currentMode = ref<'overview' | 'studio'>('overview')
 const showTerminal = ref(false)
 
-const agentStore = useAgentStore()
-const taskStore = useTaskStore()
-const wsStore = useWebSocketStore()
+const executionStore = useExecutionStore()
 
-const agents = computed(() => agentStore.agents)
-const tasks = computed(() => taskStore.tasks)
-const recentTasks = computed(() => tasks.value.slice(0, 4))
+const activeTicket = computed(() => executionStore.activeTicket)
 
 const shibaTeam = [
   { role: 'tech_lead' as const, name: '阿黄', label: '技术负责人' },
@@ -155,10 +96,6 @@ const shibaTeam = [
   { role: 'backend_dev' as const, name: '阿铁', label: '后端开发' },
   { role: 'qa_engineer' as const, name: '阿镜', label: '质量保障' },
 ]
-
-const getTaskStatusType = (status: string) => {
-  return TASK_STATUS[status as keyof typeof TASK_STATUS]?.type || 'info'
-}
 </script>
 
 <style scoped>

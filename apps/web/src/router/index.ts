@@ -9,11 +9,21 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: '',
+        name: 'Workspace',
+        component: () => import('@/views/Workspace.vue'),
+        meta: {
+          title: '工作区',
+          icon: 'Odometer',
+        },
+      },
+      {
+        path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/Dashboard.vue'),
         meta: {
           title: '仪表板',
           icon: 'Odometer',
+          hidden: true,
         },
       },
       {
@@ -111,7 +121,7 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/app/'),
   routes,
   scrollBehavior() {
     return { top: 0 }

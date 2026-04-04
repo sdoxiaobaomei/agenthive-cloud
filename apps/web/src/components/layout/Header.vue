@@ -11,6 +11,13 @@
     </div>
     
     <div class="header-right">
+      <!-- 返回官网 -->
+      <a href="/" target="_self" class="back-to-site">
+        <el-button text>官网</el-button>
+      </a>
+      
+      <el-divider direction="vertical" />
+      
       <!-- WebSocket 状态 -->
       <el-tooltip :content="wsStatusText" placement="bottom">
         <div class="ws-status" :class="wsStatus">

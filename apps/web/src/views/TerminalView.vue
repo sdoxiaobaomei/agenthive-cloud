@@ -1,6 +1,6 @@
 <template>
-  <div class="terminal-view-page">
-    <div class="page-header">
+  <div class="terminal-view-page" :class="{ embedded: props.embedded }">
+    <div v-if="!embedded" class="page-header">
       <div>
         <h1 class="page-title">终端</h1>
         <p class="page-subtitle">实时查看 Agent 终端输出</p>
@@ -40,6 +40,12 @@ import { useAgentStore } from '@/stores/agent'
 import { useWebSocketStore } from '@/stores/websocket'
 import Terminal from '@/components/terminal/Terminal.vue'
 
+const props = withDefaults(defineProps<{
+  embedded?: boolean
+}>(), {
+  embedded: false,
+})
+
 const agentStore = useAgentStore()
 const wsStore = useWebSocketStore()
 
@@ -71,6 +77,11 @@ onMounted(async () => {
   height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;
+}
+
+.terminal-view-page.embedded {
+  padding: 0;
+  height: 100%;
 }
 
 .page-header {
