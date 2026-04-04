@@ -41,20 +41,10 @@ export default defineNuxtConfig({
     },
   },
   
-  // 应用配置
-  app: {
-    head: {
-      charset: 'utf-8',
-      viewport: 'width=device-width, initial-scale=1',
-      link: [
-        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
-        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
-      ],
-      meta: [
-        { name: 'theme-color', content: '#409EFF' },
-      ],
-    },
-  },
+  // 自动导入共享组件
+  components: [
+    { path: '../../packages/ui/src/components', prefix: 'Ah' },
+  ],
   
   // 构建配置
   nitro: {
@@ -68,11 +58,18 @@ export default defineNuxtConfig({
   
   // 路由配置
   routeRules: {
-    // 开发时：/app/** 代理到 web dev server；生产时：静态部署 nginx 处理
-    '/app/**': { proxy: 'http://127.0.0.1:5173' },
-    // 其他页面静态生成
+    // 所有页面由 Nuxt 统一服务，web 已融合到 landing 中
     '/**': { prerender: true },
   },
+
+  // 别名配置
+  alias: {
+    '@agenthive/ui': '../../packages/ui/src/index.ts',
+    '@agenthive/types': '../../packages/types/src/index.ts',
+  },
+
+  // 导入共享样式
+  css: ['../../packages/ui/src/styles/tokens.css', '~/assets/css/element-plus-override.css'],
   
   // 兼容性日期
   compatibilityDate: '2024-04-01',
