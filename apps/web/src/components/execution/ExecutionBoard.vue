@@ -21,13 +21,21 @@
           <span>待执行</span>
           <el-tag size="small" type="info">{{ store.ticketsByStatus.pending.length }}</el-tag>
         </div>
-        <div class="col-body">
+        <div
+          class="col-body"
+          data-status="pending"
+          @dragover="handleDragOver"
+          @drop="handleDrop"
+        >
           <TicketCard
             v-for="t in store.ticketsByStatus.pending"
             :key="t.id"
             :ticket="t"
             :is-active="store.activeTicket?.id === t.id"
+            :is-dragging="draggingTicketId === t.id"
             @click="selectTicket"
+            @dragstart="(e: DragEvent) => handleDragStart(e, t.id)"
+            @dragend="handleDragEnd"
           />
         </div>
       </div>
@@ -38,13 +46,21 @@
           <span>进行中</span>
           <el-tag size="small" type="warning">{{ store.ticketsByStatus.doing.length }}</el-tag>
         </div>
-        <div class="col-body">
+        <div
+          class="col-body"
+          data-status="doing"
+          @dragover="handleDragOver"
+          @drop="handleDrop"
+        >
           <TicketCard
             v-for="t in store.ticketsByStatus.doing"
             :key="t.id"
             :ticket="t"
             :is-active="store.activeTicket?.id === t.id"
+            :is-dragging="draggingTicketId === t.id"
             @click="selectTicket"
+            @dragstart="(e: DragEvent) => handleDragStart(e, t.id)"
+            @dragend="handleDragEnd"
           />
         </div>
       </div>
@@ -55,13 +71,21 @@
           <span>待审查</span>
           <el-tag size="small">{{ store.ticketsByStatus.review.length }}</el-tag>
         </div>
-        <div class="col-body">
+        <div
+          class="col-body"
+          data-status="review"
+          @dragover="handleDragOver"
+          @drop="handleDrop"
+        >
           <TicketCard
             v-for="t in store.ticketsByStatus.review"
             :key="t.id"
             :ticket="t"
             :is-active="store.activeTicket?.id === t.id"
+            :is-dragging="draggingTicketId === t.id"
             @click="selectTicket"
+            @dragstart="(e: DragEvent) => handleDragStart(e, t.id)"
+            @dragend="handleDragEnd"
           />
         </div>
       </div>
@@ -72,13 +96,21 @@
           <span>已完成</span>
           <el-tag size="small" type="success">{{ store.ticketsByStatus.done.length }}</el-tag>
         </div>
-        <div class="col-body">
+        <div
+          class="col-body"
+          data-status="done"
+          @dragover="handleDragOver"
+          @drop="handleDrop"
+        >
           <TicketCard
             v-for="t in store.ticketsByStatus.done"
             :key="t.id"
             :ticket="t"
             :is-active="store.activeTicket?.id === t.id"
+            :is-dragging="draggingTicketId === t.id"
             @click="selectTicket"
+            @dragstart="(e: DragEvent) => handleDragStart(e, t.id)"
+            @dragend="handleDragEnd"
           />
         </div>
       </div>
@@ -91,13 +123,21 @@
         <span>失败</span>
         <el-tag size="small" type="danger">{{ store.ticketsByStatus.failed.length }}</el-tag>
       </div>
-      <div class="failed-list">
+      <div
+        class="failed-list"
+        data-status="failed"
+        @dragover="handleDragOver"
+        @drop="handleDrop"
+      >
         <TicketCard
           v-for="t in store.ticketsByStatus.failed"
           :key="t.id"
           :ticket="t"
           :is-active="store.activeTicket?.id === t.id"
+          :is-dragging="draggingTicketId === t.id"
           @click="selectTicket"
+          @dragstart="(e: DragEvent) => handleDragStart(e, t.id)"
+          @dragend="handleDragEnd"
         />
       </div>
     </div>
@@ -105,14 +145,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useExecutionStore } from '@/stores/execution'
 import { demoPlan } from '@/utils/execution-demo'
 import TicketCard from './TicketCard.vue'
 import { ElMessage } from 'element-plus'
+import type { TicketStatus } from '@/types/execution'
 
 const store = useExecutionStore()
-
+const draggingTicketId = ref<string | null>(null)
 onMounted(() => {
   // 如果 localStorage 里有会话，默认选中第一个
   if (store.sessions.length && !store.currentSessionId) {
@@ -139,6 +180,53 @@ function exportLog() {
   a.click()
   URL.revokeObjectURL(url)
   ElMessage.success('日志已导出')
+}
+
+// ───────────────────────────────────────────────────────────────
+// Drag & Drop (native HTML5)
+// ───────────────────────────────────────────────────────────────
+
+function handleDragStart(e: DragEvent, ticketId: string) {
+  draggingTicketId.value = ticketId
+  e.dataTransfer?.setData('text/plain', ticketId)
+  e.dataTransfer!.effectAllowed = 'move'
+}
+
+function handleDragEnd() {
+  draggingTicketId.value = null
+}
+
+function handleDragOver(e: DragEvent) {
+  e.preventDefault()
+}
+
+function handleDrop(e: DragEvent) {
+  e.preventDefault()
+  const ticketId = e.dataTransfer?.getData('text/plain')
+  const columnEl = e.currentTarget as HTMLElement
+  const columnStatus = columnEl.dataset.status as TicketStatus | undefined
+  if (!ticketId || !columnStatus) return
+
+  // 计算在新列中的插入位置（排除被拖拽元素自身，避免同列移动时索引偏移）
+  const cards = Array.from(columnEl.querySelectorAll('.ticket-card')).filter(
+    el => el.querySelector('.ticket-id')?.textContent !== ticketId
+  )
+  const newIndex = computeDropIndex(e, cards)
+
+  store.reorderTicketWithinColumn(ticketId, newIndex, columnStatus)
+  draggingTicketId.value = null
+}
+
+function computeDropIndex(e: DragEvent, cards: Element[]): number {
+  const clientY = e.clientY
+  for (let i = 0; i < cards.length; i++) {
+    const rect = cards[i].getBoundingClientRect()
+    const midY = rect.top + rect.height / 2
+    if (clientY < midY) {
+      return i
+    }
+  }
+  return cards.length
 }
 </script>
 

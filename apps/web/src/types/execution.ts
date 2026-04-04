@@ -50,6 +50,8 @@ export interface ExecutionTicket {
   /** 执行开始/结束时间 */
   startedAt?: string
   completedAt?: string
+  /** 同列排序权重 */
+  order?: number
   createdAt: string
 }
 

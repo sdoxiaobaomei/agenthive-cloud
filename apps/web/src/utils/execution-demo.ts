@@ -17,6 +17,7 @@ export const demoPlan: ExecutionPlan = {
       role: 'frontend_dev',
       task: '新增 ExecutionBoard.vue 组件骨架',
       status: 'pending',
+      order: 0,
       context: {
         relevant_files: [
           'agenthive-cloud/apps/web/src/views/Workspace.vue',
@@ -31,6 +32,7 @@ export const demoPlan: ExecutionPlan = {
       role: 'frontend_dev',
       task: '新增 Execution 相关类型定义与 Store',
       status: 'pending',
+      order: 0,
       context: {
         relevant_files: [
           'agenthive-cloud/apps/web/src/types/execution.ts',
@@ -45,6 +47,7 @@ export const demoPlan: ExecutionPlan = {
       role: 'frontend_dev',
       task: '在 Workspace Overview 中嵌入 ExecutionBoard',
       status: 'pending',
+      order: 0,
       context: {
         relevant_files: [
           'agenthive-cloud/apps/web/src/views/Workspace.vue',
@@ -60,6 +63,7 @@ export const demoPlan: ExecutionPlan = {
       role: 'qa_engineer',
       task: '审查本次前端改动',
       status: 'pending',
+      order: 0,
       context: {
         constraints: ['运行 type-check', '运行 test:unit', '检查是否有 base URL 错误'],
         depends_on: ['T-002', 'T-003'],
