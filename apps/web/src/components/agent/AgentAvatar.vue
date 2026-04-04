@@ -4,7 +4,13 @@
     :style="{ width: size + 'px', height: size + 'px' }"
     :class="[`role-${role}`, `status-${status}`]"
   >
-    <div class="avatar-inner" :style="{ fontSize: iconSize + 'px' }">
+    <img
+      v-if="shibaSrc"
+      :src="shibaSrc"
+      alt="agent avatar"
+      class="avatar-img"
+    />
+    <div v-else class="avatar-inner" :style="{ fontSize: iconSize + 'px' }">
       <el-icon>
         <component :is="roleIcon" />
       </el-icon>
@@ -48,6 +54,17 @@ const iconSize = computed(() => Math.floor(props.size * 0.5))
 
 const showStatusRing = computed(() => props.status === 'working')
 
+const shibaSrc = computed(() => {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+  const map: Record<string, string> = {
+    tech_lead: `${base}/avatars/shiba_tl.png`,
+    frontend_dev: `${base}/avatars/shiba_fe.png`,
+    backend_dev: `${base}/avatars/shiba_be.png`,
+    qa_engineer: `${base}/avatars/shiba_qa.png`,
+  }
+  return map[props.role] || ''
+})
+
 const roleColor = computed(() => {
   const colorMap: Record<AgentRole, string> = {
     director: '#722ed1',
@@ -78,6 +95,13 @@ const roleColor = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
 .status-ring {

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAgentStore } from './agent'
 import { useTaskStore } from './task'
+import { useMessageHubStore } from './messageHub'
 import type { AgentStatus, Message, CodeFile, TerminalOutput, MessageType } from '@/types'
 
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
@@ -71,7 +72,20 @@ export const useWebSocketStore = defineStore('websocket', () => {
     message?: string
   }) => {
     const agentStore = useAgentStore()
+    const messageHub = useMessageHubStore()
+    
     agentStore.updateAgentStatus(data.agentId, data.newState, data.progress)
+    
+    // 发送消息到消息中心
+    const agent = agentStore.agents.find(a => a.id === data.agentId)
+    if (agent) {
+      messageHub.notifyAgent(
+        data.agentId,
+        agent.name,
+        data.message || `状态变更为: ${data.newState}`,
+        { status: data.newState, progress: String(data.progress || 0) }
+      )
+    }
   }
   
   // 模拟接收任务进度
@@ -87,6 +101,8 @@ export const useWebSocketStore = defineStore('websocket', () => {
     content: string
     language: string
   }) => {
+    const messageHub = useMessageHubStore()
+    
     const codeFile: CodeFile = {
       path: data.file,
       name: data.file.split('/').pop() || data.file,
@@ -100,6 +116,13 @@ export const useWebSocketStore = defineStore('websocket', () => {
       codeHistory.value = codeHistory.value.slice(0, 50)
     }
     saveCodeHistory()
+    
+    // 发送代码更新消息
+    messageHub.notifyCode(
+      data.file,
+      `Agent ${data.agentId} 更新了代码`,
+      { language: data.language, agentId: data.agentId }
+    )
   }
   
   // 模拟终端输出

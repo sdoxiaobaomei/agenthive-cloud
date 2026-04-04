@@ -24,6 +24,7 @@ export default defineConfig({
       '@': resolve(__dirname, 'src'),
     },
   },
+  base: '/app/',
   server: {
     host: '0.0.0.0',
     port: 5173,

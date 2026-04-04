@@ -1,6 +1,6 @@
 <template>
-  <div class="chat-view-page">
-    <div class="page-header">
+  <div class="chat-view-page" :class="{ embedded: props.embedded }">
+    <div v-if="!embedded" class="page-header">
       <div>
         <h1 class="page-title">对话</h1>
         <p class="page-subtitle">与 Agent 团队实时交流</p>
@@ -107,6 +107,12 @@ import AgentAvatar from '@/components/agent/AgentAvatar.vue'
 import { formatDateTime } from '@/utils/format'
 import type { Message } from '@/types'
 
+const props = withDefaults(defineProps<{
+  embedded?: boolean
+}>(), {
+  embedded: false,
+})
+
 const agentStore = useAgentStore()
 const wsStore = useWebSocketStore()
 
@@ -192,6 +198,16 @@ onMounted(() => {
   height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;
+}
+
+.chat-view-page.embedded {
+  padding: 0;
+  height: 100%;
+}
+
+.chat-view-page.embedded .chat-container {
+  border-radius: 0;
+  border: none;
 }
 
 .page-header {

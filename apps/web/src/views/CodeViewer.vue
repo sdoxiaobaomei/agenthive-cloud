@@ -1,6 +1,6 @@
 <template>
-  <div class="code-viewer-page">
-    <div class="page-header">
+  <div class="code-viewer-page" :class="{ embedded: props.embedded }">
+    <div v-if="!embedded" class="page-header">
       <div>
         <h1 class="page-title">代码查看</h1>
         <p class="page-subtitle">实时查看 Agent 编写的代码</p>
@@ -75,11 +75,28 @@
             <span class="tab-name">{{ file.name }}</span>
             <el-icon class="tab-close" @click.stop="closeFile(file)"><Close /></el-icon>
           </div>
+          <div class="tab-actions">
+            <el-tooltip content="代码对比" placement="bottom">
+              <el-button text size="small" @click="showDiff = !showDiff">
+                <el-icon><SwitchButton /></el-icon>
+              </el-button>
+            </el-tooltip>
+          </div>
         </div>
         
         <div class="editor-content">
+          <!-- 代码对比视图 -->
+          <CodeDiffViewer
+            v-if="currentFile && showDiff"
+            :title="`对比: ${currentFileName}`"
+            :old-code="originalCode"
+            :new-code="codeContent"
+            :old-file-name="currentFileName"
+            :new-file-name="currentFileName"
+          />
+          
           <CodeEditor
-            v-if="currentFile"
+            v-else-if="currentFile"
             ref="codeEditorRef"
             v-model="codeContent"
             :file-name="currentFileName"
@@ -127,9 +144,10 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { 
   Search, Document, Folder, Refresh, Download, 
-  Close, Timer 
+  Close, Timer, SwitchButton
 } from '@element-plus/icons-vue'
 import CodeEditor from '@/components/code/CodeEditor.vue'
+import CodeDiffViewer from '@/components/code/CodeDiffViewer.vue'
 import { useWebSocketStore } from '@/stores/websocket'
 import { ElMessage } from 'element-plus'
 import { formatDateTime } from '@/utils/format'
@@ -147,6 +165,12 @@ interface FileNode {
   lastModified?: string
 }
 
+const props = withDefaults(defineProps<{
+  embedded?: boolean
+}>(), {
+  embedded: false,
+})
+
 const wsStore = useWebSocketStore()
 const codeEditorRef = ref<InstanceType<typeof CodeEditor>>()
 
@@ -154,11 +178,13 @@ const codeEditorRef = ref<InstanceType<typeof CodeEditor>>()
 const searchQuery = ref('')
 const currentFile = ref('')
 const codeContent = ref('')
+const originalCode = ref('')  // 用于对比的原始代码
 const fileLoading = ref(false)
 const loading = ref(false)
 const files = ref<CodeFile[]>([])
 const openFiles = ref<CodeFile[]>([])
 const currentFileInfo = ref<CodeFile | null>(null)
+const showDiff = ref(false)   // 是否显示对比视图
 
 // 计算属性
 const currentFileName = computed(() => {
@@ -228,6 +254,8 @@ const selectFile = async (file: CodeFile) => {
   currentFile.value = file.path
   currentFileInfo.value = file
   codeContent.value = file.content || ''
+  originalCode.value = file.content || ''  // 保存原始代码用于对比
+  showDiff.value = false  // 切换文件时关闭对比视图
   
   // 添加到打开的文件列表
   if (!openFiles.value.find(f => f.path === file.path)) {
@@ -373,6 +401,27 @@ onMounted(() => {
   height: calc(100vh - 100px);
   display: flex;
   flex-direction: column;
+}
+
+.code-viewer-page.embedded {
+  padding: 0;
+  height: 100%;
+}
+
+.code-viewer-page.embedded .code-viewer-content {
+  gap: 0;
+}
+
+.code-viewer-page.embedded .file-sidebar {
+  border-radius: 0;
+  border-left: none;
+  border-top: none;
+  border-bottom: none;
+}
+
+.code-viewer-page.embedded .code-editor-wrapper {
+  border-radius: 0;
+  border: none;
 }
 
 .page-header {
@@ -534,6 +583,14 @@ onMounted(() => {
 
 .tab-close:hover {
   color: var(--el-color-danger);
+}
+
+.tab-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  background: #252526;
 }
 
 .editor-content {

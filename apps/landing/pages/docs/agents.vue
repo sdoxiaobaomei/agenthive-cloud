@@ -1,0 +1,28 @@
+<template>
+  <div class="pt-24 pb-20">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 class="text-4xl font-bold text-gray-900 mb-8">Agent 角色</h1>
+      
+      <div class="grid gap-6">
+        <div class="border rounded-lg p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-2">技术总监</h2>
+          <p class="text-gray-600">负责项目整体架构和任务分配</p>
+        </div>
+        <div class="border rounded-lg p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-2">前端开发</h2>
+          <p class="text-gray-600">负责 UI 组件和前端逻辑实现</p>
+        </div>
+        <div class="border rounded-lg p-6">
+          <h2 class="text-xl font-semibold text-gray-900 mb-2">后端开发</h2>
+          <p class="text-gray-600">负责 API 设计和数据库实现</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+useSeoMeta({
+  title: 'Agent 角色',
+})
+</script>
