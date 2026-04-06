@@ -8,14 +8,6 @@
     </div>
 
     <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-20">
-      <!-- 标签 -->
-      <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium mb-8" style="background: rgba(66,103,255,0.08); color: #4267ff; border: 1px solid rgba(66,103,255,0.15);">
-        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-        柴犬装修队已就绪
-        <span class="ml-1 opacity-60">·</span>
-        <span class="opacity-80">AI Agent 团队协作平台</span>
-      </div>
-
       <!-- 柴犬头像组 - 标题上方 -->
       <div class="flex items-center justify-center mb-8">
         <div class="flex items-center -space-x-3">
@@ -165,33 +157,6 @@
         </div>
       </div>
 
-      <!-- 统计数据 -->
-      <div class="grid grid-cols-3 gap-12 mt-20 max-w-2xl mx-auto">
-        <div class="text-center group">
-          <div class="text-4xl sm:text-5xl font-bold mb-2 group-hover:scale-110 transition-transform" style="color: var(--ah-primary);">10k+</div>
-          <div class="text-base" style="color: var(--ah-grey-500);">项目构建</div>
-        </div>
-        <div class="text-center group">
-          <div class="text-4xl sm:text-5xl font-bold mb-2 group-hover:scale-110 transition-transform" style="color: var(--ah-primary);">50k+</div>
-          <div class="text-base" style="color: var(--ah-grey-500);">代码生成</div>
-        </div>
-        <div class="text-center group">
-          <div class="text-4xl sm:text-5xl font-bold mb-2 group-hover:scale-110 transition-transform" style="color: var(--ah-primary);">99%</div>
-          <div class="text-base" style="color: var(--ah-grey-500);">成功率</div>
-        </div>
-      </div>
-
-      <!-- 底部信任标识 -->
-      <div class="mt-16 pt-8 border-t" style="border-color: var(--ah-beige-200);">
-        <p class="text-sm mb-6" style="color: var(--ah-grey-400);">支持的技术栈</p>
-        <div class="flex flex-wrap items-center justify-center gap-8">
-          <span class="text-lg font-medium" style="color: var(--ah-grey-600);">Vue.js</span>
-          <span class="text-lg font-medium" style="color: var(--ah-grey-600);">React</span>
-          <span class="text-lg font-medium" style="color: var(--ah-grey-600);">Node.js</span>
-          <span class="text-lg font-medium" style="color: var(--ah-grey-600);">Python</span>
-          <span class="text-lg font-medium" style="color: var(--ah-grey-600);">TypeScript</span>
-        </div>
-      </div>
     </div>
   </section>
 </template>
