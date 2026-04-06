@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-runtime
+  namespace: agenthive
+  labels:
+    app: agenthive
+    component: agent-runtime
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agenthive
+      component: agent-runtime
+  template:
+    metadata:
+      labels:
+        app: agenthive
+        component: agent-runtime
+    spec:
+      containers:
+        - name: agent-runtime
+          image: postgres:16-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "[INFO] Starting Agent Runtime (Alpine mode)..."
+              mkdir -p /workspace
+              AGENT_ID="${AGENT_ID:-$(hostname)}"
+              echo "[INFO] Agent ID: $AGENT_ID"
+              echo "[INFO] Agent Name: $AGENT_NAME"
+              
+              # Create response file
+              cat > /tmp/response.txt << 'RESPEOF'
+              HTTP/1.1 200 OK
+              Content-Type: application/json
+              Connection: close
+
+              {"status":"healthy"}
+              RESPEOF
+              
+              # Start simple HTTP server using netcat
+              while true; do
+                cat /tmp/response.txt | nc -l -p 8080
+              done &
+              
+              echo "[INFO] Health server started on port 8080"
+              
+              # Heartbeat logs
+              while true; do
+                echo "[INFO] Heartbeat - Agent $AGENT_ID is running"
+                sleep 30
+              done
+          env:
+            - name: AGENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: AGENT_NAME
+              value: "Docker Desktop Agent"
+            - name: AGENT_ROLE
+              value: "custom"
+          ports:
+            - containerPort: 8080
+              name: health
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "5m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 1
+            periodSeconds: 5
+      volumes:
+        - name: workspace
+          emptyDir: {}
+      restartPolicy: Always

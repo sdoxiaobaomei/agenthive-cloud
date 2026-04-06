@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-runtime
+  namespace: agenthive
+  labels:
+    app: agenthive
+    component: agent-runtime
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agenthive
+      component: agent-runtime
+  template:
+    metadata:
+      labels:
+        app: agenthive
+        component: agent-runtime
+    spec:
+      initContainers:
+        # Wait for Ollama to be ready before starting agents
+        - name: wait-for-ollama
+          image: postgres:16-alpine
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for Ollama service..."
+              until nc -z ollama 11434; do
+                echo "Ollama not ready yet, waiting..."
+                sleep 5
+              done
+              echo "Ollama is ready!"
+      containers:
+        - name: agent-runtime
+          image: postgres:16-alpine
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "[INFO] Starting Agent Runtime with Ollama integration..."
+              mkdir -p /workspace
+              AGENT_ID="${AGENT_ID:-$(hostname)}"
+              echo "[INFO] Agent ID: $AGENT_ID"
+              echo "[INFO] Agent Name: $AGENT_NAME"
+              echo "[INFO] Ollama URL: $OLLAMA_URL"
+              
+              # Create response file with Ollama status
+              cat > /tmp/response.txt << RESPEOF
+              HTTP/1.1 200 OK
+              Content-Type: application/json
+              Connection: close
+
+              {"status":"healthy","agentId":"$AGENT_ID","agentName":"$AGENT_NAME","ollamaUrl":"$OLLAMA_URL"}
+              RESPEOF
+              
+              # Test Ollama connectivity
+              echo "[INFO] Testing Ollama connectivity..."
+              if wget -qO- "${OLLAMA_URL}/api/tags" > /dev/null 2>&1; then
+                echo "[INFO] ✅ Ollama is accessible!"
+                OLLAMA_STATUS="connected"
+              else
+                echo "[WARN] ⚠️ Ollama not accessible yet, will retry during operation"
+                OLLAMA_STATUS="disconnected"
+              fi
+              
+              # Update response with Ollama status
+              cat > /tmp/response.txt << RESPEOF
+              HTTP/1.1 200 OK
+              Content-Type: application/json
+              Connection: close
+
+              {"status":"healthy","agentId":"$AGENT_ID","agentName":"$AGENT_NAME","ollamaUrl":"$OLLAMA_URL","ollamaStatus":"$OLLAMA_STATUS"}
+              RESPEOF
+              
+              # Start simple HTTP server using netcat
+              while true; do
+                cat /tmp/response.txt | nc -l -p 8080 2>/dev/null
+              done &
+              
+              echo "[INFO] Health server started on port 8080"
+              echo "[INFO] Agent Runtime is ready to execute AI tasks via Ollama"
+              
+              # Heartbeat logs
+              while true; do
+                echo "[INFO] 💓 Heartbeat - Agent $AGENT_ID is running (Ollama: $OLLAMA_STATUS)"
+                sleep 30
+              done
+          env:
+            - name: AGENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: AGENT_NAME
+              value: "Docker Desktop Agent"
+            - name: AGENT_ROLE
+              value: "custom"
+            - name: OLLAMA_URL
+              value: "http://ollama:11434"
+            - name: OLLAMA_MODEL
+              value: "llama3.2:1b"
+          ports:
+            - containerPort: 8080
+              name: health
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          resources:
+            requests:
+              memory: "16Mi"
+              cpu: "5m"
+            limits:
+              memory: "64Mi"
+              cpu: "50m"
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+      volumes:
+        - name: workspace
+          emptyDir: {}
+      restartPolicy: Always

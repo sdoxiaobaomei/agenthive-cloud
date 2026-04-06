@@ -1,0 +1,165 @@
+{
+  "description": "Agent Runtime V2 示例任务",
+  "tasks": [
+    {
+      "name": "读取文件",
+      "task": {
+        "id": "task-001",
+        "type": "file_read",
+        "title": "读取 package.json",
+        "description": "读取项目配置文件",
+        "input": {
+          "path": "/workspace/package.json"
+        },
+        "priority": "medium",
+        "status": "assigned",
+        "progress": 0,
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    },
+    {
+      "name": "搜索代码",
+      "task": {
+        "id": "task-002",
+        "type": "grep",
+        "title": "搜索函数定义",
+        "description": "查找所有函数定义",
+        "input": {
+          "pattern": "function\\s+\\w+",
+          "path": "/workspace/src",
+          "glob": "*.ts",
+          "maxResults": 20
+        },
+        "priority": "medium",
+        "status": "assigned",
+        "progress": 0,
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    },
+    {
+      "name": "执行 Shell 命令",
+      "task": {
+        "id": "task-003",
+        "type": "shell",
+        "title": "列出文件",
+        "description": "列出工作目录文件",
+        "input": {
+          "command": "ls -la",
+          "description": "List all files"
+        },
+        "priority": "low",
+        "status": "assigned",
+        "progress": 0,
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    },
+    {
+      "name": "Git 状态",
+      "task": {
+        "id": "task-004",
+        "type": "git",
+        "title": "查看 Git 状态",
+        "description": "获取当前 Git 仓库状态",
+        "input": {
+          "command": "status"
+        },
+        "priority": "low",
+        "status": "assigned",
+        "progress": 0,
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    },
+    {
+      "name": "写入文件",
+      "task": {
+        "id": "task-005",
+        "type": "file_write",
+        "title": "创建配置文件",
+        "description": "创建一个新的配置文件",
+        "input": {
+          "path": "/workspace/config.json",
+          "content": "{\n  \"name\": \"example\",\n  \"version\": \"1.0.0\"\n}",
+          "overwrite": false
+        },
+        "priority": "high",
+        "status": "assigned",
+        "progress": 0,
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    },
+    {
+      "name": "编辑文件",
+      "task": {
+        "id": "task-006",
+        "type": "file_edit",
+        "title": "更新版本号",
+        "description": "修改 package.json 中的版本号",
+        "input": {
+          "path": "/workspace/package.json",
+          "oldString": "\"version\": \"1.0.0\"",
+          "newString": "\"version\": \"2.0.0\"",
+          "replaceAll": false
+        },
+        "priority": "high",
+        "status": "assigned",
+        "progress": 0,
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    },
+    {
+      "name": "文件搜索",
+      "task": {
+        "id": "task-007",
+        "type": "glob",
+        "title": "查找 TypeScript 文件",
+        "description": "搜索所有 TypeScript 源文件",
+        "input": {
+          "pattern": "src/**/*.ts",
+          "ignore": ["**/*.test.ts", "**/*.spec.ts"],
+          "limit": 50
+        },
+        "priority": "medium",
+        "status": "assigned",
+        "progress": 0,
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    },
+    {
+      "name": "多工具组合",
+      "task": {
+        "id": "task-008",
+        "type": "multi_tool",
+        "title": "构建项目",
+        "description": "读取配置、安装依赖、构建项目",
+        "input": {
+          "calls": [
+            {
+              "tool": "file_read",
+              "input": {
+                "path": "/workspace/package.json"
+              }
+            },
+            {
+              "tool": "bash",
+              "input": {
+                "command": "npm install",
+                "description": "Install dependencies"
+              }
+            },
+            {
+              "tool": "bash",
+              "input": {
+                "command": "npm run build",
+                "description": "Build project"
+              }
+            }
+          ]
+        },
+        "priority": "critical",
+        "status": "assigned",
+        "progress": 0,
+        "createdAt": "2024-01-01T00:00:00Z"
+      }
+    }
+  ]
+}

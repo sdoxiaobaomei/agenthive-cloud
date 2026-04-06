@@ -1,0 +1,192 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - link "A AgentHive" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: A
+        - generic [ref=e10]: AgentHive
+      - navigation [ref=e11]:
+        - link "功能" [ref=e12] [cursor=pointer]:
+          - /url: /features
+        - link "定价" [ref=e13] [cursor=pointer]:
+          - /url: /pricing
+        - link "文档" [ref=e14] [cursor=pointer]:
+          - /url: /docs
+        - link "博客" [ref=e15] [cursor=pointer]:
+          - /url: /blog
+      - generic [ref=e16]:
+        - link "登录" [ref=e17] [cursor=pointer]:
+          - /url: /login
+        - link "开始使用" [ref=e18] [cursor=pointer]:
+          - /url: /login
+  - main [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e22]:
+        - generic [ref=e24]:
+          - img "agent avatar" [ref=e27]
+          - img "agent avatar" [ref=e30]
+          - img "agent avatar" [ref=e33]
+          - img "agent avatar" [ref=e36]
+        - heading "用 AI 构建产品，无需组建团队" [level=1] [ref=e37]
+        - paragraph [ref=e38]: 告诉 AgentHive 你的想法，让 AI 团队帮你规划、设计、开发并部署上线。
+        - generic [ref=e41]:
+          - textbox "描述你想要构建的产品，例如：帮我做一个会员管理系统..." [ref=e42]
+          - generic [ref=e43]:
+            - generic [ref=e45]: Shift + Enter 换行
+            - link [ref=e46] [cursor=pointer]:
+              - /url: /chat
+              - img [ref=e47]
+        - generic [ref=e49]:
+          - generic [ref=e52]: AI 团队在线
+          - generic [ref=e53]: ·
+          - generic [ref=e54]: 免费开始
+          - generic [ref=e55]: ·
+          - generic [ref=e56]: 无需信用卡
+      - generic [ref=e58]:
+        - generic [ref=e59]:
+          - heading "构建、发布、盈利，一站式完成" [level=2] [ref=e60]
+          - paragraph [ref=e61]: 从 idea 到上线产品，AgentHive 团队帮你全程搞定
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - generic [ref=e64]: 🎨
+            - heading "可视化 Studio" [level=3] [ref=e65]
+            - paragraph [ref=e66]: 拖拽式界面，实时预览 Agent 工作成果，像 Figma 一样管理你的 AI 团队。
+          - generic [ref=e67]:
+            - generic [ref=e68]: ⚡
+            - heading "极速上线" [level=3] [ref=e69]
+            - paragraph [ref=e70]: 几分钟内获得可运行的页面和功能，不再等待数周的开发周期。
+          - generic [ref=e71]:
+            - generic [ref=e72]: 🤖
+            - heading "多 Agent 协作" [level=3] [ref=e73]
+            - paragraph [ref=e74]: 架构师、前端、后端、QA 多角色并行工作，讨论后输出可靠代码。
+          - generic [ref=e75]:
+            - generic [ref=e76]: 🔌
+            - heading "即插即用后端" [level=3] [ref=e77]
+            - paragraph [ref=e78]: 内置用户认证、数据库、API 托管，无需手动配置基础设施。
+          - generic [ref=e79]:
+            - generic [ref=e80]: 🏁
+            - heading "竞速模式" [level=3] [ref=e81]
+            - paragraph [ref=e82]: 同一个任务交给多个模型竞赛，自动选择最佳实现方案。
+          - generic [ref=e83]:
+            - generic [ref=e84]: 🔒
+            - heading "完全可控" [level=3] [ref=e85]
+            - paragraph [ref=e86]: 随时导出代码、同步到 GitHub，产品所有权始终在你手中。
+      - generic [ref=e88]:
+        - generic [ref=e89]:
+          - heading "SOP 驱动的工作流程" [level=2] [ref=e90]
+          - paragraph [ref=e91]: 借鉴 MetaGPT 的多智能体协作模式，标准化开发流程
+        - generic [ref=e94]:
+          - generic [ref=e95]:
+            - generic [ref=e96]: "1"
+            - heading "需求分析" [level=3] [ref=e97]
+            - paragraph [ref=e98]: Director Agent 分析需求，产出 PRD 文档
+          - generic [ref=e99]:
+            - generic [ref=e100]: "2"
+            - heading "架构设计" [level=3] [ref=e101]
+            - paragraph [ref=e102]: Tech Lead Agent 设计系统架构和 API
+          - generic [ref=e103]:
+            - generic [ref=e104]: "3"
+            - heading "代码开发" [level=3] [ref=e105]
+            - paragraph [ref=e106]: Frontend/Backend Agent 并行开发
+          - generic [ref=e107]:
+            - generic [ref=e108]: "4"
+            - heading "测试评审" [level=3] [ref=e109]
+            - paragraph [ref=e110]: QA Agent 执行测试，确保代码质量
+      - generic [ref=e112]:
+        - generic [ref=e113]:
+          - heading "认识你的 AI 团队" [level=2] [ref=e114]
+          - paragraph [ref=e115]: 柴犬装修队，随时待命
+        - generic [ref=e116]:
+          - generic [ref=e117]:
+            - img [ref=e120]:
+              - generic [ref=e131]: ★
+            - heading "阿黄" [level=3] [ref=e132]
+            - paragraph [ref=e133]: Team Lead
+          - generic [ref=e134]:
+            - img [ref=e137]:
+              - generic [ref=e148]: UI
+            - heading "小花" [level=3] [ref=e149]
+            - paragraph [ref=e150]: Frontend Dev
+          - generic [ref=e151]:
+            - img [ref=e154]:
+              - generic [ref=e165]: DB
+            - heading "阿铁" [level=3] [ref=e166]
+            - paragraph [ref=e167]: Backend Dev
+          - generic [ref=e168]:
+            - img [ref=e171]:
+              - generic [ref=e181]: QA
+            - heading "阿镜" [level=3] [ref=e182]
+            - paragraph [ref=e183]: QA Engineer
+      - generic [ref=e185]:
+        - heading "准备好构建你的 AI 团队了吗？" [level=2] [ref=e186]
+        - paragraph [ref=e187]: 立即开始使用 AgentHive，体验 AI 驱动的软件开发
+        - generic [ref=e188]:
+          - link "免费开始" [ref=e189] [cursor=pointer]:
+            - /url: /chat
+          - link "进入 Studio" [ref=e190] [cursor=pointer]:
+            - /url: /studio
+  - contentinfo [ref=e191]:
+    - generic [ref=e192]:
+      - generic [ref=e193]:
+        - generic [ref=e194]:
+          - heading "产品" [level=4] [ref=e195]
+          - list [ref=e196]:
+            - listitem [ref=e197]:
+              - link "功能" [ref=e198] [cursor=pointer]:
+                - /url: /features
+            - listitem [ref=e199]:
+              - link "定价" [ref=e200] [cursor=pointer]:
+                - /url: /pricing
+            - listitem [ref=e201]:
+              - link "Studio" [ref=e202] [cursor=pointer]:
+                - /url: /studio
+            - listitem [ref=e203]:
+              - link "示例" [ref=e204] [cursor=pointer]:
+                - /url: /examples
+        - generic [ref=e205]:
+          - heading "资源" [level=4] [ref=e206]
+          - list [ref=e207]:
+            - listitem [ref=e208]:
+              - link "文档" [ref=e209] [cursor=pointer]:
+                - /url: /docs
+            - listitem [ref=e210]:
+              - link "教程" [ref=e211] [cursor=pointer]:
+                - /url: /tutorials
+            - listitem [ref=e212]:
+              - link "博客" [ref=e213] [cursor=pointer]:
+                - /url: /blog
+            - listitem [ref=e214]:
+              - link "更新日志" [ref=e215] [cursor=pointer]:
+                - /url: /changelog
+        - generic [ref=e216]:
+          - heading "公司" [level=4] [ref=e217]
+          - list [ref=e218]:
+            - listitem [ref=e219]:
+              - link "关于我们" [ref=e220] [cursor=pointer]:
+                - /url: /about
+            - listitem [ref=e221]:
+              - link "招聘" [ref=e222] [cursor=pointer]:
+                - /url: /careers
+            - listitem [ref=e223]:
+              - link "联系我们" [ref=e224] [cursor=pointer]:
+                - /url: /contact
+        - generic [ref=e225]:
+          - heading "法律" [level=4] [ref=e226]
+          - list [ref=e227]:
+            - listitem [ref=e228]:
+              - link "隐私政策" [ref=e229] [cursor=pointer]:
+                - /url: /privacy
+            - listitem [ref=e230]:
+              - link "服务条款" [ref=e231] [cursor=pointer]:
+                - /url: /terms
+      - generic [ref=e232]:
+        - generic [ref=e233]:
+          - generic [ref=e235]: A
+          - generic [ref=e236]: © 2026 AgentHive. All rights reserved.
+        - generic [ref=e237]:
+          - link [ref=e238] [cursor=pointer]:
+            - /url: "#"
+            - img [ref=e239]
+          - link [ref=e241] [cursor=pointer]:
+            - /url: "#"
+            - img [ref=e242]

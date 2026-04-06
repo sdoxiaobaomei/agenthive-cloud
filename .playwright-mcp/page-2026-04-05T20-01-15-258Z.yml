@@ -1,0 +1,106 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e6]:
+      - link "A AgentHive" [ref=e7] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: A
+        - generic [ref=e10]: AgentHive
+      - navigation [ref=e11]:
+        - link "功能" [ref=e12] [cursor=pointer]:
+          - /url: /features
+        - link "定价" [ref=e13] [cursor=pointer]:
+          - /url: /pricing
+        - link "文档" [ref=e14] [cursor=pointer]:
+          - /url: /docs
+        - link "博客" [ref=e15] [cursor=pointer]:
+          - /url: /blog
+      - generic [ref=e16]:
+        - link "登录" [ref=e17] [cursor=pointer]:
+          - /url: /login
+        - link "开始使用" [ref=e18] [cursor=pointer]:
+          - /url: /login
+  - main [ref=e19]:
+    - generic [ref=e20]:
+      - generic [ref=e23]:
+        - link "A AgentHive" [ref=e24] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e26]: A
+          - generic [ref=e27]: AgentHive
+        - button "登录" [ref=e29] [cursor=pointer]
+      - main [ref=e30]:
+        - generic [ref=e31]:
+          - generic [ref=e33]:
+            - generic [ref=e34]: 💬
+            - heading "开始与 AI 团队对话" [level=3] [ref=e35]
+            - paragraph [ref=e36]: 描述你的需求，让柴犬装修队帮你实现
+          - generic [ref=e37]:
+            - generic [ref=e38]:
+              - textbox "输入消息..." [ref=e39]
+              - button [disabled] [ref=e40]:
+                - img [ref=e42]
+            - generic [ref=e44]: 按 Enter 发送，Shift + Enter 换行
+  - contentinfo [ref=e45]:
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - heading "产品" [level=4] [ref=e49]
+          - list [ref=e50]:
+            - listitem [ref=e51]:
+              - link "功能" [ref=e52] [cursor=pointer]:
+                - /url: /features
+            - listitem [ref=e53]:
+              - link "定价" [ref=e54] [cursor=pointer]:
+                - /url: /pricing
+            - listitem [ref=e55]:
+              - link "Studio" [ref=e56] [cursor=pointer]:
+                - /url: /studio
+            - listitem [ref=e57]:
+              - link "示例" [ref=e58] [cursor=pointer]:
+                - /url: /examples
+        - generic [ref=e59]:
+          - heading "资源" [level=4] [ref=e60]
+          - list [ref=e61]:
+            - listitem [ref=e62]:
+              - link "文档" [ref=e63] [cursor=pointer]:
+                - /url: /docs
+            - listitem [ref=e64]:
+              - link "教程" [ref=e65] [cursor=pointer]:
+                - /url: /tutorials
+            - listitem [ref=e66]:
+              - link "博客" [ref=e67] [cursor=pointer]:
+                - /url: /blog
+            - listitem [ref=e68]:
+              - link "更新日志" [ref=e69] [cursor=pointer]:
+                - /url: /changelog
+        - generic [ref=e70]:
+          - heading "公司" [level=4] [ref=e71]
+          - list [ref=e72]:
+            - listitem [ref=e73]:
+              - link "关于我们" [ref=e74] [cursor=pointer]:
+                - /url: /about
+            - listitem [ref=e75]:
+              - link "招聘" [ref=e76] [cursor=pointer]:
+                - /url: /careers
+            - listitem [ref=e77]:
+              - link "联系我们" [ref=e78] [cursor=pointer]:
+                - /url: /contact
+        - generic [ref=e79]:
+          - heading "法律" [level=4] [ref=e80]
+          - list [ref=e81]:
+            - listitem [ref=e82]:
+              - link "隐私政策" [ref=e83] [cursor=pointer]:
+                - /url: /privacy
+            - listitem [ref=e84]:
+              - link "服务条款" [ref=e85] [cursor=pointer]:
+                - /url: /terms
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - generic [ref=e89]: A
+          - generic [ref=e90]: © 2026 AgentHive. All rights reserved.
+        - generic [ref=e91]:
+          - link [ref=e92] [cursor=pointer]:
+            - /url: "#"
+            - img [ref=e93]
+          - link [ref=e95] [cursor=pointer]:
+            - /url: "#"
+            - img [ref=e96]

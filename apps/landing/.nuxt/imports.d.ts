@@ -32,6 +32,15 @@ export { computedAsync, asyncComputed, computedEager, eagerComputed, computedInj
 export { definePageMeta } from '../node_modules/nuxt/dist/pages/runtime/composables';
 export { defineLazyHydrationComponent } from '#app/composables/lazy-hydration';
 export { useAgentTracker, AgentStatus, AgentLog, AgentTask } from '../composables/useAgentTracker';
+export { useAuth, User } from '../composables/useAuth';
 export { useCanvasBuilder, CanvasComponent } from '../composables/useCanvasBuilder';
+export { useClientOnly, useClientEffect, useBrowserStorage, useWindowEvent, useDocumentEvent, isClient, isServer } from '../composables/useClientOnly';
 export { presetSchemes, useColorSchemes, ColorScheme } from '../composables/useColorSchemes';
-export { useNuxtDevTools } from '../node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools';
+export { useVisitorSession, VisitorSession } from '../composables/useVisitorSession';
+export { TASK_STATUS, TASK_PRIORITIES, AGENT_STATUS, AGENT_ROLES, PRIORITY_COLORS, STATUS_COLORS, STORAGE_KEYS } from '../utils/constants';
+export { formatStatus, formatRelativeTime, truncate, formatDate, formatDateTime, formatRole, getStatusType } from '../utils/format';
+export { useAgentStore } from '../stores/agent';
+export { useMessageHubStore, Message } from '../stores/messageHub';
+export { useTaskStore, TaskStatus, CreateTaskInput, UpdateTaskInput } from '../stores/task';
+export { useWebSocketStore } from '../stores/websocket';
+export { defineStore, acceptHMRUpdate, usePinia, storeToRefs } from '../node_modules/@pinia/nuxt/dist/runtime/composables';

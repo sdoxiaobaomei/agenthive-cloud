@@ -1,19 +1,34 @@
 <template>
-  <div class="relative flex flex-col items-center text-center">
-    <!-- 步骤圆圈 -->
-    <div class="w-16 h-16 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-xl relative z-10 mb-4 shadow-lg shadow-primary-500/30">
-      {{ index + 1 }}
+  <div class="relative text-center">
+    <!-- Step Number Circle -->
+    <div 
+      class="w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4"
+      style="background-color: #4267ff20;"
+    >
+      <el-icon :size="28" style="color: #4267ff;">
+        <component :is="icon" />
+      </el-icon>
     </div>
     
-    <!-- 内容 -->
-    <h3 class="text-lg font-semibold text-gray-900 mb-2">{{ step.title }}</h3>
-    <p class="text-gray-600 text-sm">{{ step.description }}</p>
+    <!-- Step Number Badge -->
+    <div class="absolute top-0 right-1/3 w-6 h-6 rounded-full bg-[#4267ff] text-white text-sm font-semibold flex items-center justify-center">
+      {{ number }}
+    </div>
+    
+    <h3 class="text-lg font-semibold mb-2">{{ title }}</h3>
+    <p class="text-gray-600 text-sm">{{ description }}</p>
   </div>
 </template>
 
-<script setup>
-defineProps({
-  step: Object,
-  index: Number
-})
+<script setup lang="ts">
+import type { Component } from 'vue'
+
+interface Props {
+  number: number
+  icon: Component
+  title: string
+  description: string
+}
+
+defineProps<Props>()
 </script>

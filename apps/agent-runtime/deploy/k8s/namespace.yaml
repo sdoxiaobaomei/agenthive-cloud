@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agenthive
+  labels:
+    app: agenthive
+    component: agent-runtime

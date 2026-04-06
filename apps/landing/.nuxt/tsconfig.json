@@ -94,12 +94,6 @@
       "#server/*": [
         "../server/*"
       ],
-      "@agenthive/ui": [
-        "../../../../packages/ui/src/index"
-      ],
-      "@agenthive/types": [
-        "../../../../packages/types/src/index"
-      ],
       "#app": [
         "../node_modules/nuxt/dist/app"
       ],
@@ -119,7 +113,7 @@
         "./imports"
       ],
       "#app-manifest": [
-        "./manifest/meta/dev"
+        "../node_modules/mocked-exports/lib/proxy"
       ],
       "#components": [
         "./components"
@@ -140,7 +134,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "allowArbitraryExtensions": true,
-    "strict": true,
+    "strict": false,
     "noUncheckedIndexedAccess": false,
     "forceConsistentCasingInFileNames": true,
     "noImplicitOverride": true,
@@ -166,9 +160,7 @@
     "./nuxt.d.ts",
     "../node_modules/runtime",
     "../node_modules/dist/runtime",
-    "..",
-    "../../../../packages/ui/src/index",
-    "../../../../packages/types/src/index"
+    ".."
   ],
   "exclude": [
     "../dist",
@@ -176,6 +168,6 @@
     "../../../node_modules",
     "../node_modules/runtime/server",
     "../node_modules/dist/runtime/server",
-    "dev"
+    "../.output-new"
   ]
 }

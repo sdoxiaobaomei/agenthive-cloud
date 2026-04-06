@@ -1,0 +1,17 @@
+apiVersion: v2
+name: agent-runtime
+description: AgentHive Agent Runtime - Kubernetes-enabled agent execution environment
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - agent
+  - ai
+  - automation
+  - kubernetes
+home: https://github.com/agenthive/agent-runtime
+sources:
+  - https://github.com/agenthive/agent-runtime
+maintainers:
+  - name: AgentHive Team
+    email: team@agenthive.io
