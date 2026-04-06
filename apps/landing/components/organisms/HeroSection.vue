@@ -80,49 +80,57 @@
             <div class="flex items-center gap-2">
               <!-- 主题选择 -->
               <ClientRender>
-                <el-select 
-                  v-model="selectedTheme" 
-                  size="small" 
-                  class="w-20 theme-select"
-                  placeholder="主题"
-                >
-                  <template #prefix>
-                    <el-icon class="text-xs"><Brush /></el-icon>
-                  </template>
-                  <el-option
-                    v-for="theme in themes"
-                    :key="theme.value"
-                    :label="theme.label"
-                    :value="theme.value"
+                <div class="relative">
+                  <button 
+                    @click="showThemeDropdown = !showThemeDropdown"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all hover:border-[#4267ff]"
+                    :class="selectedTheme ? 'border-[#4267ff]/30 bg-[#4267ff]/5' : 'border-gray-200 bg-white'"
                   >
-                    <div class="flex items-center gap-2">
+                    <el-icon class="text-xs" :style="selectedTheme ? 'color: ' + currentTheme?.color : ''"><Brush /></el-icon>
+                    <span :style="selectedTheme ? 'color: ' + currentTheme?.color : 'color: var(--ah-grey-500)'">
+                      {{ selectedTheme ? currentTheme?.label : '主题' }}
+                    </span>
+                    <el-icon class="text-[10px] ml-0.5"><ArrowDown /></el-icon>
+                  </button>
+                  <!-- 下拉菜单 -->
+                  <div v-if="showThemeDropdown" class="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[100px]">
+                    <button
+                      v-for="theme in themes"
+                      :key="theme.value"
+                      @click="selectedTheme = theme.value; showThemeDropdown = false"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors text-left"
+                    >
                       <span class="w-2 h-2 rounded-full" :style="{ background: theme.color }"></span>
-                      <span class="text-xs">{{ theme.label }}</span>
-                    </div>
-                  </el-option>
-                </el-select>
+                      <span>{{ theme.label }}</span>
+                    </button>
+                  </div>
+                </div>
               </ClientRender>
               
               <!-- 模型选择 -->
               <ClientRender>
-                <el-select 
-                  v-model="selectedModel" 
-                  size="small" 
-                  class="w-32 model-select"
-                  placeholder="模型"
-                >
-                  <el-option
-                    v-for="model in models"
-                    :key="model.value"
-                    :label="model.label"
-                    :value="model.value"
+                <div class="relative">
+                  <button 
+                    @click="showModelDropdown = !showModelDropdown"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-xs transition-all hover:border-[#4267ff]"
                   >
-                    <div class="flex items-center gap-2">
+                    <el-icon class="text-xs text-[#4267ff]"><Cpu /></el-icon>
+                    <span style="color: var(--ah-grey-700);">{{ currentModel?.label }}</span>
+                    <el-icon class="text-[10px] ml-0.5 text-gray-400"><ArrowDown /></el-icon>
+                  </button>
+                  <!-- 下拉菜单 -->
+                  <div v-if="showModelDropdown" class="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[140px]">
+                    <button
+                      v-for="model in models"
+                      :key="model.value"
+                      @click="selectedModel = model.value; showModelDropdown = false"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors text-left"
+                    >
                       <el-icon class="text-xs"><Cpu /></el-icon>
-                      <span class="text-xs">{{ model.label }}</span>
-                    </div>
-                  </el-option>
-                </el-select>
+                      <span>{{ model.label }}</span>
+                    </button>
+                  </div>
+                </div>
               </ClientRender>
             </div>
 
@@ -191,7 +199,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Cpu, ArrowRight, Loading, Brush } from '@element-plus/icons-vue'
+import { Plus, Cpu, ArrowRight, Loading, Brush, ArrowDown } from '@element-plus/icons-vue'
 import { useAuth } from '~/composables/useAuth'
 
 const router = useRouter()
@@ -200,6 +208,8 @@ const { isAuthenticated } = useAuth()
 const inputText = ref('')
 const isFocused = ref(false)
 const isLoading = ref(false)
+const showThemeDropdown = ref(false)
+const showModelDropdown = ref(false)
 
 // 柴犬头像
 const avatars = [
@@ -220,6 +230,9 @@ const themes = [
 
 // 获取当前主题
 const currentTheme = computed(() => themes.find(t => t.value === selectedTheme.value))
+
+// 获取当前模型
+const currentModel = computed(() => models.find(m => m.value === selectedModel.value))
 
 // 模型选择
 const selectedModel = ref('claude-sonnet-4.6')
