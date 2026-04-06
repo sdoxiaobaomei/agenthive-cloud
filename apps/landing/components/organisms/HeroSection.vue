@@ -87,8 +87,7 @@
                   placeholder="主题"
                 >
                   <template #prefix>
-                    <el-icon v-if="!selectedTheme" class="text-xs" style="color: var(--ah-grey-400);"><Brush /></el-icon>
-                    <span v-else class="w-2 h-2 rounded-full" :style="{ background: currentTheme?.color }"></span>
+                    <el-icon class="text-xs"><Brush /></el-icon>
                   </template>
                   <el-option
                     v-for="theme in themes"
@@ -109,7 +108,8 @@
                 <el-select 
                   v-model="selectedModel" 
                   size="small" 
-                  class="w-28 model-select"
+                  class="w-32 model-select"
+                  placeholder="模型"
                 >
                   <el-option
                     v-for="model in models"
