@@ -55,19 +55,19 @@
 
       <!-- 聊天输入框 - 更大的多行文本区 -->
       <div class="max-w-4xl mx-auto">
-        <div class="relative p-6 rounded-3xl border-2 transition-all duration-300 shadow-xl"
+        <div class="relative p-5 rounded-[20px] border-2 transition-all duration-300 shadow-xl"
           :class="isFocused ? 'border-[#4267ff] shadow-2xl shadow-[#4267ff]/15' : 'border-[var(--ah-beige-300)] shadow-xl'"
           style="background: white;"
         >
           <!-- 文本输入区 -->
-          <div class="flex items-start gap-3 mb-3">
+          <div class="flex items-start gap-3 mb-2">
             <div class="flex-1">
               <textarea
                 v-model="inputText"
-                rows="5"
+                rows="4"
                 placeholder="帮我做一个任务管理系统，支持拖拽排序、标签分类和团队协作，风格要简洁现代。"
                 class="w-full resize-none outline-none text-base bg-transparent leading-relaxed"
-                style="color: var(--ah-text-primary); min-height: 120px;"
+                style="color: var(--ah-text-primary); min-height: 100px;"
                 @focus="isFocused = true"
                 @blur="isFocused = false"
                 @keydown.enter.ctrl.prevent="handleSubmit"
@@ -76,11 +76,14 @@
           </div>
 
           <!-- 底部工具栏：主题选择 + 模型选择 -->
-          <div class="flex items-center justify-between pt-3">
-            <div class="flex items-center gap-3">
+          <div class="flex items-center justify-between pt-2">
+            <div class="flex items-center gap-2">
               <!-- 主题选择 -->
               <ClientRender>
-                <el-select v-model="selectedTheme" placeholder="主题" size="small" class="w-24">
+                <el-select v-model="selectedTheme" size="small" class="w-20 theme-select">
+                  <template #prefix>
+                    <span class="w-2 h-2 rounded-full" :style="{ background: themes.find(t => t.value === selectedTheme)?.color }"></span>
+                  </template>
                   <el-option
                     v-for="theme in themes"
                     :key="theme.value"
@@ -88,8 +91,8 @@
                     :value="theme.value"
                   >
                     <div class="flex items-center gap-2">
-                      <span class="w-3 h-3 rounded-full" :style="{ background: theme.color }"></span>
-                      <span>{{ theme.label }}</span>
+                      <span class="w-2 h-2 rounded-full" :style="{ background: theme.color }"></span>
+                      <span class="text-xs">{{ theme.label }}</span>
                     </div>
                   </el-option>
                 </el-select>
@@ -97,7 +100,7 @@
               
               <!-- 模型选择 -->
               <ClientRender>
-                <el-select v-model="selectedModel" placeholder="模型" size="small" class="w-28">
+                <el-select v-model="selectedModel" size="small" class="w-24 model-select">
                   <el-option
                     v-for="model in models"
                     :key="model.value"
@@ -105,8 +108,8 @@
                     :value="model.value"
                   >
                     <div class="flex items-center gap-2">
-                      <el-icon><Cpu /></el-icon>
-                      <span>{{ model.label }}</span>
+                      <el-icon class="text-xs"><Cpu /></el-icon>
+                      <span class="text-xs">{{ model.label }}</span>
                     </div>
                   </el-option>
                 </el-select>
@@ -117,14 +120,14 @@
             <button
               @click="handleSubmit"
               :disabled="!inputText.trim() || isLoading"
-              class="flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium text-sm text-white transition-all duration-200"
+              class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-medium text-xs text-white transition-all duration-200"
               :class="inputText.trim() && !isLoading 
                 ? 'bg-gradient-to-r from-[#4267ff] to-[#5a7fff] hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5' 
                 : 'bg-gray-300 cursor-not-allowed'"
             >
-              <el-icon v-if="isLoading" class="animate-spin"><Loading /></el-icon>
+              <el-icon v-if="isLoading" class="animate-spin text-sm"><Loading /></el-icon>
               <span>免费开始</span>
-              <el-icon v-if="!isLoading"><ArrowRight /></el-icon>
+              <el-icon v-if="!isLoading" class="text-sm"><ArrowRight /></el-icon>
             </button>
           </div>
         </div>
@@ -248,5 +251,22 @@ async function handleSubmit() {
 /* 头像悬停效果 */
 .border-3 {
   border-width: 3px;
+}
+
+/* Element Plus Select 样式覆盖 */
+:deep(.theme-select .el-input__wrapper),
+:deep(.model-select .el-input__wrapper) {
+  border-radius: 10px;
+  padding: 0 8px;
+  min-height: 28px;
+}
+
+:deep(.theme-select .el-input__inner),
+:deep(.model-select .el-input__inner) {
+  font-size: 12px;
+}
+
+:deep(.theme-select .el-input__prefix) {
+  margin-right: 4px;
 }
 </style>
