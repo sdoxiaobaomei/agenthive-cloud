@@ -506,7 +506,7 @@ const tabs = [
 .preview-view {
   flex: 1;
   overflow: auto;
-  padding: 20px;
+  padding: 0;
   background: #f3f4f6;
 }
 

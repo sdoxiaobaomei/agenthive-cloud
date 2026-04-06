@@ -233,13 +233,13 @@ provide('currentProject', currentProject)
   z-index: 40;
 }
 
-/* Left Sidebar - Floating overlay */
+/* Left Sidebar - Floating overlay (full height) */
 .left-sidebar {
   position: fixed;
-  top: 64px; /* Below header */
+  top: 0;
   left: 0;
   width: 280px;
-  height: calc(100vh - 64px);
+  height: 100vh;
   background: #f9fafb;
   border-right: 1px solid #e5e7eb;
   display: flex;
