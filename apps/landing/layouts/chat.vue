@@ -7,7 +7,7 @@
       @click="toggleSidebar"
     ></div>
 
-    <!-- Left Sidebar - Projects List Only -->
+    <!-- Left Floating Sidebar - Projects Only -->
     <aside class="left-sidebar" :class="{ collapsed: isSidebarCollapsed }">
       <!-- Sidebar Header -->
       <div class="sidebar-header">
@@ -59,7 +59,7 @@
 
     <!-- Main Content Area -->
     <main class="main-content">
-      <!-- Top Bar - Unified Header Style -->
+      <!-- Top Bar -->
       <header class="top-bar">
         <!-- Left: Toggle Sidebar + Logo -->
         <div class="flex items-center gap-3">
@@ -72,7 +72,7 @@
           </NuxtLink>
         </div>
         
-        <!-- Center: Breadcrumb / Project Name -->
+        <!-- Center: Project Name -->
         <div class="breadcrumb">
           <span v-if="currentProject">{{ currentProject.name }}</span>
           <span v-else>Select a project</span>
@@ -91,7 +91,7 @@
         </div>
       </header>
 
-      <!-- Content -->
+      <!-- Page Content (with Chat sidebar + Center area) -->
       <div class="content-area">
         <slot />
       </div>
@@ -236,10 +236,10 @@ provide('currentProject', currentProject)
 /* Left Sidebar - Floating overlay */
 .left-sidebar {
   position: fixed;
-  top: 0;
+  top: 64px; /* Below header */
   left: 0;
   width: 280px;
-  height: 100vh;
+  height: calc(100vh - 64px);
   background: #f9fafb;
   border-right: 1px solid #e5e7eb;
   display: flex;
@@ -402,7 +402,7 @@ provide('currentProject', currentProject)
   text-overflow: ellipsis;
 }
 
-/* Main Content - Full width always */
+/* Main Content - Full width */
 .main-content {
   flex: 1;
   display: flex;
@@ -412,7 +412,7 @@ provide('currentProject', currentProject)
   width: 100%;
 }
 
-/* Top Bar - Unified Header Style */
+/* Top Bar */
 .top-bar {
   height: 64px;
   background: #ffffff;
@@ -424,7 +424,6 @@ provide('currentProject', currentProject)
   flex-shrink: 0;
 }
 
-/* Sidebar Toggle Button */
 .sidebar-toggle-btn {
   display: flex;
   align-items: center;
@@ -531,8 +530,8 @@ provide('currentProject', currentProject)
 /* Content Area */
 .content-area {
   flex: 1;
-  overflow: auto;
-  background: #fafafa;
+  overflow: hidden;
+  display: flex;
 }
 
 /* Dialog */
