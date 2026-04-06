@@ -3,19 +3,32 @@
     :class="isScrolled ? 'bg-white/90 backdrop-blur-md shadow-sm' : 'bg-transparent'"
   >
     <div class="flex items-center h-16">
-      <!-- 左侧: Logo (紧贴左边) -->
-      <NuxtLink to="/" class="flex items-center gap-2 flex-shrink-0 pl-4 sm:pl-6 lg:pl-8">
-        <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: #4267ff;">
-          <span class="text-white font-bold text-lg">A</span>
-        </div>
-        <span class="text-lg font-bold" style="font-family: 'IBM Plex Sans', sans-serif; color: var(--ah-text-primary);">
-          AgentHive
-        </span>
-      </NuxtLink>
+      <!-- 最左侧: 呼出 sidebar 的按钮（登录后且 mode === 'landing' 时显示） -->
+      <button
+        v-if="authenticated && mode === 'landing'"
+        class="flex-shrink-0 pl-4 sm:pl-6 lg:pl-8 pr-2 py-2 text-gray-600 hover:text-[#4267ff] transition-colors"
+        @click="$emit('toggle-sidebar')"
+        aria-label="打开侧边栏"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
 
-      <!-- 中间: 导航 (占据中间空间并居中) -->
-      <div class="flex-1 flex justify-center items-center">
-        <nav v-if="mode === 'landing'" class="hidden md:flex items-center gap-6">
+      <!-- 左侧: Logo + 导航（定价 + 更多） -->
+      <div class="flex items-center gap-4 flex-shrink-0" :class="authenticated && mode === 'landing' ? '' : 'pl-4 sm:pl-6 lg:pl-8'">
+        <!-- Logo -->
+        <NuxtLink to="/" class="flex items-center gap-2 flex-shrink-0">
+          <div class="w-8 h-8 rounded-lg flex items-center justify-center" style="background: #4267ff;">
+            <span class="text-white font-bold text-lg">A</span>
+          </div>
+          <span class="text-lg font-bold" style="font-family: 'IBM Plex Sans', sans-serif; color: var(--ah-text-primary);">
+            AgentHive
+          </span>
+        </NuxtLink>
+
+        <!-- 导航: 定价 + 更多（仅在 landing 模式下显示） -->
+        <nav v-if="mode === 'landing'" class="hidden md:flex items-center gap-4 ml-2">
           <!-- 定价: 直接显示 -->
           <NuxtLink to="/pricing" class="text-sm font-medium transition-colors hover:text-[#4267ff]" style="color: var(--ah-grey-500);">
             定价
@@ -45,6 +58,9 @@
           </SafeElementDropdown>
         </nav>
       </div>
+
+      <!-- 中间: 空（占位） -->
+      <div class="flex-1"></div>
 
       <!-- 右侧: 操作按钮 (紧贴右边) -->
       <div class="flex items-center gap-3 flex-shrink-0 pr-4 sm:pr-6 lg:pr-8">
@@ -107,8 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 
 withDefaults(defineProps<{
   mode?: 'landing' | 'app' | 'studio'
@@ -118,6 +133,7 @@ withDefaults(defineProps<{
 
 defineEmits<{
   login: []
+  'toggle-sidebar': []
 }>()
 
 const { isAuthenticated, user, userInitial, logout } = useAuth()
