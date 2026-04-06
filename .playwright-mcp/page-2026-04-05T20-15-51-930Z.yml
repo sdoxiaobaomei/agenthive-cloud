@@ -1,0 +1,67 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e7]: A
+        - generic [ref=e8]: AgentHive
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - generic [ref=e34]: 🐕
+          - generic [ref=e35]:
+            - heading "柴犬装修队" [level=3] [ref=e36]
+            - paragraph [ref=e37]: AI Agent 团队协作
+        - generic [ref=e38]:
+          - generic [ref=e39]: ⚡
+          - generic [ref=e40]:
+            - heading "自动化开发" [level=3] [ref=e41]
+            - paragraph [ref=e42]: MetaGPT SOP 流程
+        - generic [ref=e43]:
+          - generic [ref=e44]: 🔧
+          - generic [ref=e45]:
+            - heading "实时监控" [level=3] [ref=e46]
+            - paragraph [ref=e47]: 可视化 Studio 面板
+        - generic [ref=e48]:
+          - generic [ref=e49]: 🚀
+          - generic [ref=e50]:
+            - heading "一键部署" [level=3] [ref=e51]
+            - paragraph [ref=e52]: 自动构建发布上线
+      - generic [ref=e53]:
+        - link "返回首页" [ref=e54] [cursor=pointer]:
+          - /url: /
+        - link "帮助中心" [ref=e55] [cursor=pointer]:
+          - /url: /contact
+        - link "隐私政策" [ref=e56] [cursor=pointer]:
+          - /url: /privacy
+    - generic [ref=e58]:
+      - generic [ref=e59]:
+        - heading "登录 / 注册" [level=1] [ref=e60]
+        - paragraph [ref=e61]: 手机号一键登录，新用户自动注册
+      - generic [ref=e62]:
+        - button "验证码登录" [ref=e63] [cursor=pointer]
+        - button "密码登录" [ref=e64] [cursor=pointer]
+      - generic [ref=e65]:
+        - generic [ref=e66]: 手机号
+        - generic [ref=e70]:
+          - img [ref=e73]
+          - textbox "请输入手机号" [ref=e75]: "13800138000"
+        - generic [ref=e76]: 验证码
+        - generic [ref=e80]:
+          - img [ref=e83]
+          - textbox "请输入6位验证码" [ref=e86]: "123456"
+          - button "35s后重发" [disabled] [ref=e112]
+        - generic [ref=e89]:
+          - checkbox "我已阅读并同意 《服务协议》 和 《隐私政策》" [checked] [ref=e90] [cursor=pointer]
+          - generic [ref=e91] [cursor=pointer]:
+            - text: 我已阅读并同意
+            - link "《服务协议》" [ref=e92]:
+              - /url: /privacy
+            - text: 和
+            - link "《隐私政策》" [ref=e93]:
+              - /url: /privacy
+        - button "登录 / 注册" [ref=e96] [cursor=pointer]:
+          - generic [ref=e97]: 登录 / 注册
+      - generic [ref=e100]: 或
+      - button "访客模式浏览" [ref=e102] [cursor=pointer]
+  - alert [ref=e113]:
+    - img [ref=e115]
+    - paragraph [ref=e117]: 登录成功

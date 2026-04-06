@@ -1,0 +1,71 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - img [ref=e9]
+        - generic [ref=e12]: AI 助手
+      - generic [ref=e13]:
+        - button "全屏" [ref=e14] [cursor=pointer]:
+          - img [ref=e16]
+        - button "收起" [ref=e18] [cursor=pointer]:
+          - img [ref=e20]
+    - generic [ref=e23]:
+      - img [ref=e26]
+      - paragraph [ref=e29]: 有什么可以帮助你的？
+      - paragraph [ref=e30]: 描述你的需求，让我来协助你
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - textbox "输入消息..." [ref=e33]
+        - button [disabled] [ref=e34]:
+          - img [ref=e36]
+      - generic [ref=e38]:
+        - generic [ref=e39]: Enter 发送
+        - generic [ref=e40]: ·
+        - generic [ref=e41]: Shift + Enter 换行
+  - generic [ref=e42]:
+    - generic [ref=e43]:
+      - generic [ref=e44]:
+        - button "切换项目侧边栏" [ref=e45] [cursor=pointer]:
+          - img [ref=e47]
+        - link "A AgentHive" [ref=e49] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e51]: A
+          - generic [ref=e52]: AgentHive
+      - generic [ref=e54]:
+        - button "预览" [ref=e55] [cursor=pointer]:
+          - img [ref=e58]
+          - generic [ref=e60]: 预览
+        - button "代码" [ref=e61] [cursor=pointer]:
+          - img [ref=e64]
+          - generic [ref=e66]: 代码
+        - button "数据" [ref=e67] [cursor=pointer]:
+          - img [ref=e70]
+          - generic [ref=e72]: 数据
+        - button "设置" [ref=e73] [cursor=pointer]:
+          - img [ref=e76]
+          - generic [ref=e78]: 设置
+    - generic [ref=e87]:
+      - img [ref=e90]
+      - heading "应用预览" [level=3] [ref=e92]
+      - paragraph [ref=e93]: 从左侧选择一个项目开始，或创建新项目
+  - complementary [ref=e94]:
+    - generic [ref=e95]:
+      - generic [ref=e96]: 项目
+      - button [ref=e97] [cursor=pointer]:
+        - img [ref=e99]
+    - generic [ref=e101]:
+      - generic [ref=e102] [cursor=pointer]:
+        - img "个人博客" [ref=e104]
+        - generic [ref=e105]:
+          - generic [ref=e106]: 个人博客
+          - generic [ref=e107]: 2 天前
+      - generic [ref=e108] [cursor=pointer]:
+        - img "电商后台" [ref=e110]
+        - generic [ref=e111]:
+          - generic [ref=e112]: 电商后台
+          - generic [ref=e113]: 5 天前
+      - generic [ref=e114] [cursor=pointer]:
+        - img "数据分析平台" [ref=e116]
+        - generic [ref=e117]:
+          - generic [ref=e118]: 数据分析平台
+          - generic [ref=e119]: 3月30日

@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-runtime
+  namespace: agenthive
+  labels:
+    app: agenthive
+    component: agent-runtime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agenthive
+      component: agent-runtime
+  template:
+    metadata:
+      labels:
+        app: agenthive
+        component: agent-runtime
+    spec:
+      containers:
+        - name: agent-runtime
+          image: agenthive/agent-runtime:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: health
+          env:
+            - name: AGENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: AGENT_NAME
+              value: "K8s Agent"
+            - name: AGENT_ROLE
+              value: "custom"
+            - name: AGENT_CAPABILITIES
+              value: "shell,code_generation,code_review,test,build"
+          envFrom:
+            - configMapRef:
+                name: agent-runtime-config
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('http').get('http://localhost:8080/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: workspace
+          emptyDir: {}
+      restartPolicy: Always

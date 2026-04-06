@@ -1,0 +1,75 @@
+# Default values for agent-runtime
+
+replicaCount: 1
+
+image:
+  repository: agenthive/agent-runtime
+  pullPolicy: Always
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Agent Configuration
+agent:
+  name: "K8s Agent"
+  role: "custom"
+  capabilities:
+    - shell
+    - code_generation
+    - code_review
+    - test
+    - build
+  maxConcurrentTasks: 1
+  heartbeatInterval: 30000
+
+# Supervisor Configuration
+supervisor:
+  url: "ws://supervisor:3001"
+
+# Workspace
+workspace:
+  path: "/workspace"
+  size: "1Gi"
+  storageClass: ""

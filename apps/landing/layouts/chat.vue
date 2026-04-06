@@ -32,9 +32,20 @@
             <el-icon><Folder /></el-icon>
             <span v-if="!isSidebarCollapsed">My Projects</span>
           </div>
-          <el-icon v-if="!isSidebarCollapsed" class="expand-icon" :class="{ expanded: isProjectsExpanded }">
-            <ArrowRight />
-          </el-icon>
+          <div class="flex items-center gap-2">
+            <!-- View All Button -->
+            <button 
+              v-if="!isSidebarCollapsed"
+              class="view-all-btn"
+              @click.stop="showProjectSearchDialog = true"
+              title="View all projects"
+            >
+              <el-icon><Search /></el-icon>
+            </button>
+            <el-icon v-if="!isSidebarCollapsed" class="expand-icon" :class="{ expanded: isProjectsExpanded }">
+              <ArrowRight />
+            </el-icon>
+          </div>
         </div>
 
         <div v-show="isProjectsExpanded || isSidebarCollapsed" class="project-list">
@@ -42,7 +53,7 @@
             <div class="group-label">Recents</div>
           </div>
           <div
-            v-for="project in projects"
+            v-for="project in recentProjects"
             :key="project.id"
             class="project-item"
             :class="{ active: currentProject?.id === project.id }"
@@ -123,17 +134,74 @@
         <el-button type="primary" @click="addProject">Create</el-button>
       </template>
     </el-dialog>
+
+    <!-- Project Search Dialog -->
+    <el-dialog
+      v-model="showProjectSearchDialog"
+      title="All Projects"
+      width="600px"
+      :close-on-click-modal="true"
+      class="project-search-dialog"
+    >
+      <!-- Search Input -->
+      <div class="project-search-input-wrapper">
+        <el-icon class="search-icon"><Search /></el-icon>
+        <el-input
+          v-model="projectSearchQuery"
+          placeholder="Search projects..."
+          size="large"
+          clearable
+          class="project-search-input"
+        />
+      </div>
+
+      <!-- Project List -->
+      <div class="project-search-list">
+        <div
+          v-for="project in filteredProjects"
+          :key="project.id"
+          class="project-search-item"
+          :class="{ active: currentProject?.id === project.id }"
+          @click="selectProjectFromSearch(project)"
+        >
+          <div class="project-search-icon">
+            <el-icon><Folder /></el-icon>
+          </div>
+          <div class="project-search-info">
+            <div class="project-search-name">{{ project.name }}</div>
+            <div class="project-search-desc">{{ project.description }}</div>
+            <div class="project-search-date">{{ new Date(project.createdAt).toLocaleDateString() }}</div>
+          </div>
+          <el-icon v-if="currentProject?.id === project.id" class="project-search-check"><Check /></el-icon>
+        </div>
+        
+        <!-- Empty State -->
+        <div v-if="filteredProjects.length === 0" class="project-search-empty">
+          <el-icon :size="48"><Search /></el-icon>
+          <p>No projects found</p>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="project-search-footer">
+          <span class="project-count">{{ filteredProjects.length }} projects</span>
+          <el-button @click="showProjectSearchDialog = false">Close</el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, provide } from 'vue'
+import { ref, reactive, provide, computed } from 'vue'
 import { 
   Plus,
   Folder,
   ArrowRight,
   Upload,
-  Menu
+  Menu,
+  Search,
+  Check
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -188,6 +256,29 @@ const toggleProjectsExpanded = () => {
 // New project
 const showNewProjectDialog = ref(false)
 const newProject = reactive({ name: '', description: '' })
+
+// Project Search Dialog
+const showProjectSearchDialog = ref(false)
+const projectSearchQuery = ref('')
+
+// Recent projects (show only last 3)
+const recentProjects = computed(() => projects.slice(0, 3))
+
+// Filtered projects for search
+const filteredProjects = computed(() => {
+  if (!projectSearchQuery.value.trim()) return projects
+  const query = projectSearchQuery.value.toLowerCase()
+  return projects.filter(p => 
+    p.name.toLowerCase().includes(query) || 
+    p.description.toLowerCase().includes(query)
+  )
+})
+
+const selectProjectFromSearch = (project: Project) => {
+  selectProject(project)
+  showProjectSearchDialog.value = false
+  projectSearchQuery.value = ''
+}
 
 const addProject = () => {
   if (!newProject.name.trim()) {
@@ -567,5 +658,171 @@ provide('currentProject', currentProject)
 :deep(.project-dialog .el-button--primary:hover) {
   background: #4338ca;
   border-color: #4338ca;
+}
+
+/* View All Button */
+.view-all-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.view-all-btn:hover {
+  background: #f3f4f6;
+  color: #4f46e5;
+}
+
+/* Project Search Dialog */
+:deep(.project-search-dialog) {
+  border-radius: 16px;
+}
+
+:deep(.project-search-dialog .el-dialog__header) {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-right: 0;
+}
+
+:deep(.project-search-dialog .el-dialog__title) {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+:deep(.project-search-dialog .el-dialog__body) {
+  padding: 20px 24px;
+}
+
+.project-search-input-wrapper {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  font-size: 18px;
+  z-index: 1;
+}
+
+:deep(.project-search-input .el-input__inner) {
+  padding-left: 40px;
+  border-radius: 10px;
+  height: 44px;
+}
+
+.project-search-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.project-search-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-bottom: 4px;
+}
+
+.project-search-item:hover {
+  background: #f3f4f6;
+}
+
+.project-search-item.active {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.project-search-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  font-size: 20px;
+}
+
+.project-search-item:hover .project-search-icon {
+  background: #e5e7eb;
+  color: #4f46e5;
+}
+
+.project-search-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-search-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-search-desc {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-search-date {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.project-search-check {
+  color: #4f46e5;
+  font-size: 20px;
+}
+
+.project-search-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+}
+
+.project-search-empty p {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.project-search-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.project-count {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+:deep(.project-search-dialog .el-dialog__footer) {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
 }
 </style>

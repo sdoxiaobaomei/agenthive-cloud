@@ -6,6 +6,7 @@ type ComponentProps<T> = T extends new(...args: any) => { $props: infer P } ? No
 
 declare module 'nuxt/app' {
   interface NuxtLayouts {
+    chat: ComponentProps<typeof import("E:/Git/ai-digital-twin/agenthive-cloud/apps/landing/layouts/chat.vue").default>,
     default: ComponentProps<typeof import("E:/Git/ai-digital-twin/agenthive-cloud/apps/landing/layouts/default.vue").default>,
     studio: ComponentProps<typeof import("E:/Git/ai-digital-twin/agenthive-cloud/apps/landing/layouts/studio.vue").default>,
 }

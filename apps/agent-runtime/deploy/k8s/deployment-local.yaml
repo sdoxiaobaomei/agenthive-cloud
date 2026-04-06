@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-runtime
+  namespace: agenthive
+  labels:
+    app: agenthive
+    component: agent-runtime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agenthive
+      component: agent-runtime
+  template:
+    metadata:
+      labels:
+        app: agenthive
+        component: agent-runtime
+    spec:
+      containers:
+        - name: agent-runtime
+          image: kindest/node:v1.34.3
+          command: ["sh", "-c"]
+          args:
+            - |
+              # 安装 Node.js
+              apt-get update && apt-get install -y nodejs npm git 2>/dev/null || 
+              (apk add --no-cache nodejs npm git)
+              
+              # 创建工作目录
+              mkdir -p /app /workspace
+              cd /app
+              
+              # 创建简单的 Agent Runtime 模拟
+              cat > index.js << 'EOF'
+              const http = require('http');
+              const WebSocket = require('ws');
+              
+              const AGENT_ID = process.env.AGENT_ID || 'agent-local';
+              const AGENT_NAME = process.env.AGENT_NAME || 'Local Agent';
+              const AGENT_ROLE = process.env.AGENT_ROLE || 'custom';
+              
+              console.log(`[${new Date().toISOString()}] [INFO] Agent Runtime starting...`);
+              console.log(`[${new Date().toISOString()}] [INFO] Agent ID: ${AGENT_ID}`);
+              console.log(`[${new Date().toISOString()}] [INFO] Agent Name: ${AGENT_NAME}`);
+              console.log(`[${new Date().toISOString()}] [INFO] Agent Role: ${AGENT_ROLE}`);
+              
+              // 健康检查服务器
+              const server = http.createServer((req, res) => {
+                if (req.url === '/health') {
+                  res.writeHead(200, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ 
+                    status: 'healthy', 
+                    agentId: AGENT_ID,
+                    timestamp: new Date().toISOString()
+                  }));
+                } else {
+                  res.writeHead(404);
+                  res.end('Not Found');
+                }
+              });
+              
+              server.listen(8080, () => {
+                console.log(`[${new Date().toISOString()}] [INFO] Health check server listening on port 8080`);
+              });
+              
+              // 模拟心跳
+              setInterval(() => {
+                console.log(`[${new Date().toISOString()}] [INFO] Heartbeat - Agent ${AGENT_ID} is alive`);
+              }, 30000);
+              
+              // 保持运行
+              console.log(`[${new Date().toISOString()}] [INFO] Agent Runtime started successfully`);
+              
+              // 优雅关闭
+              process.on('SIGTERM', () => {
+                console.log(`[${new Date().toISOString()}] [INFO] Received SIGTERM, shutting down...`);
+                server.close(() => {
+                  process.exit(0);
+                });
+              });
+              
+              process.on('SIGINT', () => {
+                console.log(`[${new Date().toISOString()}] [INFO] Received SIGINT, shutting down...`);
+                server.close(() => {
+                  process.exit(0);
+                });
+              });
+              EOF
+              
+              # 安装 ws 模块
+              npm init -y
+              npm install ws
+              
+              # 启动
+              node index.js
+          env:
+            - name: AGENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: AGENT_NAME
+              value: "Docker Desktop Agent"
+            - name: AGENT_ROLE
+              value: "custom"
+            - name: NODE_ENV
+              value: "production"
+          ports:
+            - containerPort: 8080
+              name: health
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: workspace
+          emptyDir: {}
+      restartPolicy: Always

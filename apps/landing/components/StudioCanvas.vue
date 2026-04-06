@@ -1,6 +1,6 @@
 <template>
   <div class="relative rounded-2xl overflow-hidden border-2 border-dashed transition-colors"
-    :class="isDragging ? 'border-primary-500 bg-primary-50/30' : 'border-gray-200 bg-white'"
+    :class="builder.isDragging.value ? 'border-primary-500 bg-primary-50/30' : 'border-gray-200 bg-white'"
   >
     <canvas
       ref="canvasRef"
@@ -47,10 +47,13 @@
 import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useCanvasBuilder } from '~/composables/useCanvasBuilder'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   width: number
   height: number
-}>()
+}>(), {
+  width: 800,
+  height: 600,
+})
 
 const emit = defineEmits<{
   select: [component: ReturnType<typeof useCanvasBuilder>['selectedComponent']['value']]
@@ -59,6 +62,7 @@ const emit = defineEmits<{
 
 const canvasRef = ref<HTMLCanvasElement>()
 const builder = useCanvasBuilder()
+const { isDragging } = builder
 
 const tools = [
   { type: 'rect' as const, icon: '▭', label: '矩形' },

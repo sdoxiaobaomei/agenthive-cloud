@@ -1,14 +1,26 @@
+// 认证路由
 import { Router } from 'express'
-import { visitorMiddleware } from '../middleware/visitor.js'
+import {
+  login,
+  loginBySms,
+  register,
+  logout,
+  refreshToken,
+  getCurrentUser,
+  sendSmsCode,
+} from '../controllers/auth.js'
 
 const router = Router()
 
-// Public health check
-router.get('/health', (_req, res) => res.json({ ok: true }))
+// 短信登录相关
+router.post('/sms/send', sendSmsCode)
+router.post('/login/sms', loginBySms)
 
-// Visitor-protected demo endpoints
-router.get('/visitor-status', visitorMiddleware, (req, res) => {
-  res.json({ visitorId: req.visitorId, mode: 'visitor' })
-})
+// 传统登录
+router.post('/login', login)
+router.post('/register', register)
+router.post('/logout', logout)
+router.post('/refresh', refreshToken)
+router.get('/me', getCurrentUser)
 
 export default router

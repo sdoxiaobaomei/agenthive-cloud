@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-runtime
+  namespace: agenthive
+  labels:
+    app: agenthive
+    component: agent-runtime
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agenthive
+      component: agent-runtime
+  template:
+    metadata:
+      labels:
+        app: agenthive
+        component: agent-runtime
+    spec:
+      containers:
+        - name: agent-runtime
+          image: node:18-alpine
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "[$(date -Iseconds)] [INFO] Starting Agent Runtime..."
+              echo "[$(date -Iseconds)] [INFO] Agent ID: $AGENT_ID"
+              echo "[$(date -Iseconds)] [INFO] Agent Name: $AGENT_NAME"
+              echo "[$(date -Iseconds)] [INFO] Agent Role: $AGENT_ROLE"
+              
+              # 创建模拟的 Agent Runtime
+              mkdir -p /workspace
+              
+              # 启动健康检查服务器
+              node -e "
+              const http = require('http');
+              const os = require('os');
+              
+              const AGENT_ID = process.env.AGENT_ID || 'agent-unknown';
+              const AGENT_NAME = process.env.AGENT_NAME || 'Unknown Agent';
+              
+              const server = http.createServer((req, res) => {
+                if (req.url === '/health') {
+                  const memUsage = process.memoryUsage();
+                  res.writeHead(200, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ 
+                    status: 'healthy',
+                    agentId: AGENT_ID,
+                    agentName: AGENT_NAME,
+                    uptime: process.uptime(),
+                    memory: {
+                      used: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB',
+                      total: Math.round(memUsage.heapTotal / 1024 / 1024) + 'MB'
+                    },
+                    timestamp: new Date().toISOString()
+                  }));
+                } else {
+                  res.writeHead(404);
+                  res.end('Not Found');
+                }
+              });
+              
+              server.listen(8080, () => {
+                console.log('[INFO] Health check server listening on port 8080');
+              });
+              
+              // Heartbeat log
+              setInterval(() => {
+                console.log('[INFO] 💓 Heartbeat - Agent ' + AGENT_ID + ' is running');
+              }, 30000);
+              
+              console.log('[INFO] ✅ Agent Runtime started successfully');
+              console.log('[INFO] 📝 Ready to accept tasks');
+              
+              // Keep alive
+              setInterval(() => {}, 1000);
+              "
+          env:
+            - name: AGENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: AGENT_NAME
+              value: "Docker Desktop Agent"
+            - name: AGENT_ROLE
+              value: "custom"
+            - name: NODE_ENV
+              value: "production"
+          ports:
+            - containerPort: 8080
+              name: health
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 5
+      volumes:
+        - name: workspace
+          emptyDir: {}
+      restartPolicy: Always

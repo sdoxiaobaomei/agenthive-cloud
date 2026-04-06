@@ -107,12 +107,6 @@
       "#internal/nuxt/paths": [
         "../node_modules/@nuxt/nitro-server/dist/runtime/utils/paths"
       ],
-      "@agenthive/ui": [
-        "../../packages/ui/src/index.ts"
-      ],
-      "@agenthive/types": [
-        "../../packages/types/src/index.ts"
-      ],
       "#unhead/composables": [
         "../node_modules/nuxt/dist/head/runtime/composables/v3"
       ]
@@ -140,7 +134,7 @@
     "../node_modules/nuxt/node_modules",
     "../node_modules/@nuxtjs/tailwindcss/node_modules",
     "../node_modules/@vueuse/nuxt/node_modules",
-    "../node_modules/@nuxt/devtools/node_modules",
+    "../node_modules/@pinia/nuxt/node_modules",
     "../node_modules/@nuxt/telemetry/node_modules",
     "../dist"
   ]

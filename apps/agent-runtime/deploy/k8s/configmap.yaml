@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-runtime-config
+  namespace: agenthive
+data:
+  SUPERVISOR_URL: "ws://supervisor:3001"
+  WORKSPACE_PATH: "/workspace"
+  MAX_CONCURRENT_TASKS: "1"
+  HEARTBEAT_INTERVAL: "30000"

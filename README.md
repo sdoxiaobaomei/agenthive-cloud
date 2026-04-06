@@ -12,7 +12,8 @@
 │  ├─ Chat View       ├─ Task Scheduler    ├─ Director        │
 │  ├─ Agent Panel     ├─ State Manager     ├─ Backend Dev     │
 │  ├─ Sprint Board    ├─ Event Bus         ├─ Frontend Dev    │
-│  └─ Code Viewer     └─ WebSocket Hub     └─ ...             │
+│  └─ Code Viewer     └─ WebSocket Hub     ├─ QA Engineer     │
+│                     └─ REST API          └─ Custom Agents   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -21,9 +22,10 @@
 ```
 agenthive-cloud/
 ├── apps/                    # 应用代码
+│   ├── api/                 # REST API Server (Node.js)
 │   ├── web/                 # Vue3 Web UI
-│   ├── supervisor/          # Agent管理服务 (Go)
-│   └── agent-runtime/       # Agent运行时 (Go)
+│   ├── landing/             # Nuxt3 Landing Page
+│   └── agent-runtime/       # Agent运行时 (Node.js + K8s)
 │
 ├── deploy/                  # K8s部署
 │   ├── helm/               # Helm charts
@@ -113,10 +115,11 @@ make docker-build    # 构建镜像
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| Web UI | 🚧 WIP | 基于现有对话页面改造 |
-| Supervisor | 🚧 WIP | 核心调度服务 |
-| Agent Runtime | 🚧 WIP | Agent Pod运行时 |
-| K8s部署 | 📋 Planned | Helm charts |
+| API Server | ✅ Done | REST API + 单元测试 |
+| Web UI | ✅ Done | Vue3 + Element Plus |
+| Landing | ✅ Done | Nuxt3 Landing Page |
+| Agent Runtime | ✅ Done | K8s-enabled Agent runtime |
+| K8s部署 | ✅ Done | Helm charts + HPA |
 | CI/CD | 📋 Planned | GitHub Actions |
 
 ## 贡献指南
