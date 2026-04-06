@@ -1,4 +1,0 @@
-import{h as a,e as c,s as m,f as v,i as p,g as y,p as g}from"./CO4O9AQZ.js";import{c as h}from"./BsJ7Xlub.js";async function b(e){const t=await e(),r=t.default||t;return $(r)}const d=new WeakMap;function $(e){if(d.has(e))return d.get(e);const t={...e};return t.render?t.render=(r,o,u,n,l,i)=>n.mounted$??r.mounted$?a(e.render?.bind(r)(r,o,u,n,l,i)):a("div"):t.template&&=`
-      <template v-if="mounted$">${e.template}</template>
-      <template v-else><div></div></template>
-    `,t.setup=(r,o)=>{const u=c(),n=m(u.isHydrating===!1);g(h,!0);const l=y();l&&(l._nuxtClientOnly=!0),v(()=>{n.value=!0});const i=e.setup?.(r,o)||{};return p(i)?Promise.resolve(i).then(s=>typeof s!="function"?(s||={},s.mounted$=n,s):(...f)=>n.value||!u.isHydrating?a(s(...f)):a("div")):typeof i=="function"?(...s)=>n.value||!u.isHydrating?a(i(...s)):a("div"):Object.assign(i,{mounted$:n})},d.set(e,t),t}export{b as createClientPage};

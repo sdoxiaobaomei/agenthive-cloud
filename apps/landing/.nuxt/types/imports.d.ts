@@ -115,7 +115,6 @@ declare global {
   const preloadPayload: typeof import('../../node_modules/nuxt/dist/app/composables/payload').preloadPayload
   const preloadRouteComponents: typeof import('../../node_modules/nuxt/dist/app/composables/preload').preloadRouteComponents
   const prerenderRoutes: typeof import('../../node_modules/nuxt/dist/app/composables/ssr').prerenderRoutes
-  const presetSchemes: typeof import('../../composables/useColorSchemes').presetSchemes
   const provide: typeof import('vue').provide
   const provideLocal: typeof import('../../node_modules/@vueuse/core').provideLocal
   const proxyRefs: typeof import('vue').proxyRefs
@@ -170,8 +169,6 @@ declare global {
   const until: typeof import('../../node_modules/@vueuse/core').until
   const updateAppConfig: typeof import('../../node_modules/nuxt/dist/app/config').updateAppConfig
   const useActiveElement: typeof import('../../node_modules/@vueuse/core').useActiveElement
-  const useAgentStore: typeof import('../../stores/agent').useAgentStore
-  const useAgentTracker: typeof import('../../composables/useAgentTracker').useAgentTracker
   const useAnimate: typeof import('../../node_modules/@vueuse/core').useAnimate
   const useAppConfig: typeof import('../../node_modules/nuxt/dist/app/config').useAppConfig
   const useArrayDifference: typeof import('../../node_modules/@vueuse/core').useArrayDifference
@@ -199,14 +196,12 @@ declare global {
   const useBrowserLocation: typeof import('../../node_modules/@vueuse/core').useBrowserLocation
   const useBrowserStorage: typeof import('../../composables/useClientOnly').useBrowserStorage
   const useCached: typeof import('../../node_modules/@vueuse/core').useCached
-  const useCanvasBuilder: typeof import('../../composables/useCanvasBuilder').useCanvasBuilder
   const useClientEffect: typeof import('../../composables/useClientOnly').useClientEffect
   const useClientOnly: typeof import('../../composables/useClientOnly').useClientOnly
   const useClipboard: typeof import('../../node_modules/@vueuse/core').useClipboard
   const useClipboardItems: typeof import('../../node_modules/@vueuse/core').useClipboardItems
   const useCloned: typeof import('../../node_modules/@vueuse/core').useCloned
   const useColorMode: typeof import('../../node_modules/@vueuse/core').useColorMode
-  const useColorSchemes: typeof import('../../composables/useColorSchemes').useColorSchemes
   const useConfirmDialog: typeof import('../../node_modules/@vueuse/core').useConfirmDialog
   const useCookie: typeof import('../../node_modules/nuxt/dist/app/composables/cookie').useCookie
   const useCounter: typeof import('../../node_modules/@vueuse/core').useCounter
@@ -271,7 +266,6 @@ declare global {
   const useMediaQuery: typeof import('../../node_modules/@vueuse/core').useMediaQuery
   const useMemoize: typeof import('../../node_modules/@vueuse/core').useMemoize
   const useMemory: typeof import('../../node_modules/@vueuse/core').useMemory
-  const useMessageHubStore: typeof import('../../stores/messageHub').useMessageHubStore
   const useModel: typeof import('vue').useModel
   const useMounted: typeof import('../../node_modules/@vueuse/core').useMounted
   const useMouse: typeof import('../../node_modules/@vueuse/core').useMouse
@@ -368,7 +362,6 @@ declare global {
   const useStyleTag: typeof import('../../node_modules/@vueuse/core').useStyleTag
   const useSupported: typeof import('../../node_modules/@vueuse/core').useSupported
   const useSwipe: typeof import('../../node_modules/@vueuse/core').useSwipe
-  const useTaskStore: typeof import('../../stores/task').useTaskStore
   const useTemplateRef: typeof import('vue').useTemplateRef
   const useTemplateRefsList: typeof import('../../node_modules/@vueuse/core').useTemplateRefsList
   const useTextDirection: typeof import('../../node_modules/@vueuse/core').useTextDirection
@@ -393,11 +386,9 @@ declare global {
   const useVModels: typeof import('../../node_modules/@vueuse/core').useVModels
   const useVibrate: typeof import('../../node_modules/@vueuse/core').useVibrate
   const useVirtualList: typeof import('../../node_modules/@vueuse/core').useVirtualList
-  const useVisitorSession: typeof import('../../composables/useVisitorSession').useVisitorSession
   const useWakeLock: typeof import('../../node_modules/@vueuse/core').useWakeLock
   const useWebNotification: typeof import('../../node_modules/@vueuse/core').useWebNotification
   const useWebSocket: typeof import('../../node_modules/@vueuse/core').useWebSocket
-  const useWebSocketStore: typeof import('../../stores/websocket').useWebSocketStore
   const useWebWorker: typeof import('../../node_modules/@vueuse/core').useWebWorker
   const useWebWorkerFn: typeof import('../../node_modules/@vueuse/core').useWebWorkerFn
   const useWindowEvent: typeof import('../../composables/useClientOnly').useWindowEvent
@@ -433,26 +424,8 @@ declare global {
   export type { Component, ComponentPublicInstance, ComputedRef, DirectiveBinding, ExtractDefaultPropTypes, ExtractPropTypes, ExtractPublicPropTypes, InjectionKey, PropType, Ref, MaybeRef, MaybeRefOrGetter, VNode, WritableComputedRef } from 'vue'
   import('vue')
   // @ts-ignore
-  export type { AgentStatus, AgentLog, AgentTask } from '../../composables/useAgentTracker'
-  import('../../composables/useAgentTracker')
-  // @ts-ignore
   export type { User } from '../../composables/useAuth'
   import('../../composables/useAuth')
-  // @ts-ignore
-  export type { CanvasComponent } from '../../composables/useCanvasBuilder'
-  import('../../composables/useCanvasBuilder')
-  // @ts-ignore
-  export type { ColorScheme } from '../../composables/useColorSchemes'
-  import('../../composables/useColorSchemes')
-  // @ts-ignore
-  export type { VisitorSession } from '../../composables/useVisitorSession'
-  import('../../composables/useVisitorSession')
-  // @ts-ignore
-  export type { Message } from '../../stores/messageHub'
-  import('../../stores/messageHub')
-  // @ts-ignore
-  export type { TaskStatus, CreateTaskInput, UpdateTaskInput } from '../../stores/task'
-  import('../../stores/task')
 }
 // for vue template auto import
 import { UnwrapRef } from 'vue'
@@ -572,7 +545,6 @@ declare module 'vue' {
     readonly preloadPayload: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/payload')['preloadPayload']>
     readonly preloadRouteComponents: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/preload')['preloadRouteComponents']>
     readonly prerenderRoutes: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/ssr')['prerenderRoutes']>
-    readonly presetSchemes: UnwrapRef<typeof import('../../composables/useColorSchemes')['presetSchemes']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideLocal: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['provideLocal']>
     readonly proxyRefs: UnwrapRef<typeof import('vue')['proxyRefs']>
@@ -627,8 +599,6 @@ declare module 'vue' {
     readonly until: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['until']>
     readonly updateAppConfig: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/config')['updateAppConfig']>
     readonly useActiveElement: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useActiveElement']>
-    readonly useAgentStore: UnwrapRef<typeof import('../../stores/agent')['useAgentStore']>
-    readonly useAgentTracker: UnwrapRef<typeof import('../../composables/useAgentTracker')['useAgentTracker']>
     readonly useAnimate: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useAnimate']>
     readonly useAppConfig: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/config')['useAppConfig']>
     readonly useArrayDifference: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useArrayDifference']>
@@ -656,14 +626,12 @@ declare module 'vue' {
     readonly useBrowserLocation: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useBrowserLocation']>
     readonly useBrowserStorage: UnwrapRef<typeof import('../../composables/useClientOnly')['useBrowserStorage']>
     readonly useCached: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useCached']>
-    readonly useCanvasBuilder: UnwrapRef<typeof import('../../composables/useCanvasBuilder')['useCanvasBuilder']>
     readonly useClientEffect: UnwrapRef<typeof import('../../composables/useClientOnly')['useClientEffect']>
     readonly useClientOnly: UnwrapRef<typeof import('../../composables/useClientOnly')['useClientOnly']>
     readonly useClipboard: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useClipboard']>
     readonly useClipboardItems: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useClipboardItems']>
     readonly useCloned: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useCloned']>
     readonly useColorMode: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useColorMode']>
-    readonly useColorSchemes: UnwrapRef<typeof import('../../composables/useColorSchemes')['useColorSchemes']>
     readonly useConfirmDialog: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useConfirmDialog']>
     readonly useCookie: UnwrapRef<typeof import('../../node_modules/nuxt/dist/app/composables/cookie')['useCookie']>
     readonly useCounter: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useCounter']>
@@ -728,7 +696,6 @@ declare module 'vue' {
     readonly useMediaQuery: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useMediaQuery']>
     readonly useMemoize: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useMemoize']>
     readonly useMemory: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useMemory']>
-    readonly useMessageHubStore: UnwrapRef<typeof import('../../stores/messageHub')['useMessageHubStore']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useMounted: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useMounted']>
     readonly useMouse: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useMouse']>
@@ -825,7 +792,6 @@ declare module 'vue' {
     readonly useStyleTag: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useStyleTag']>
     readonly useSupported: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useSupported']>
     readonly useSwipe: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useSwipe']>
-    readonly useTaskStore: UnwrapRef<typeof import('../../stores/task')['useTaskStore']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useTemplateRefsList: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useTemplateRefsList']>
     readonly useTextDirection: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useTextDirection']>
@@ -850,11 +816,9 @@ declare module 'vue' {
     readonly useVModels: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useVModels']>
     readonly useVibrate: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useVibrate']>
     readonly useVirtualList: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useVirtualList']>
-    readonly useVisitorSession: UnwrapRef<typeof import('../../composables/useVisitorSession')['useVisitorSession']>
     readonly useWakeLock: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useWakeLock']>
     readonly useWebNotification: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useWebNotification']>
     readonly useWebSocket: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useWebSocket']>
-    readonly useWebSocketStore: UnwrapRef<typeof import('../../stores/websocket')['useWebSocketStore']>
     readonly useWebWorker: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useWebWorker']>
     readonly useWebWorkerFn: UnwrapRef<typeof import('../../node_modules/@vueuse/core')['useWebWorkerFn']>
     readonly useWindowEvent: UnwrapRef<typeof import('../../composables/useClientOnly')['useWindowEvent']>
