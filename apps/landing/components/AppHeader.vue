@@ -48,8 +48,26 @@
         </div>
 
         <!-- 右侧: 操作按钮 -->
-        <div class="flex items-center gap-4 flex-shrink-0">
+        <div class="flex items-center gap-3 flex-shrink-0">
           <template v-if="!authenticated">
+            <!-- 注册按钮 (登录左侧) -->
+            <NuxtLink
+              v-if="mode === 'landing'"
+              to="/login?tab=register"
+              class="hidden sm:block px-4 py-2 rounded-lg text-sm font-medium border transition-all hover:shadow-md"
+              style="border-color: #4267ff; color: #4267ff;"
+            >
+              注册
+            </NuxtLink>
+            <!-- 登录按钮 (最右侧) -->
+            <NuxtLink
+              v-if="mode === 'landing'"
+              to="/login"
+              class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:shadow-lg"
+              style="background: #4267ff;"
+            >
+              登录
+            </NuxtLink>
             <button
               v-if="mode !== 'landing'"
               class="text-sm font-medium transition-colors hover:text-[#4267ff]"
@@ -58,14 +76,6 @@
             >
               登录
             </button>
-            <NuxtLink
-              v-else
-              to="/login"
-              class="hidden sm:block text-sm font-medium transition-colors hover:text-[#4267ff]"
-              style="color: var(--ah-grey-500);"
-            >
-              登录
-            </NuxtLink>
           </template>
           <template v-else>
             <div class="flex items-center gap-2">
@@ -92,14 +102,6 @@
               </button>
             </div>
           </template>
-          <NuxtLink
-            v-if="mode === 'landing' && !authenticated"
-            to="/login"
-            class="px-4 py-2 rounded-lg text-sm font-medium text-white transition-all hover:shadow-lg"
-            style="background: #4267ff;"
-          >
-            开始使用
-          </NuxtLink>
         </div>
       </div>
     </div>
