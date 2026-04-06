@@ -76,40 +76,56 @@
           </div>
 
           <!-- 底部工具栏：主题选择 + 模型选择 -->
-          <div class="flex items-center justify-start gap-3 pt-2">
-            <!-- 主题选择 -->
-            <ClientRender>
-              <el-select v-model="selectedTheme" placeholder="主题" size="small" class="w-24">
-                <el-option
-                  v-for="theme in themes"
-                  :key="theme.value"
-                  :label="theme.label"
-                  :value="theme.value"
-                >
-                  <div class="flex items-center gap-2">
-                    <span class="w-3 h-3 rounded-full" :style="{ background: theme.color }"></span>
-                    <span>{{ theme.label }}</span>
-                  </div>
-                </el-option>
-              </el-select>
-            </ClientRender>
-            
-            <!-- 模型选择 -->
-            <ClientRender>
-              <el-select v-model="selectedModel" placeholder="模型" size="small" class="w-28">
-                <el-option
-                  v-for="model in models"
-                  :key="model.value"
-                  :label="model.label"
-                  :value="model.value"
-                >
-                  <div class="flex items-center gap-2">
-                    <el-icon><Cpu /></el-icon>
-                    <span>{{ model.label }}</span>
-                  </div>
-                </el-option>
-              </el-select>
-            </ClientRender>
+          <div class="flex items-center justify-between pt-3">
+            <div class="flex items-center gap-3">
+              <!-- 主题选择 -->
+              <ClientRender>
+                <el-select v-model="selectedTheme" placeholder="主题" size="small" class="w-24">
+                  <el-option
+                    v-for="theme in themes"
+                    :key="theme.value"
+                    :label="theme.label"
+                    :value="theme.value"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span class="w-3 h-3 rounded-full" :style="{ background: theme.color }"></span>
+                      <span>{{ theme.label }}</span>
+                    </div>
+                  </el-option>
+                </el-select>
+              </ClientRender>
+              
+              <!-- 模型选择 -->
+              <ClientRender>
+                <el-select v-model="selectedModel" placeholder="模型" size="small" class="w-28">
+                  <el-option
+                    v-for="model in models"
+                    :key="model.value"
+                    :label="model.label"
+                    :value="model.value"
+                  >
+                    <div class="flex items-center gap-2">
+                      <el-icon><Cpu /></el-icon>
+                      <span>{{ model.label }}</span>
+                    </div>
+                  </el-option>
+                </el-select>
+              </ClientRender>
+            </div>
+
+            <!-- 免费开始按钮 -->
+            <button
+              @click="handleSubmit"
+              :disabled="!inputText.trim() || isLoading"
+              class="flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium text-sm text-white transition-all duration-200"
+              :class="inputText.trim() && !isLoading 
+                ? 'bg-gradient-to-r from-[#4267ff] to-[#5a7fff] hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5' 
+                : 'bg-gray-300 cursor-not-allowed'"
+            >
+              <el-icon v-if="isLoading" class="animate-spin"><Loading /></el-icon>
+              <span>免费开始</span>
+              <el-icon v-if="!isLoading"><ArrowRight /></el-icon>
+            </button>
           </div>
         </div>
         
@@ -162,7 +178,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Cpu } from '@element-plus/icons-vue'
+import { Plus, Cpu, ArrowRight, Loading } from '@element-plus/icons-vue'
 import { useAuth } from '~/composables/useAuth'
 
 const router = useRouter()
