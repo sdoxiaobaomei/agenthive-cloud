@@ -1,19 +1,16 @@
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
 export default defineNuxtConfig({
-  devtools: { enabled: true },
-  
-  // 站点配置
-  site: {
-    url: 'https://agenthive.cloud',
-    name: 'AgentHive Cloud',
-    description: 'AI驱动的智能开发团队管理平台',
-    defaultLocale: 'zh-CN',
-  },
+  devtools: { enabled: false },
   
   // 模块
   modules: [
     '@nuxtjs/tailwindcss',
     '@vueuse/nuxt',
-    // '@nuxtjs/seo',  // 暂时禁用，有兼容性问题
+    '@pinia/nuxt',
   ],
   
   // 应用配置
@@ -22,55 +19,72 @@ export default defineNuxtConfig({
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1',
       titleTemplate: '%s | AgentHive Cloud',
-      defaultTitle: 'AgentHive Cloud - AI驱动的智能开发团队',
+      title: 'AgentHive Cloud - AI驱动的智能开发团队',
       meta: [
         { name: 'description', content: 'AgentHive Cloud 是一个AI驱动的智能开发团队管理平台，帮助您管理和协调多个AI Agent，实现自动化软件开发。' },
         { name: 'theme-color', content: '#409EFF' },
-        // Open Graph
         { property: 'og:site_name', content: 'AgentHive Cloud' },
         { property: 'og:title', content: 'AgentHive Cloud - AI驱动的智能开发团队' },
         { property: 'og:description', content: '管理和协调多个AI Agent，实现自动化软件开发' },
         { property: 'og:image', content: '/og-image.png' },
-        // Twitter
         { name: 'twitter:card', content: 'summary_large_image' },
       ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap' },
       ],
     },
   },
   
-  // 自动导入共享组件
-  components: [
-    { path: '../../packages/ui/src/components', prefix: 'Ah' },
+  // CSS
+  css: [
+    '~/assets/css/main.css',
   ],
   
   // 构建配置
-  nitro: {
-    preset: 'static',
-    prerender: {
-      crawlLinks: true,
-      routes: ['/sitemap.xml', '/robots.txt'],
-      failOnError: false,
+  build: {
+    transpile: ['@element-plus/icons-vue'],
+  },
+  
+  // Vite 配置
+  vite: {
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, './'),
+        '~': resolve(__dirname, './'),
+      },
     },
   },
   
-  // 路由配置
-  routeRules: {
-    // 所有页面由 Nuxt 统一服务，web 已融合到 landing 中
-    '/**': { prerender: true },
+  // TypeScript 配置
+  typescript: {
+    strict: false,
+    typeCheck: false,
   },
-
-  // 别名配置
-  alias: {
-    '@agenthive/ui': '../../packages/ui/src/index.ts',
-    '@agenthive/types': '../../packages/types/src/index.ts',
-  },
-
-  // 导入共享样式
-  css: ['../../packages/ui/src/styles/tokens.css', '~/assets/css/element-plus-override.css'],
   
+  // 运行时配置
+  runtimeConfig: {
+    public: {
+      apiBase: '/api',
+    },
+  },
+  
+  // Nitro 配置
+  nitro: {
+    preset: 'static',
+    output: {
+      dir: '.output-new',
+    },
+  },
+
   // 兼容性日期
-  compatibilityDate: '2024-04-01',
+  compatibilityDate: '2024-04-06',
+  
+  // 禁用实验性 app-manifest（解决开发模式热更新问题）
+  experimental: {
+    appManifest: false,
+  },
 })
