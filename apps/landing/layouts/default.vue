@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-white">
     <!-- 导航栏 -->
-    <AppHeader />
+    <AppHeader mode="landing" :show-shiba-team="true" />
     
     <!-- 主要内容 -->
     <main>
