@@ -12,25 +12,43 @@
       <div class="flex items-center justify-center mb-8">
         <div class="flex items-center -space-x-3">
           <!-- 柴犬头像 -->
-          <div 
-            v-for="(avatar, index) in avatars" 
-            :key="index"
-            class="relative w-14 h-14 rounded-full border-3 border-white shadow-lg overflow-hidden cursor-pointer hover:scale-110 hover:z-10 transition-all duration-300"
-            :title="avatar.role"
-          >
-            <img 
-              :src="avatar.src" 
-              :alt="avatar.role"
-              class="w-full h-full object-cover object-center scale-110"
-            />
-          </div>
+          <ClientRender>
+            <el-tooltip
+              v-for="(avatar, index) in avatars"
+              :key="index"
+              :content="avatar.tooltip"
+              effect="dark"
+              :show-arrow="false"
+              popper-class="avatar-tooltip"
+              placement="top"
+            >
+              <div 
+                class="relative w-14 h-14 rounded-full border-3 border-white shadow-lg overflow-hidden cursor-pointer hover:scale-110 hover:z-10 transition-all duration-300"
+              >
+                <img 
+                  :src="avatar.src" 
+                  :alt="avatar.tooltip"
+                  class="w-full h-full object-cover object-center scale-110"
+                />
+              </div>
+            </el-tooltip>
+          </ClientRender>
           <!-- 添加更多按钮 -->
-          <div 
-            class="w-14 h-14 rounded-full border-3 border-white shadow-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center cursor-pointer hover:scale-110 hover:z-10 transition-all duration-300 -ml-3"
-            title="更多 Agent 即将加入"
-          >
-            <el-icon class="text-white text-xl font-bold"><Plus /></el-icon>
-          </div>
+          <ClientRender>
+            <el-tooltip
+              content="更多角色学习中..."
+              effect="dark"
+              :show-arrow="false"
+              popper-class="avatar-tooltip"
+              placement="top"
+            >
+              <div 
+                class="w-14 h-14 rounded-full border-3 border-white shadow-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center cursor-pointer hover:scale-110 hover:z-10 transition-all duration-300 -ml-3"
+              >
+                <el-icon class="text-white text-xl font-bold"><Plus /></el-icon>
+              </div>
+            </el-tooltip>
+          </ClientRender>
         </div>
       </div>
 
@@ -57,11 +75,11 @@
               <textarea
                 v-model="inputText"
                 rows="4"
-                placeholder="帮我做一个任务管理系统，支持拖拽排序、标签分类和团队协作，风格要简洁现代。"
+                :placeholder="typewriterText"
                 class="w-full resize-none outline-none text-base bg-transparent leading-relaxed"
                 style="color: var(--ah-text-primary); min-height: 100px;"
-                @focus="isFocused = true"
-                @blur="isFocused = false"
+                @focus="handleFocus"
+                @blur="handleBlur"
                 @keydown.enter.ctrl.prevent="handleSubmit"
               />
             </div>
@@ -162,7 +180,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Cpu, ArrowRight, Loading, Brush, ArrowDown } from '@element-plus/icons-vue'
 import { useAuth } from '~/composables/useAuth'
@@ -178,11 +196,96 @@ const showModelDropdown = ref(false)
 
 // 柴犬头像
 const avatars = [
-  { src: '/avatars/shiba_tl.png', role: 'Tech Lead - 阿黄' },
-  { src: '/avatars/shiba_fe.png', role: 'Frontend Dev - 小花' },
-  { src: '/avatars/shiba_be.png', role: 'Backend Dev - 阿铁' },
-  { src: '/avatars/shiba_qa.png', role: 'QA Engineer - 阿镜' },
+  { src: '/avatars/shiba_tl.png', tooltip: '阿黄 - 技术负责人' },
+  { src: '/avatars/shiba_fe.png', tooltip: '小花 - 前端开发' },
+  { src: '/avatars/shiba_be.png', tooltip: '阿铁 - 后端开发' },
+  { src: '/avatars/shiba_qa.png', tooltip: '阿镜 - 测试工程师' },
 ]
+
+// 打字机效果
+const typewriterTexts = [
+  '帮我做一个任务管理系统，支持拖拽排序、标签分类和团队协作，风格要简洁现代。',
+  '创建一个个人博客网站，要有深色模式、Markdown 支持和评论功能。',
+  '设计一个电商数据看板，包含销售趋势图、库存预警和用户行为分析。'
+]
+const typewriterText = ref('')
+const currentTextIndex = ref(0)
+const charIndex = ref(0)
+const isDeleting = ref(false)
+const typewriterTimer = ref<number | null>(null)
+const isTypingActive = ref(true)
+
+// 打字机逻辑
+const typeWriter = () => {
+  if (!isTypingActive.value) return
+  
+  const currentText = typewriterTexts[currentTextIndex.value]
+  
+  if (isDeleting.value) {
+    // 退格
+    typewriterText.value = currentText.substring(0, charIndex.value - 1)
+    charIndex.value--
+  } else {
+    // 打字
+    typewriterText.value = currentText.substring(0, charIndex.value + 1)
+    charIndex.value++
+  }
+  
+  let nextDelay = isDeleting.value ? 30 : 50
+  
+  if (!isDeleting.value && charIndex.value === currentText.length) {
+    // 完成打字，暂停2秒开始删除
+    nextDelay = 2000
+    isDeleting.value = true
+  } else if (isDeleting.value && charIndex.value === 0) {
+    // 完成删除，切换到下一个文本
+    isDeleting.value = false
+    currentTextIndex.value = (currentTextIndex.value + 1) % typewriterTexts.length
+    nextDelay = 500
+  }
+  
+  typewriterTimer.value = window.setTimeout(typeWriter, nextDelay)
+}
+
+// 开始打字机
+const startTypewriter = () => {
+  isTypingActive.value = true
+  typeWriter()
+}
+
+// 停止打字机
+const stopTypewriter = () => {
+  isTypingActive.value = false
+  if (typewriterTimer.value) {
+    clearTimeout(typewriterTimer.value)
+    typewriterTimer.value = null
+  }
+}
+
+// 处理聚焦
+const handleFocus = () => {
+  isFocused.value = true
+  stopTypewriter()
+  typewriterText.value = ''
+}
+
+// 处理失焦
+const handleBlur = () => {
+  isFocused.value = false
+  if (!inputText.value) {
+    charIndex.value = 0
+    isDeleting.value = false
+    startTypewriter()
+  }
+}
+
+onMounted(() => {
+  startTypewriter()
+})
+
+onUnmounted(() => {
+  stopTypewriter()
+})
 
 // 主题选择
 const selectedTheme = ref('')
@@ -259,5 +362,12 @@ async function handleSubmit() {
 
 :deep(.theme-select .el-input__prefix) {
   margin-right: 4px;
+}
+
+/* Tooltip 样式 */
+:deep(.avatar-tooltip) {
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
 }
 </style>
