@@ -86,11 +86,11 @@
                     class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all hover:border-[#4267ff]"
                     :class="selectedTheme ? 'border-[#4267ff]/30 bg-[#4267ff]/5' : 'border-gray-200 bg-white'"
                   >
-                    <el-icon class="text-xs" :style="selectedTheme ? 'color: ' + currentTheme?.color : ''"><Brush /></el-icon>
-                    <span :style="selectedTheme ? 'color: ' + currentTheme?.color : 'color: var(--ah-grey-500)'">
+                    <el-icon class="text-xs text-[#4267ff]"><Brush /></el-icon>
+                    <span style="color: var(--ah-grey-700);">
                       {{ selectedTheme ? currentTheme?.label : '主题' }}
                     </span>
-                    <el-icon class="text-[10px] ml-0.5"><ArrowDown /></el-icon>
+                    <el-icon class="text-[10px] ml-0.5 text-gray-400"><ArrowDown /></el-icon>
                   </button>
                   <!-- 下拉菜单 -->
                   <div v-if="showThemeDropdown" class="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[100px]">
