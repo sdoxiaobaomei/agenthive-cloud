@@ -1,13 +1,13 @@
 <template>
   <div class="chat-layout">
-    <!-- Overlay for mobile/tablet when sidebar is open -->
+    <!-- Overlay when sidebar is open -->
     <div 
       v-if="!isSidebarCollapsed" 
       class="sidebar-overlay" 
       @click="toggleSidebar"
     ></div>
 
-    <!-- Left Sidebar - Floating overlay style -->
+    <!-- Left Sidebar - Projects List Only -->
     <aside class="left-sidebar" :class="{ collapsed: isSidebarCollapsed }">
       <!-- Sidebar Header -->
       <div class="sidebar-header">
@@ -24,14 +24,6 @@
           <span>New Project</span>
         </button>
       </div>
-
-      <!-- Navigation -->
-      <nav class="sidebar-nav">
-        <div class="nav-item">
-          <el-icon><Compass /></el-icon>
-          <span v-if="!isSidebarCollapsed">Discover</span>
-        </div>
-      </nav>
 
       <!-- Projects Section -->
       <div class="projects-section">
@@ -63,17 +55,9 @@
           </div>
         </div>
       </div>
-
-      <!-- AI Chat Section (Bottom) -->
-      <div class="chat-section">
-        <ChatPanel 
-          :collapsed="isSidebarCollapsed"
-          :current-project="currentProject"
-        />
-      </div>
     </aside>
 
-    <!-- Main Content Area - Full width always -->
+    <!-- Main Content Area -->
     <main class="main-content">
       <!-- Top Bar - Unified Header Style -->
       <header class="top-bar">
@@ -146,14 +130,12 @@
 import { ref, reactive, provide } from 'vue'
 import { 
   Plus,
-  Compass,
   Folder,
   ArrowRight,
   Upload,
   Menu
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import ChatPanel from '~/components/ChatPanel.vue'
 
 // Projects
 interface Project {
@@ -242,7 +224,7 @@ provide('currentProject', currentProject)
   background: #ffffff;
 }
 
-/* Overlay for mobile/tablet */
+/* Overlay when sidebar is open */
 .sidebar-overlay {
   position: fixed;
   inset: 0;
@@ -323,28 +305,6 @@ provide('currentProject', currentProject)
 
 .new-project-btn:hover {
   background: #4338ca;
-}
-
-/* Navigation */
-.sidebar-nav {
-  padding: 0 12px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  color: #6b7280;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.nav-item:hover {
-  background: #f3f4f6;
-  color: #374151;
 }
 
 /* Projects Section */
@@ -440,13 +400,6 @@ provide('currentProject', currentProject)
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-/* Chat Section */
-.chat-section {
-  border-top: 1px solid #e5e7eb;
-  min-height: 200px;
-  max-height: 40%;
 }
 
 /* Main Content - Full width always */
