@@ -1,5 +1,5 @@
 <template>
-  <ClientRender :show-loading="false">
+  <ClientRender :show-loading="false" :show-placeholder="false">
     <el-dropdown v-bind="$attrs" :trigger="trigger">
       <slot name="default">
         <span class="dropdown-trigger">

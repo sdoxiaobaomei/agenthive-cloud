@@ -22,7 +22,7 @@
           </NuxtLink>
           
           <!-- 更多: 下拉菜单 (SSR 安全) -->
-          <SafeElementDropdown label="更多">
+          <SafeElementDropdown label="更多" class="inline-flex items-center">
             <template #dropdown>
               <el-dropdown-menu>
                 <el-dropdown-item>
