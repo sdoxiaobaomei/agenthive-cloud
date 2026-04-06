@@ -80,9 +80,15 @@
             <div class="flex items-center gap-2">
               <!-- 主题选择 -->
               <ClientRender>
-                <el-select v-model="selectedTheme" size="small" class="w-20 theme-select">
+                <el-select 
+                  v-model="selectedTheme" 
+                  size="small" 
+                  class="w-20 theme-select"
+                  placeholder="主题"
+                >
                   <template #prefix>
-                    <span class="w-2 h-2 rounded-full" :style="{ background: themes.find(t => t.value === selectedTheme)?.color }"></span>
+                    <el-icon v-if="!selectedTheme" class="text-xs" style="color: var(--ah-grey-400);"><Brush /></el-icon>
+                    <span v-else class="w-2 h-2 rounded-full" :style="{ background: currentTheme?.color }"></span>
                   </template>
                   <el-option
                     v-for="theme in themes"
@@ -100,7 +106,11 @@
               
               <!-- 模型选择 -->
               <ClientRender>
-                <el-select v-model="selectedModel" size="small" class="w-24 model-select">
+                <el-select 
+                  v-model="selectedModel" 
+                  size="small" 
+                  class="w-28 model-select"
+                >
                   <el-option
                     v-for="model in models"
                     :key="model.value"
@@ -179,9 +189,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Cpu, ArrowRight, Loading } from '@element-plus/icons-vue'
+import { Plus, Cpu, ArrowRight, Loading, Brush } from '@element-plus/icons-vue'
 import { useAuth } from '~/composables/useAuth'
 
 const router = useRouter()
@@ -200,7 +210,7 @@ const avatars = [
 ]
 
 // 主题选择
-const selectedTheme = ref('modern')
+const selectedTheme = ref('')
 const themes = [
   { value: 'modern', label: '现代', color: '#4267ff' },
   { value: 'minimal', label: '极简', color: '#1a1a1a' },
@@ -208,12 +218,15 @@ const themes = [
   { value: 'fresh', label: '清新', color: '#10b981' },
 ]
 
+// 获取当前主题
+const currentTheme = computed(() => themes.find(t => t.value === selectedTheme.value))
+
 // 模型选择
-const selectedModel = ref('gpt-4o')
+const selectedModel = ref('claude-sonnet-4.6')
 const models = [
+  { value: 'claude-sonnet-4.6', label: 'Claude Sonnet 4.6' },
   { value: 'gpt-4o', label: 'GPT-4o' },
   { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-  { value: 'claude-3-5', label: 'Claude 3.5' },
   { value: 'deepseek', label: 'DeepSeek' },
 ]
 
