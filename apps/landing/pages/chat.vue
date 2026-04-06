@@ -211,6 +211,7 @@ const tabs = [
 <style scoped>
 .chat-page {
   display: flex;
+  width: 100%;
   height: 100%;
   background: #fafafa;
 }
