@@ -1,11 +1,18 @@
 <template>
   <div class="chat-layout">
-    <!-- Left Sidebar -->
+    <!-- Overlay for mobile/tablet when sidebar is open -->
+    <div 
+      v-if="!isSidebarCollapsed" 
+      class="sidebar-overlay" 
+      @click="toggleSidebar"
+    ></div>
+
+    <!-- Left Sidebar - Floating overlay style -->
     <aside class="left-sidebar" :class="{ collapsed: isSidebarCollapsed }">
       <!-- Sidebar Header -->
       <div class="sidebar-header">
         <NuxtLink to="/" class="logo-link">
-          <div class="logo-icon">A</div>
+          <div class="logo-icon" style="background: #4267ff;">A</div>
           <span v-if="!isSidebarCollapsed" class="logo-text">AgentHive</span>
         </NuxtLink>
         <button 
@@ -64,25 +71,22 @@
           :current-project="currentProject"
         />
       </div>
-
-      <!-- Collapse Toggle -->
-      <button class="collapse-toggle" @click="toggleSidebar">
-        <el-icon>
-          <ArrowLeft v-if="!isSidebarCollapsed" />
-          <ArrowRight v-else />
-        </el-icon>
-      </button>
     </aside>
 
-    <!-- Main Content Area -->
+    <!-- Main Content Area - Full width always -->
     <main class="main-content">
       <!-- Top Bar - Unified Header Style -->
       <header class="top-bar">
-        <!-- Left: Logo (consistent with landing page) -->
-        <NuxtLink to="/" class="logo-link">
-          <div class="logo-icon" style="background: #4267ff;">A</div>
-          <span class="logo-text">AgentHive</span>
-        </NuxtLink>
+        <!-- Left: Toggle Sidebar + Logo -->
+        <div class="flex items-center gap-3">
+          <button class="sidebar-toggle-btn" @click="toggleSidebar" title="Toggle sidebar">
+            <el-icon><Menu /></el-icon>
+          </button>
+          <NuxtLink to="/" class="logo-link">
+            <div class="logo-icon" style="background: #4267ff;">A</div>
+            <span class="logo-text">AgentHive</span>
+          </NuxtLink>
+        </div>
         
         <!-- Center: Breadcrumb / Project Name -->
         <div class="breadcrumb">
@@ -145,8 +149,8 @@ import {
   Compass,
   Folder,
   ArrowRight,
-  ArrowLeft,
-  Upload
+  Upload,
+  Menu
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import ChatPanel from '~/components/ChatPanel.vue'
@@ -185,8 +189,8 @@ const selectProject = (project: Project) => {
   currentProject.value = project
 }
 
-// Sidebar state
-const isSidebarCollapsed = ref(false)
+// Sidebar state - default collapsed
+const isSidebarCollapsed = ref(true)
 const isProjectsExpanded = ref(true)
 
 const toggleSidebar = () => {
@@ -238,21 +242,32 @@ provide('currentProject', currentProject)
   background: #ffffff;
 }
 
-/* Left Sidebar */
+/* Overlay for mobile/tablet */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+  z-index: 40;
+}
+
+/* Left Sidebar - Floating overlay */
 .left-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 280px;
-  height: 100%;
+  height: 100vh;
   background: #f9fafb;
   border-right: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  position: relative;
-  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  flex-shrink: 0;
+  z-index: 50;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .left-sidebar.collapsed {
-  width: 64px;
+  transform: translateX(-100%);
 }
 
 /* Sidebar Header */
@@ -263,18 +278,18 @@ provide('currentProject', currentProject)
   gap: 12px;
 }
 
-.logo-link {
+.sidebar-header .logo-link {
   display: flex;
   align-items: center;
   gap: 10px;
   text-decoration: none;
 }
 
-.logo-icon {
+.sidebar-header .logo-icon {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #1f2937;
+  background: #4267ff;
   color: white;
   display: flex;
   align-items: center;
@@ -284,7 +299,7 @@ provide('currentProject', currentProject)
   flex-shrink: 0;
 }
 
-.logo-text {
+.sidebar-header .logo-text {
   font-size: 16px;
   font-weight: 600;
   color: #111827;
@@ -434,39 +449,14 @@ provide('currentProject', currentProject)
   max-height: 40%;
 }
 
-/* Collapse Toggle */
-.collapse-toggle {
-  position: absolute;
-  right: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 48px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-left: none;
-  border-radius: 0 8px 8px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  cursor: pointer;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.08);
-  z-index: 10;
-}
-
-.collapse-toggle:hover {
-  background: #f9fafb;
-  color: #374151;
-}
-
-/* Main Content */
+/* Main Content - Full width always */
 .main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
   background: #ffffff;
+  width: 100%;
 }
 
 /* Top Bar - Unified Header Style */
@@ -479,6 +469,27 @@ provide('currentProject', currentProject)
   justify-content: space-between;
   padding: 0 24px;
   flex-shrink: 0;
+}
+
+/* Sidebar Toggle Button */
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+  border-color: #d1d5db;
 }
 
 .top-bar .logo-link {
