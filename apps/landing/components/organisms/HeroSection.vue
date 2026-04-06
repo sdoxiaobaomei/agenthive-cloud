@@ -54,20 +54,20 @@
       </p>
 
       <!-- 聊天输入框 - 更大的多行文本区 -->
-      <div class="max-w-3xl mx-auto">
-        <div class="relative p-4 rounded-3xl border-2 transition-all duration-300 shadow-xl"
+      <div class="max-w-4xl mx-auto">
+        <div class="relative p-6 rounded-3xl border-2 transition-all duration-300 shadow-xl"
           :class="isFocused ? 'border-[#4267ff] shadow-2xl shadow-[#4267ff]/15' : 'border-[var(--ah-beige-300)] shadow-xl'"
           style="background: white;"
         >
           <!-- 文本输入区 -->
-          <div class="flex items-start gap-3 mb-4">
+          <div class="flex items-start gap-3 mb-3">
             <div class="flex-1">
               <textarea
                 v-model="inputText"
-                rows="3"
-                placeholder="描述你想构建的应用...&#10;例如：帮我做一个任务管理系统，支持拖拽排序和标签分类"
-                class="w-full resize-none outline-none text-base bg-transparent"
-                style="color: var(--ah-text-primary); min-height: 80px;"
+                rows="5"
+                placeholder="帮我做一个任务管理系统，支持拖拽排序、标签分类和团队协作，风格要简洁现代。"
+                class="w-full resize-none outline-none text-base bg-transparent leading-relaxed"
+                style="color: var(--ah-text-primary); min-height: 120px;"
                 @focus="isFocused = true"
                 @blur="isFocused = false"
                 @keydown.enter.ctrl.prevent="handleSubmit"
@@ -75,58 +75,41 @@
             </div>
           </div>
 
-          <!-- 底部工具栏：主题选择 + 模型选择 + 发送按钮 -->
-          <div class="flex items-center justify-between pt-4 border-t" style="border-color: var(--ah-beige-200);">
-            <!-- 左侧：主题和模型选择 -->
-            <div class="flex items-center gap-3">
-              <!-- 主题选择 -->
-              <ClientRender>
-                <el-select v-model="selectedTheme" placeholder="选择主题" size="small" class="w-28">
-                  <el-option
-                    v-for="theme in themes"
-                    :key="theme.value"
-                    :label="theme.label"
-                    :value="theme.value"
-                  >
-                    <div class="flex items-center gap-2">
-                      <span class="w-3 h-3 rounded-full" :style="{ background: theme.color }"></span>
-                      <span>{{ theme.label }}</span>
-                    </div>
-                  </el-option>
-                </el-select>
-              </ClientRender>
-              
-              <!-- 模型选择 -->
-              <ClientRender>
-                <el-select v-model="selectedModel" placeholder="选择模型" size="small" class="w-32">
-                  <el-option
-                    v-for="model in models"
-                    :key="model.value"
-                    :label="model.label"
-                    :value="model.value"
-                  >
-                    <div class="flex items-center gap-2">
-                      <el-icon><Cpu /></el-icon>
-                      <span>{{ model.label }}</span>
-                    </div>
-                  </el-option>
-                </el-select>
-              </ClientRender>
-            </div>
-
-            <!-- 右侧：发送按钮 -->
-            <button
-              @click="handleSubmit"
-              :disabled="!inputText.trim() || isLoading"
-              class="flex-shrink-0 h-10 px-6 rounded-xl font-semibold text-white text-sm transition-all duration-200 flex items-center gap-2"
-              :class="inputText.trim() && !isLoading ? 'bg-[#4267ff] hover:bg-[#3151cc] shadow-lg shadow-[#4267ff]/30' : 'bg-gray-300 cursor-not-allowed'"
-            >
-              <el-icon v-if="isLoading" class="animate-spin"><Loading /></el-icon>
-              <template v-else>
-                <span>开始构建</span>
-                <el-icon><ArrowRight /></el-icon>
-              </template>
-            </button>
+          <!-- 底部工具栏：主题选择 + 模型选择 -->
+          <div class="flex items-center justify-start gap-3 pt-2">
+            <!-- 主题选择 -->
+            <ClientRender>
+              <el-select v-model="selectedTheme" placeholder="主题" size="small" class="w-24">
+                <el-option
+                  v-for="theme in themes"
+                  :key="theme.value"
+                  :label="theme.label"
+                  :value="theme.value"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full" :style="{ background: theme.color }"></span>
+                    <span>{{ theme.label }}</span>
+                  </div>
+                </el-option>
+              </el-select>
+            </ClientRender>
+            
+            <!-- 模型选择 -->
+            <ClientRender>
+              <el-select v-model="selectedModel" placeholder="模型" size="small" class="w-28">
+                <el-option
+                  v-for="model in models"
+                  :key="model.value"
+                  :label="model.label"
+                  :value="model.value"
+                >
+                  <div class="flex items-center gap-2">
+                    <el-icon><Cpu /></el-icon>
+                    <span>{{ model.label }}</span>
+                  </div>
+                </el-option>
+              </el-select>
+            </ClientRender>
           </div>
         </div>
         
@@ -179,7 +162,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowRight, Loading, Plus, Cpu } from '@element-plus/icons-vue'
+import { Plus, Cpu } from '@element-plus/icons-vue'
 import { useAuth } from '~/composables/useAuth'
 
 const router = useRouter()
