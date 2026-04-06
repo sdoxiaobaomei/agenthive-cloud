@@ -14,7 +14,6 @@ type HydrationStrategies = {
 type LazyComponent<T> = DefineComponent<HydrationStrategies, {}, {}, {}, {}, {}, {}, { hydrated: () => void }> & T
 
 
-export const AgentAvatar: typeof import("../components/AgentAvatar.vue")['default']
 export const AnimatedCharacters: typeof import("../components/AnimatedCharacters.vue")['default']
 export const AppFooter: typeof import("../components/AppFooter.vue")['default']
 export const AppHeader: typeof import("../components/AppHeader.vue")['default']
@@ -30,15 +29,11 @@ export const FileManager: typeof import("../components/FileManager.vue")['defaul
 export const FileTreeNode: typeof import("../components/FileTreeNode.vue")['default']
 export const PricingCard: typeof import("../components/PricingCard.vue")['default']
 export const SafeElementDropdown: typeof import("../components/SafeElementDropdown.vue")['default']
-export const ShibaAvatar: typeof import("../components/ShibaAvatar.vue")['default']
 export const WorkflowSection: typeof import("../components/WorkflowSection.vue")['default']
 export const WorkflowStep: typeof import("../components/WorkflowStep.vue")['default']
 export const AnimatedEyeBall: typeof import("../components/animated/EyeBall.vue")['default']
 export const AnimatedPupil: typeof import("../components/animated/Pupil.vue")['default']
-export const OrganismsCTASection: typeof import("../components/organisms/CTASection.vue")['default']
-export const OrganismsFeaturesSection: typeof import("../components/organisms/FeaturesSection.vue")['default']
 export const OrganismsHeroSection: typeof import("../components/organisms/HeroSection.vue")['default']
-export const OrganismsWorkflowSection: typeof import("../components/organisms/WorkflowSection.vue")['default']
 export const NuxtWelcome: typeof import("../node_modules/nuxt/dist/app/components/welcome.vue")['default']
 export const NuxtLayout: typeof import("../node_modules/nuxt/dist/app/components/nuxt-layout")['default']
 export const NuxtErrorBoundary: typeof import("../node_modules/nuxt/dist/app/components/nuxt-error-boundary.vue")['default']
@@ -62,7 +57,6 @@ export const Head: typeof import("../node_modules/nuxt/dist/head/runtime/compone
 export const Html: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Html']
 export const Body: typeof import("../node_modules/nuxt/dist/head/runtime/components")['Body']
 export const NuxtIsland: typeof import("../node_modules/nuxt/dist/app/components/nuxt-island")['default']
-export const LazyAgentAvatar: LazyComponent<typeof import("../components/AgentAvatar.vue")['default']>
 export const LazyAnimatedCharacters: LazyComponent<typeof import("../components/AnimatedCharacters.vue")['default']>
 export const LazyAppFooter: LazyComponent<typeof import("../components/AppFooter.vue")['default']>
 export const LazyAppHeader: LazyComponent<typeof import("../components/AppHeader.vue")['default']>
@@ -78,15 +72,11 @@ export const LazyFileManager: LazyComponent<typeof import("../components/FileMan
 export const LazyFileTreeNode: LazyComponent<typeof import("../components/FileTreeNode.vue")['default']>
 export const LazyPricingCard: LazyComponent<typeof import("../components/PricingCard.vue")['default']>
 export const LazySafeElementDropdown: LazyComponent<typeof import("../components/SafeElementDropdown.vue")['default']>
-export const LazyShibaAvatar: LazyComponent<typeof import("../components/ShibaAvatar.vue")['default']>
 export const LazyWorkflowSection: LazyComponent<typeof import("../components/WorkflowSection.vue")['default']>
 export const LazyWorkflowStep: LazyComponent<typeof import("../components/WorkflowStep.vue")['default']>
 export const LazyAnimatedEyeBall: LazyComponent<typeof import("../components/animated/EyeBall.vue")['default']>
 export const LazyAnimatedPupil: LazyComponent<typeof import("../components/animated/Pupil.vue")['default']>
-export const LazyOrganismsCTASection: LazyComponent<typeof import("../components/organisms/CTASection.vue")['default']>
-export const LazyOrganismsFeaturesSection: LazyComponent<typeof import("../components/organisms/FeaturesSection.vue")['default']>
 export const LazyOrganismsHeroSection: LazyComponent<typeof import("../components/organisms/HeroSection.vue")['default']>
-export const LazyOrganismsWorkflowSection: LazyComponent<typeof import("../components/organisms/WorkflowSection.vue")['default']>
 export const LazyNuxtWelcome: LazyComponent<typeof import("../node_modules/nuxt/dist/app/components/welcome.vue")['default']>
 export const LazyNuxtLayout: LazyComponent<typeof import("../node_modules/nuxt/dist/app/components/nuxt-layout")['default']>
 export const LazyNuxtErrorBoundary: LazyComponent<typeof import("../node_modules/nuxt/dist/app/components/nuxt-error-boundary.vue")['default']>
