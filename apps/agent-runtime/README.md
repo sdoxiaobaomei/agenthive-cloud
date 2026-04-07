@@ -2,6 +2,10 @@
 
 K8s-native agent runtime service for Docker Desktop Kubernetes cluster.
 
+> 📚 **完整文档**: 参见 [docs/README.md](docs/README.md) - Agent Runtime v2.2.0 库文档
+> 
+> 本文档仅涵盖 K8s 轻量级部署服务。关于完整的 Agent Runtime 库功能，请参阅上述链接。
+
 ## Overview
 
 The Agent Runtime is a lightweight service that runs inside Kubernetes pods and:
