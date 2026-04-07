@@ -1,7 +1,7 @@
-import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'url'
+import { dirname, resolve } from 'path'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
+const currentDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
   devtools: { enabled: false },
@@ -11,6 +11,11 @@ export default defineNuxtConfig({
     '@nuxtjs/tailwindcss',
     '@vueuse/nuxt',
     '@pinia/nuxt',
+  ],
+  
+  // 插件配置
+  plugins: [
+    { src: '~/plugins/error-handler.ts', mode: 'all' },
   ],
   
   // 应用配置
@@ -37,6 +42,16 @@ export default defineNuxtConfig({
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap' },
       ],
     },
+    // 页面过渡配置
+    pageTransition: {
+      name: 'page',
+      mode: 'out-in'
+    },
+    // 布局过渡配置
+    layoutTransition: {
+      name: 'layout',
+      mode: 'out-in'
+    }
   },
   
   // CSS
@@ -53,8 +68,8 @@ export default defineNuxtConfig({
   vite: {
     resolve: {
       alias: {
-        '@': resolve(__dirname, './'),
-        '~': resolve(__dirname, './'),
+        '@': resolve(currentDir, './'),
+        '~': resolve(currentDir, './'),
       },
     },
   },
@@ -74,9 +89,17 @@ export default defineNuxtConfig({
   
   // Nitro 配置
   nitro: {
-    preset: 'static',
     output: {
       dir: '.output-new',
+    },
+    // 开发环境代理 API 请求到后端服务器 (3001)
+    // 注意：后端路由没有 /api 前缀，所以代理时去掉 /api
+    devProxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
     },
   },
 

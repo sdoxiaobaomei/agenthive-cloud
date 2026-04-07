@@ -8,6 +8,8 @@ import {
   deleteTask,
   cancelTask,
   getSubtasks,
+  executeTask,
+  getTaskProgress,
 } from '../controllers/tasks.js'
 
 const router = Router()
@@ -17,7 +19,9 @@ router.post('/', createTask)
 router.get('/:id', getTask)
 router.patch('/:id', updateTask)
 router.delete('/:id', deleteTask)
+router.post('/:id/execute', executeTask)
 router.post('/:id/cancel', cancelTask)
+router.get('/:id/progress', getTaskProgress)
 router.get('/:id/subtasks', getSubtasks)
 
 export default router

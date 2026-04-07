@@ -1,22 +1,15 @@
 <template>
-  <NuxtLayout>
-    <NuxtPage :transition="pageTransition" />
-  </NuxtLayout>
+  <Transition name="page" mode="out-in">
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </Transition>
+  
+  <!-- 全局 Loading 遮罩层 -->
+  <GlobalLoading />
 </template>
 
 <script setup>
-// 页面过渡配置
-const pageTransition = {
-  name: 'page',
-  mode: 'out-in',
-  onBeforeEnter: () => {
-    document.body.style.overflow = 'hidden'
-  },
-  onAfterEnter: () => {
-    document.body.style.overflow = ''
-  },
-}
-
 // SEO 元数据
 useHead({
   htmlAttrs: {
@@ -49,30 +42,35 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* 页面过渡动画 - 平滑淡入淡出 */
+/* 页面过渡动画 - 左右滑动 */
 .page-enter-active,
 .page-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s ease;
 }
 
 .page-enter-from {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateX(20px);
 }
 
 .page-leave-to {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateX(-20px);
 }
 
-/* 布局过渡 - 确保平滑 */
+/* 布局过渡动画 */
 .layout-enter-active,
 .layout-leave-active {
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
 }
 
-.layout-enter-from,
+.layout-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
 .layout-leave-to {
   opacity: 0;
+  transform: translateX(-20px);
 }
 </style>

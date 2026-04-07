@@ -3,6 +3,7 @@ import { EventEmitter } from 'events'
 import { ILLMProvider, LLMMessage, LLMCompletionOptions, LLMCompletionResult, LLMStreamChunk, LLMProviderConfig, LLMToolDefinition } from './types.js'
 import { AnthropicProvider } from './providers/anthropic.js'
 import { OpenAIProvider } from './providers/openai.js'
+import { OllamaProvider } from './providers/ollama.js'
 import { Logger } from '../../utils/logger.js'
 
 export interface LLMServiceConfig {
@@ -62,6 +63,15 @@ export class LLMService extends EventEmitter {
         if (!config.apiKey) throw new Error('OpenAI provider requires apiKey')
         provider = new OpenAIProvider({
           apiKey: config.apiKey,
+          baseUrl: config.baseUrl,
+          model: config.model,
+          defaultOptions: config.defaultOptions
+        })
+        break
+
+      case 'ollama':
+        // Ollama 不需要 API key
+        provider = new OllamaProvider({
           baseUrl: config.baseUrl,
           model: config.model,
           defaultOptions: config.defaultOptions

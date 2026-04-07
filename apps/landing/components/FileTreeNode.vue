@@ -3,7 +3,7 @@
     <div 
       class="node-content"
       :class="{ 
-        selected: node.path === selectedPath,
+        selected: isSelected,
         'is-folder': node.type === 'folder'
       }"
       :style="{ paddingLeft: level * 16 + 8 + 'px' }"
@@ -17,7 +17,7 @@
       <button 
         v-if="node.type === 'folder'"
         class="expand-btn"
-        :class="{ expanded: node.isExpanded }"
+        :class="{ expanded: isExpanded }"
         @click.stop="$emit('toggle', node)"
       >
         <el-icon><ArrowRight /></el-icon>
@@ -29,12 +29,12 @@
       <span v-if="!isRenaming" class="node-name">{{ node.name }}</span>
       <input 
         v-else
+        ref="renameInputRef"
         v-model="renameValue"
         class="rename-input"
         @blur="finishRename"
         @keydown.enter="finishRename"
         @keydown.esc="cancelRename"
-        v-focus
       />
       
       <span v-if="node.gitStatus && node.gitStatus !== 'unchanged'" 
@@ -43,7 +43,7 @@
       />
     </div>
     
-    <div v-if="node.type === 'folder' && node.isExpanded && node.children" class="node-children">
+    <div v-if="node.type === 'folder' && isExpanded && node.children" class="node-children">
       <FileTreeNode 
         v-for="child in node.children" 
         :key="child.path"
@@ -62,27 +62,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { ArrowRight } from '@element-plus/icons-vue'
 import FileIcon from './FileIcon.vue'
 
+// 与 stores/chat.ts 中的 FileTreeNode 类型保持一致
 interface FileNode {
   name: string
   path: string
   type: 'file' | 'folder'
+  size?: number
+  modifiedAt?: string
   language?: string
   gitStatus?: 'modified' | 'added' | 'deleted' | 'untracked' | 'unchanged'
   children?: FileNode[]
   isExpanded?: boolean
+  isOpen?: boolean
+  isSelected?: boolean
 }
 
 const props = withDefaults(defineProps<{
   node: FileNode
   selectedPath?: string
-  expandedPaths: Set<string>
+  expandedPaths?: Set<string>
   level?: number
 }>(), {
-  level: 0
+  level: 0,
+  expandedPaths: () => new Set<string>()
+})
+
+// 计算是否展开 - 优先使用节点的 isExpanded，其次检查 expandedPaths
+const isExpanded = computed(() => {
+  if (props.node.isExpanded !== undefined) {
+    return props.node.isExpanded
+  }
+  if (props.node.isOpen !== undefined) {
+    return props.node.isOpen
+  }
+  return props.expandedPaths?.has(props.node.path) || false
+})
+
+// 计算是否选中
+const isSelected = computed(() => {
+  return props.node.isSelected || props.selectedPath === props.node.path
 })
 
 const emit = defineEmits<{
@@ -95,6 +117,14 @@ const emit = defineEmits<{
 
 const isRenaming = ref(false)
 const renameValue = ref('')
+const renameInputRef = ref<HTMLInputElement | null>(null)
+
+// Focus input when renaming starts
+const focusInput = async () => {
+  await nextTick()
+  renameInputRef.value?.focus()
+  renameInputRef.value?.select()
+}
 
 const onDragStart = (e: DragEvent) => {
   e.dataTransfer?.setData('text/plain', props.node.path)
@@ -124,6 +154,7 @@ const cancelRename = () => {
 const startRename = () => {
   isRenaming.value = true
   renameValue.value = props.node.name
+  focusInput()
 }
 
 defineExpose({ startRename })

@@ -31,7 +31,10 @@
             clearable
           />
         </div>
-        <div class="project-list">
+        <div v-if="projectStore.loading" class="project-loading">
+          <el-skeleton :rows="3" animated />
+        </div>
+        <div v-else class="project-list">
           <div
             v-for="project in filteredProjects"
             :key="project.id"
@@ -54,33 +57,48 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { useProjectStore, type Project } from '~/stores/project'
 
 const router = useRouter()
+const projectStore = useProjectStore()
+
 const showProjectDialog = ref(false)
 const projectSearchQuery = ref('')
-const currentProject = ref(null)
 
-// Demo projects - in production this would come from an API
-const projects = ref([
-  { id: '1', name: '任务管理系统', description: '支持拖拽排序和团队协作的任务管理应用', createdAt: '2026-04-01' },
-  { id: '2', name: '个人博客', description: '基于 Markdown 的简洁博客系统', createdAt: '2026-04-02' },
-  { id: '3', name: '电商数据看板', description: '销售趋势和库存预警分析面板', createdAt: '2026-04-03' },
-])
+// 使用 projectStore 中的项目和当前项目
+const projects = computed(() => projectStore.projects)
+const currentProject = computed(() => projectStore.currentProject)
 
 const filteredProjects = computed(() => {
   if (!projectSearchQuery.value) return projects.value
   const query = projectSearchQuery.value.toLowerCase()
   return projects.value.filter(p => 
     p.name.toLowerCase().includes(query) || 
-    p.description.toLowerCase().includes(query)
+    (p.description?.toLowerCase().includes(query) ?? false)
   )
 })
 
-const selectProject = (project) => {
-  currentProject.value = project
+// 在组件挂载时加载项目列表
+onMounted(async () => {
+  try {
+    await projectStore.fetchProjects()
+  } catch (error: any) {
+    // 静默处理错误，因为用户可能未登录
+    // 使用 debug 级别只在开发环境显示
+    if (import.meta.dev) {
+      console.debug('[Projects] Failed to fetch projects (may need login):', error.message)
+    }
+  }
+})
+
+const selectProject = (project: Project) => {
+  projectStore.setCurrentProject(project)
+  // 存储到 sessionStorage
+  sessionStorage.setItem('pending-project', JSON.stringify(project))
   showProjectDialog.value = false
   router.push('/chat')
 }
@@ -98,6 +116,10 @@ useSeoMeta({
 <style scoped>
 .project-search {
   margin-bottom: 16px;
+}
+
+.project-loading {
+  padding: 20px 0;
 }
 
 .project-list {

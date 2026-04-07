@@ -124,6 +124,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useAuthStore } from '~/stores/auth'
 
 withDefaults(defineProps<{
   mode?: 'landing' | 'app' | 'studio'
@@ -136,9 +137,15 @@ defineEmits<{
   'toggle-sidebar': []
 }>()
 
-const { isAuthenticated, user, userInitial, logout } = useAuth()
+const authStore = useAuthStore()
 
-const authenticated = computed(() => isAuthenticated())
+const authenticated = computed(() => authStore.isAuthenticated)
+const user = computed(() => authStore.currentUser)
+const userInitial = computed(() => authStore.userInitial)
+
+const logout = async () => {
+  await authStore.logout()
+}
 
 const isScrolled = ref(false)
 

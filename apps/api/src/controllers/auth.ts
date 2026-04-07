@@ -81,11 +81,11 @@ export const loginBySms = async (req: Request, res: Response) => {
     }
     
     // 查找或创建用户
-    let user = userDb.findByPhone(phone)
+    let user = await userDb.findByPhone(phone)
     
     if (!user) {
       // 新用户注册
-      user = userDb.create({
+      user = await userDb.create({
         phone,
         username: `user_${phone.slice(-4)}`,
         role: 'user',
@@ -140,10 +140,11 @@ export const login = async (req: Request, res: Response) => {
     }
     
     // Mock 验证 - 任何用户名密码都接受
-    let user = userDb.getAll().find(u => u.username === username)
+    const allUsers = await userDb.getAll()
+    let user = allUsers.find(u => u.username === username)
     
     if (!user) {
-      user = userDb.create({
+      user = await userDb.create({
         username,
         role: 'user',
       })
@@ -205,7 +206,8 @@ export const register = async (req: Request, res: Response) => {
     }
     
     // 检查用户名是否已存在
-    const existingUser = userDb.getAll().find(u => u.username === username)
+    const allUsers = await userDb.getAll()
+    const existingUser = allUsers.find(u => u.username === username)
     if (existingUser) {
       return res.status(409).json({
         success: false,
@@ -214,7 +216,7 @@ export const register = async (req: Request, res: Response) => {
     }
     
     // 创建新用户
-    const user = userDb.create({
+    const user = await userDb.create({
       username,
       email,
       phone,
@@ -297,7 +299,7 @@ export const refreshToken = async (req: Request, res: Response) => {
       })
     }
     
-    const user = userDb.findById(payload.userId)
+    const user = await userDb.findById(payload.userId)
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -359,7 +361,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       })
     }
     
-    const user = userDb.findById(payload.userId)
+    const user = await userDb.findById(payload.userId)
     if (!user) {
       return res.status(404).json({
         success: false,

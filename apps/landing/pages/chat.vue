@@ -29,37 +29,19 @@
             <span class="files-title">File System</span>
           </div>
           <div class="file-tree">
-            <div class="tree-item expanded">
-              <div class="tree-row folder">
-                <el-icon class="tree-icon"><FolderOpened /></el-icon>
-                <span>root</span>
-              </div>
-              <div class="tree-children">
-                <div class="tree-row folder">
-                  <el-icon class="tree-icon"><Folder /></el-icon>
-                  <span>app</span>
-                </div>
-                <div class="tree-row folder">
-                  <el-icon class="tree-icon"><Folder /></el-icon>
-                  <span>components</span>
-                </div>
-                <div class="tree-row folder">
-                  <el-icon class="tree-icon"><Folder /></el-icon>
-                  <span>lib</span>
-                </div>
-                <div class="tree-row file">
-                  <el-icon class="tree-icon"><Document /></el-icon>
-                  <span>package.json</span>
-                </div>
-                <div class="tree-row file">
-                  <el-icon class="tree-icon"><Document /></el-icon>
-                  <span>README.md</span>
-                </div>
-                <div class="tree-row file">
-                  <el-icon class="tree-icon"><Document /></el-icon>
-                  <span>tsconfig.json</span>
-                </div>
-              </div>
+            <FileTreeNode 
+              v-for="node in chatStore.fileTree" 
+              :key="node.path"
+              :node="node"
+              :selected-path="chatStore.selectedFile || undefined"
+              :expanded-paths="chatStore.expandedFolders"
+              @select="handleFileSelect"
+              @toggle="handleFolderToggle"
+              @contextmenu="handleContextMenu"
+            />
+            <div v-if="chatStore.fileTree.length === 0 && !chatStore.isLoading" class="empty-tree">
+              <el-icon><Folder /></el-icon>
+              <span>No files found</span>
             </div>
           </div>
         </div>
@@ -69,64 +51,62 @@
           <!-- Editor Sidebar - Apps Files -->
           <div class="editor-sidebar">
             <div class="editor-sidebar-header">
-              <span class="editor-sidebar-title">Explorer (app)</span>
+              <span class="editor-sidebar-title">Explorer</span>
               <div class="editor-actions">
-                <button class="editor-btn" title="New File">
+                <button class="editor-btn" title="New File" @click="showCreateDialog('file')">
                   <el-icon><DocumentAdd /></el-icon>
                 </button>
-                <button class="editor-btn" title="New Folder">
+                <button class="editor-btn" title="New Folder" @click="showCreateDialog('folder')">
                   <el-icon><FolderAdd /></el-icon>
                 </button>
               </div>
             </div>
             <div class="editor-file-tree">
-              <div class="tree-item expanded">
-                <div class="tree-row folder">
-                  <el-icon class="tree-icon"><FolderOpened /></el-icon>
-                  <span>app</span>
-                </div>
-                <div class="tree-children">
-                  <div class="tree-row file active">
-                    <el-icon class="tree-icon"><Document /></el-icon>
-                    <span>page.tsx</span>
-                  </div>
-                  <div class="tree-row file">
-                    <el-icon class="tree-icon"><Document /></el-icon>
-                    <span>layout.tsx</span>
-                  </div>
-                  <div class="tree-row folder">
-                    <el-icon class="tree-icon"><Folder /></el-icon>
-                    <span>components</span>
-                  </div>
-                </div>
+              <FileTreeNode 
+                v-for="node in editorFileTree" 
+                :key="node.path"
+                :node="node"
+                :selected-path="chatStore.selectedFile || undefined"
+                :expanded-paths="chatStore.expandedFolders"
+                @select="handleFileSelect"
+                @toggle="handleFolderToggle"
+                @contextmenu="handleContextMenu"
+              />
+              <div v-if="editorFileTree.length === 0 && !chatStore.isLoading" class="empty-tree">
+                <span>No files found</span>
               </div>
             </div>
           </div>
 
           <!-- Code Editor -->
           <div class="code-editor">
-            <div class="code-tabs">
-              <div class="code-tab active">
+            <!-- Opened Files Tabs -->
+            <div v-if="chatStore.openedFiles.length > 0" class="code-tabs">
+              <div 
+                v-for="file in chatStore.openedFiles" 
+                :key="file.path"
+                class="code-tab"
+                :class="{ active: chatStore.activeFilePath === file.path }"
+                @click="chatStore.setActiveFile(file.path)"
+              >
                 <el-icon><Document /></el-icon>
-                <span>page.tsx</span>
-                <button class="tab-close">
+                <span>{{ file.name }}</span>
+                <button class="tab-close" @click.stop="chatStore.closeFileInEditor(file.path)">
                   <el-icon><Close /></el-icon>
                 </button>
               </div>
             </div>
+            
             <div class="code-content">
-              <div class="code-header">
-                <span class="code-path">app/page.tsx</span>
+              <div v-if="currentFile" class="code-header">
+                <span class="code-path">{{ currentFile.path }}</span>
               </div>
               <div class="code-body">
-                <pre class="code-block"><code><span class="line"><span class="keyword">export default function</span> <span class="function">Home</span>() {</span>
-<span class="line">  <span class="keyword">return</span> (</span>
-<span class="line">    &lt;<span class="tag">main</span> <span class="attr">className</span>=<span class="string">"min-h-screen"</span>&gt;</span>
-<span class="line">      &lt;<span class="tag">h1</span>&gt;{{ currentProject?.name || 'Welcome' }}&lt;/<span class="tag">h1</span>&gt;</span>
-<span class="line">      &lt;<span class="tag">p</span>&gt;{{ currentProject?.description || 'Start building your app' }}&lt;/<span class="tag">p</span>&gt;</span>
-<span class="line">    &lt;/<span class="tag">main</span>&gt;</span>
-<span class="line">  );</span>
-<span class="line">}</span></code></pre>
+                <div v-if="!currentFile" class="code-placeholder">
+                  <el-icon class="placeholder-icon"><Document /></el-icon>
+                  <p>Select a file to view its content</p>
+                </div>
+                <pre v-else class="code-block"><code>{{ fileContent || '// File content will be loaded here' }}</code></pre>
               </div>
             </div>
           </div>
@@ -169,27 +149,113 @@
         </div>
       </div>
     </div>
+
+    <!-- Context Menu -->
+    <div 
+      v-if="contextMenu.visible" 
+      class="context-menu"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+    >
+      <div class="context-menu-item" @click="handleMenuAction('rename')">
+        <el-icon><Edit /></el-icon>
+        <span>Rename</span>
+      </div>
+      <div class="context-menu-item" @click="handleMenuAction('delete')">
+        <el-icon><Delete /></el-icon>
+        <span>Delete</span>
+      </div>
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-item" @click="handleMenuAction('newFile')">
+        <el-icon><DocumentAdd /></el-icon>
+        <span>New File</span>
+      </div>
+      <div class="context-menu-item" @click="handleMenuAction('newFolder')">
+        <el-icon><FolderAdd /></el-icon>
+        <span>New Folder</span>
+      </div>
+    </div>
+
+    <!-- Create File/Folder Dialog -->
+    <el-dialog
+      v-model="createDialog.visible"
+      :title="createDialog.isDirectory ? 'New Folder' : 'New File'"
+      width="400px"
+    >
+      <el-input 
+        v-model="createDialog.name" 
+        :placeholder="createDialog.isDirectory ? 'Folder name' : 'File name'"
+        @keyup.enter="confirmCreate"
+      />
+      <template #footer>
+        <el-button @click="createDialog.visible = false">Cancel</el-button>
+        <el-button type="primary" @click="confirmCreate" :loading="chatStore.isLoading">
+          Create
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Rename Dialog -->
+    <el-dialog
+      v-model="renameDialog.visible"
+      title="Rename"
+      width="400px"
+    >
+      <el-input 
+        v-model="renameDialog.name" 
+        placeholder="New name"
+        @keyup.enter="confirmRename"
+      />
+      <template #footer>
+        <el-button @click="renameDialog.visible = false">Cancel</el-button>
+        <el-button type="primary" @click="confirmRename" :loading="chatStore.isLoading">
+          Rename
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Delete Confirm Dialog -->
+    <el-dialog
+      v-model="deleteDialog.visible"
+      title="Confirm Delete"
+      width="400px"
+    >
+      <p>Are you sure you want to delete "{{ deleteDialog.node?.name }}"?</p>
+      <p class="delete-warning">This action cannot be undone.</p>
+      <template #footer>
+        <el-button @click="deleteDialog.visible = false">Cancel</el-button>
+        <el-button type="danger" @click="confirmDelete" :loading="chatStore.isLoading">
+          Delete
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { inject, ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import {
   Document,
   DocumentAdd,
   Folder,
   FolderAdd,
-  FolderOpened,
   Close,
   Monitor,
-  ChatDotRound,
   View,
-  Edit
+  Edit,
+  Delete
 } from '@element-plus/icons-vue'
 import ChatPanel from '~/components/ChatPanel.vue'
+import FileTreeNode from '~/components/FileTreeNode.vue'
+import { useChatStore, type FileTreeNode as FileTreeNodeType } from '~/stores/chat'
 
 definePageMeta({
   layout: 'chat',
+  pageTransition: {
+    name: 'chat-page',
+    mode: 'out-in',
+    duration: 400
+  }
 })
 
 interface Project {
@@ -198,14 +264,230 @@ interface Project {
   description: string
 }
 
-const currentProject = inject<Project | null>('currentProject', null)
+const chatStore = useChatStore()
+const currentProject = ref<Project | null>(null)
 const activeTab = ref<'files' | 'editor' | 'preview'>('editor')
+const fileContent = ref('')
 
-const tabs = [
+// Context Menu State
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  node: null as FileTreeNodeType | null,
+})
+
+// Create Dialog State
+const createDialog = ref({
+  visible: false,
+  isDirectory: false,
+  name: '',
+  parentPath: '',
+})
+
+// Rename Dialog State
+const renameDialog = ref({
+  visible: false,
+  name: '',
+  node: null as FileTreeNodeType | null,
+})
+
+// Delete Dialog State
+const deleteDialog = ref({
+  visible: false,
+  node: null as FileTreeNodeType | null,
+})
+
+type TabId = 'files' | 'editor' | 'preview'
+const tabs: { id: TabId; label: string; icon: any }[] = [
   { id: 'files', label: 'Files', icon: 'Folder' },
-  { id: 'editor', label: 'Editor', icon: 'Edit' },
-  { id: 'preview', label: 'Preview', icon: 'View' },
+  { id: 'editor', label: 'Editor', icon: Edit },
+  { id: 'preview', label: 'Preview', icon: View },
 ]
+
+// Editor file tree - filter to show only app directory or full tree
+const editorFileTree = computed(() => {
+  // For now, show full tree in editor, can be filtered later
+  return chatStore.fileTree
+})
+
+// Current file being edited
+const currentFile = computed(() => {
+  if (!chatStore.activeFilePath) return null
+  return chatStore.openedFiles.find(f => f.path === chatStore.activeFilePath) || null
+})
+
+// Load file content when active file changes
+watch(() => chatStore.activeFilePath, async (path) => {
+  if (path) {
+    await loadFileContent(path)
+  } else {
+    fileContent.value = ''
+  }
+})
+
+onMounted(() => {
+  const saved = sessionStorage.getItem('pending-project')
+  if (saved) {
+    currentProject.value = JSON.parse(saved)
+  }
+  
+  // Load file tree on mount
+  chatStore.loadFileTree().catch((err) => {
+    console.warn('Failed to load file tree:', err)
+    // 不显示错误提示，因为用户可能未登录
+  })
+  
+  // Close context menu on click outside
+  document.addEventListener('click', hideContextMenu)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', hideContextMenu)
+})
+
+// Load file content from API
+async function loadFileContent(path: string) {
+  try {
+    const { code: codeApi } = useApi()
+    const response = await codeApi.getFile(path)
+    if (response.success && response.data) {
+      fileContent.value = response.data.content
+    }
+  } catch (err) {
+    console.error('Failed to load file content:', err)
+    fileContent.value = '// Error loading file content'
+  }
+}
+
+// Handle file/folder selection
+function handleFileSelect(node: FileTreeNodeType) {
+  if (node.type === 'file') {
+    chatStore.openFileInEditor(node)
+    activeTab.value = 'editor'
+  }
+  hideContextMenu()
+}
+
+// Handle folder toggle
+function handleFolderToggle(node: FileTreeNodeType) {
+  chatStore.toggleFolder(node.path)
+}
+
+// Handle right-click context menu
+function handleContextMenu(event: MouseEvent, node: FileTreeNodeType) {
+  event.preventDefault()
+  contextMenu.value = {
+    visible: true,
+    x: event.clientX,
+    y: event.clientY,
+    node,
+  }
+}
+
+// Hide context menu
+function hideContextMenu() {
+  contextMenu.value.visible = false
+}
+
+// Handle context menu action
+function handleMenuAction(action: string) {
+  const node = contextMenu.value.node
+  if (!node) return
+
+  switch (action) {
+    case 'rename':
+      renameDialog.value = {
+        visible: true,
+        name: node.name,
+        node,
+      }
+      break
+    case 'delete':
+      deleteDialog.value = {
+        visible: true,
+        node,
+      }
+      break
+    case 'newFile':
+      createDialog.value = {
+        visible: true,
+        isDirectory: false,
+        name: '',
+        parentPath: node.type === 'folder' ? node.path : getParentPath(node.path),
+      }
+      break
+    case 'newFolder':
+      createDialog.value = {
+        visible: true,
+        isDirectory: true,
+        name: '',
+        parentPath: node.type === 'folder' ? node.path : getParentPath(node.path),
+      }
+      break
+  }
+  hideContextMenu()
+}
+
+// Get parent path
+function getParentPath(path: string): string {
+  const parts = path.split('/')
+  parts.pop()
+  return parts.join('/')
+}
+
+// Show create dialog
+function showCreateDialog(type: 'file' | 'folder') {
+  createDialog.value = {
+    visible: true,
+    isDirectory: type === 'folder',
+    name: '',
+    parentPath: '',
+  }
+}
+
+// Confirm create
+async function confirmCreate() {
+  if (!createDialog.value.name) return
+  
+  try {
+    await chatStore.createFile(
+      createDialog.value.parentPath,
+      createDialog.value.name,
+      createDialog.value.isDirectory
+    )
+    createDialog.value.visible = false
+    ElMessage.success(createDialog.value.isDirectory ? 'Folder created' : 'File created')
+  } catch (err: any) {
+    ElMessage.error(err.message || 'Failed to create')
+  }
+}
+
+// Confirm rename
+async function confirmRename() {
+  if (!renameDialog.value.name || !renameDialog.value.node) return
+  
+  try {
+    await chatStore.renameFile(renameDialog.value.node.path, renameDialog.value.name)
+    renameDialog.value.visible = false
+    ElMessage.success('Renamed successfully')
+  } catch (err: any) {
+    ElMessage.error(err.message || 'Failed to rename')
+  }
+}
+
+// Confirm delete
+async function confirmDelete() {
+  if (!deleteDialog.value.node) return
+  
+  try {
+    await chatStore.deleteFile(deleteDialog.value.node.path)
+    deleteDialog.value.visible = false
+    ElMessage.success('Deleted successfully')
+  } catch (err: any) {
+    ElMessage.error(err.message || 'Failed to delete')
+  }
+}
 </script>
 
 <style scoped>
@@ -214,6 +496,25 @@ const tabs = [
   width: 100%;
   height: 100%;
   background: #fafafa;
+}
+
+/* Chat 页面特殊入场动画 - 淡入 + 轻微缩放 */
+:global(.chat-page-enter-active) {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:global(.chat-page-leave-active) {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:global(.chat-page-enter-from) {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+:global(.chat-page-leave-to) {
+  opacity: 0;
+  transform: scale(1.02);
 }
 
 /* Left Chat Sidebar */
@@ -376,6 +677,7 @@ const tabs = [
   display: flex;
   background: #252526;
   border-bottom: 1px solid #333;
+  overflow-x: auto;
 }
 
 .code-tab {
@@ -387,6 +689,13 @@ const tabs = [
   color: #9ca3af;
   font-size: 13px;
   cursor: pointer;
+  white-space: nowrap;
+  border-right: 1px solid #333;
+  transition: all 0.15s ease;
+}
+
+.code-tab:hover {
+  background: #3c3c3c;
 }
 
 .code-tab.active {
@@ -406,6 +715,12 @@ const tabs = [
   align-items: center;
   justify-content: center;
   margin-left: 8px;
+  opacity: 0;
+  transition: all 0.15s ease;
+}
+
+.code-tab:hover .tab-close {
+  opacity: 1;
 }
 
 .tab-close:hover {
@@ -438,22 +753,28 @@ const tabs = [
   padding: 16px;
 }
 
+.code-placeholder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  gap: 12px;
+}
+
+.code-placeholder .placeholder-icon {
+  font-size: 48px;
+  color: #4b5563;
+}
+
 .code-block {
   margin: 0;
   font-family: 'Fira Code', 'Consolas', monospace;
   font-size: 13px;
   line-height: 1.6;
+  color: #d4d4d4;
 }
-
-.line {
-  display: block;
-}
-
-.keyword { color: #c586c0; }
-.function { color: #dcdcaa; }
-.tag { color: #569cd6; }
-.attr { color: #9cdcfe; }
-.string { color: #ce9178; }
 
 /* File Tree Common Styles */
 .file-tree {
@@ -462,44 +783,55 @@ const tabs = [
   padding: 8px;
 }
 
-.tree-item {
-  margin-bottom: 2px;
-}
-
-.tree-row {
+.empty-tree {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+/* Context Menu */
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 160px;
+  padding: 4px;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
   cursor: pointer;
+  border-radius: 6px;
   font-size: 13px;
   color: #374151;
   transition: all 0.15s ease;
 }
 
-.tree-row:hover {
+.context-menu-item:hover {
   background: #f3f4f6;
 }
 
-.tree-row.active {
-  background: #4f46e5;
-  color: white;
+.context-menu-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
 }
 
-.tree-icon {
-  font-size: 14px;
-  color: #9ca3af;
-}
-
-.tree-row.active .tree-icon {
-  color: white;
-}
-
-.tree-children {
-  margin-left: 20px;
-  border-left: 1px solid #e5e7eb;
-  padding-left: 4px;
+/* Delete warning */
+.delete-warning {
+  color: #ef4444;
+  font-size: 13px;
+  margin-top: 8px;
 }
 
 /* Preview View */

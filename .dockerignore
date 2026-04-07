@@ -1,56 +1,94 @@
-# Dependencies
+# ==================== 依赖目录（最大）====================
+# 所有 node_modules（包括嵌套的）
 **/node_modules
-**/vendor
 
-# Build outputs
+# pnpm 虚拟存储（巨大！）
+.pnpm-store
+**/.pnpm-store
+
+# npm 缓存
+.npm
+**/.npm
+
+# yarn 缓存
+.yarn
+**/.yarn
+
+# ==================== 构建输出 ====================
 **/dist
+**/.nuxt
+**/.output
+**/.turbo
+**/.cache
 **/build
-**/bin
-**/*.exe
 
-# Development
+# ==================== 测试和日志 ====================
+**/*.log
+**/test
+**/__tests__
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+**/coverage
+
+# ==================== 本地环境文件 ====================
+**/.env
+**/.env.local
+**/.env.*.local
+**/.envrc
+
+# ==================== IDE 和编辑器 ====================
+**/.vscode
+**/.idea
+**/*.swp
+**/*.swo
+**/*~
+
+# ==================== 版本控制 ====================
 .git
 .gitignore
-.env
-.env.*
-.env.local
-.env.development
-.env.production
+.gitattributes
+.gitmodules
 
-# IDE
-.idea
-.vscode
-*.swp
-*.swo
-*~
+# ==================== 文档（不需要在容器中）====================
+**/README.md
+**/CHANGELOG.md
+**/LICENSE
+**/CONTRIBUTING.md
 
-# Testing
-**/coverage
-**/.nyc_output
-
-# Logs
-**/logs
-**/*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Documentation
-*.md
-!README.md
-docs/
-
-# CI/CD
+# ==================== CI/CD ====================
 .github
 .gitlab-ci.yml
+azure-pipelines.yml
 .travis.yml
+.circleci
 
-# Misc
-.cache
-tmp
-temp
-*.tmp
+# ==================== Docker 相关 ====================
+**/Dockerfile*
+**/.dockerignore
+docker-compose*.yml
+.docker
+
+# ==================== 其他工具 ====================
+# Playwright
+.playwright-mcp
+
+# 视频/图片资源（如果在代码仓库中）
+**/*.mp4
+**/*.mov
+**/*.avi
+
+# 备份文件
+**/*.bak
+**/*.backup
+
+# 操作系统文件
+**/.DS_Store
+**/Thumbs.db
+desktop.ini
+
+# 临时文件
+**/tmp
+**/temp
+**/*.tmp

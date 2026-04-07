@@ -11,7 +11,7 @@ export const getAgents = async (req: Request, res: Response) => {
     await delay(300)
     
     const { teamId } = req.query
-    const agents = agentDb.findAll()
+    const agents = await agentDb.findAll()
     
     res.json({
       success: true,
@@ -38,7 +38,7 @@ export const getAgent = async (req: Request, res: Response) => {
     await delay(300)
     
     const { id } = req.params
-    const agent = agentDb.findById(id)
+    const agent = await agentDb.findById(id)
     
     if (!agent) {
       return res.status(404).json({
@@ -48,7 +48,7 @@ export const getAgent = async (req: Request, res: Response) => {
     }
     
     // 获取关联的任务
-    const tasks = taskDb.findAll({ assignedTo: id })
+    const tasks = await taskDb.findAll({ assignedTo: id })
     
     // 计算统计信息
     const totalTasks = tasks.length
@@ -94,11 +94,11 @@ export const createAgent = async (req: Request, res: Response) => {
       })
     }
     
-    const agent = agentDb.create({
+    const agent = await agentDb.create({
       name,
       role,
       description,
-      ...config,
+      config,
     })
     
     res.status(201).json({
@@ -125,7 +125,7 @@ export const updateAgent = async (req: Request, res: Response) => {
     const { id } = req.params
     const { name, description, config } = req.body
     
-    const agent = agentDb.findById(id)
+    const agent = await agentDb.findById(id)
     if (!agent) {
       return res.status(404).json({
         success: false,
@@ -133,10 +133,10 @@ export const updateAgent = async (req: Request, res: Response) => {
       })
     }
     
-    const updated = agentDb.update(id, {
+    const updated = await agentDb.update(id, {
       name,
       description,
-      ...config,
+      config,
     })
     
     res.json({
@@ -162,7 +162,7 @@ export const deleteAgent = async (req: Request, res: Response) => {
     
     const { id } = req.params
     
-    const agent = agentDb.findById(id)
+    const agent = await agentDb.findById(id)
     if (!agent) {
       return res.status(404).json({
         success: false,
@@ -170,7 +170,7 @@ export const deleteAgent = async (req: Request, res: Response) => {
       })
     }
     
-    agentDb.delete(id)
+    await agentDb.delete(id)
     
     res.json({
       success: true,
@@ -195,7 +195,7 @@ export const startAgent = async (req: Request, res: Response) => {
     
     const { id } = req.params
     
-    const agent = agentDb.findById(id)
+    const agent = await agentDb.findById(id)
     if (!agent) {
       return res.status(404).json({
         success: false,
@@ -203,8 +203,8 @@ export const startAgent = async (req: Request, res: Response) => {
       })
     }
     
-    const updated = agentDb.update(id, { status: 'working' })
-    logDb.addLog(id, 'Agent started')
+    const updated = await agentDb.update(id, { status: 'working' })
+    await logDb.addLog(id, 'Agent started')
     
     res.json({
       success: true,
@@ -229,7 +229,7 @@ export const stopAgent = async (req: Request, res: Response) => {
     
     const { id } = req.params
     
-    const agent = agentDb.findById(id)
+    const agent = await agentDb.findById(id)
     if (!agent) {
       return res.status(404).json({
         success: false,
@@ -237,8 +237,8 @@ export const stopAgent = async (req: Request, res: Response) => {
       })
     }
     
-    const updated = agentDb.update(id, { status: 'idle' })
-    logDb.addLog(id, 'Agent stopped')
+    const updated = await agentDb.update(id, { status: 'idle' })
+    await logDb.addLog(id, 'Agent stopped')
     
     res.json({
       success: true,
@@ -263,7 +263,7 @@ export const pauseAgent = async (req: Request, res: Response) => {
     
     const { id } = req.params
     
-    const agent = agentDb.findById(id)
+    const agent = await agentDb.findById(id)
     if (!agent) {
       return res.status(404).json({
         success: false,
@@ -271,8 +271,8 @@ export const pauseAgent = async (req: Request, res: Response) => {
       })
     }
     
-    const updated = agentDb.update(id, { status: 'paused' })
-    logDb.addLog(id, 'Agent paused')
+    const updated = await agentDb.update(id, { status: 'paused' })
+    await logDb.addLog(id, 'Agent paused')
     
     res.json({
       success: true,
@@ -297,7 +297,7 @@ export const resumeAgent = async (req: Request, res: Response) => {
     
     const { id } = req.params
     
-    const agent = agentDb.findById(id)
+    const agent = await agentDb.findById(id)
     if (!agent) {
       return res.status(404).json({
         success: false,
@@ -305,8 +305,8 @@ export const resumeAgent = async (req: Request, res: Response) => {
       })
     }
     
-    const updated = agentDb.update(id, { status: 'working' })
-    logDb.addLog(id, 'Agent resumed')
+    const updated = await agentDb.update(id, { status: 'working' })
+    await logDb.addLog(id, 'Agent resumed')
     
     res.json({
       success: true,
@@ -332,7 +332,7 @@ export const sendCommand = async (req: Request, res: Response) => {
     const { id } = req.params
     const { type, payload } = req.body
     
-    const agent = agentDb.findById(id)
+    const agent = await agentDb.findById(id)
     if (!agent) {
       return res.status(404).json({
         success: false,
@@ -340,7 +340,7 @@ export const sendCommand = async (req: Request, res: Response) => {
       })
     }
     
-    logDb.addLog(id, `Command received: ${type}`)
+    await logDb.addLog(id, `Command received: ${type}`)
     
     // 模拟命令执行
     res.json({
@@ -372,7 +372,7 @@ export const getAgentLogs = async (req: Request, res: Response) => {
     const { id } = req.params
     const lines = parseInt(req.query.lines as string) || 100
     
-    const agent = agentDb.findById(id)
+    const agent = await agentDb.findById(id)
     if (!agent) {
       return res.status(404).json({
         success: false,
@@ -380,7 +380,7 @@ export const getAgentLogs = async (req: Request, res: Response) => {
       })
     }
     
-    const logs = logDb.getLogs(id).slice(-lines)
+    const logs = await logDb.getLogs(id, lines)
     
     res.json({
       success: true,
