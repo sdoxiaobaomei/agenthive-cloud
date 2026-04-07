@@ -48,6 +48,8 @@ desktop.ini
 *.tmp
 tmp/
 temp/
+FILE-ANALYSIS.md
+GIT-ANALYSIS.md
 
 # 截图（开发测试用）
 /*.png
