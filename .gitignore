@@ -61,3 +61,43 @@ temp/
 # 证书
 *.pem
 *.key
+
+# ========================================
+# Backend 专用 .gitignore 补充
+# ========================================
+
+# 错误日志
+*.err
+backend.err
+server.err
+frontend.err
+
+# 测试覆盖率报告（保留 JSON 数据，移除 HTML）
+apps/*/coverage/**/*.html
+apps/*/coverage/**/*.css
+apps/*/coverage/**/*.js
+apps/*/coverage/**/*.png
+apps/*/coverage/favicon.png
+
+# 工作区运行时文件
+apps/api/workspaces/
+!apps/api/workspaces/.gitkeep
+
+# 临时测试脚本（如需保留请注释）
+apps/api/test-hello.js
+apps/api/test-db.mjs
+apps/api/test-full-flow.js
+apps/api/test-ollama-direct.js
+apps/landing/test-login-*.mjs
+
+# npm 锁定文件（使用 pnpm）
+apps/*/package-lock.json
+
+# 运行时生成的任务结果
+apps/api/task-results/
+
+# 本地 SQLite 数据库（如有）
+*.sqlite
+*.db
+
+.nuxt/
