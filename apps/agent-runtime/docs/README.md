@@ -10,16 +10,19 @@
 
 - [API 文档](API.md) - 完整的 API 参考和使用示例
 - [架构文档](ARCHITECTURE.md) - 系统架构和设计决策
-- [迁移指南](API.md#迁移指南) - 从旧版本迁移的详细步骤
+- [快速参考](QUICK_REFERENCE.md) - 常用代码片段速查
+- [迁移指南](guides/MIGRATION_GUIDE.md) - 从旧版本迁移的详细步骤
+- [Ollama 本地部署](guides/README-OLLAMA.md) - Ollama 本地模型配置
 
 ### 项目信息
 
 - [CHANGELOG](../CHANGELOG.md) - 版本变更历史
-- [PROGRESS](../PROGRESS.md) - 开发进度追踪
-
-### 开发文档
-
+- [PROGRESS](../PROGRESS.md) - 开发进度追踪 (v2.2.0)
 - [MIGRATION_PLAN](../MIGRATION_PLAN.md) - 完整的迁移计划
+
+### 归档文档
+
+- [archive/](archive/) - 历史文档和过时资料
 
 ---
 
