@@ -2,10 +2,126 @@
  * Agent Runtime - Main Entry Point
  * 
  * 统一导出所有模块，简化导入路径
+ * 版本: 2.2.0
  */
 
 // ============================================================================
-// Core Types
+// Feature Flags (功能开关)
+// ============================================================================
+
+export {
+  FEATURE_FLAGS,
+  isFeatureEnabled,
+  enableFeature,
+  disableFeature,
+  getFeatureStatus,
+  printFeatureStatus,
+  type FeatureFlag
+} from './config/featureFlags.js'
+
+// ============================================================================
+// Core Types - ToolV2 (新接口)
+// ============================================================================
+
+export type {
+  // ToolV2 核心类型
+  ToolV2,
+  ToolV2Def,
+  ToolUseContext,
+  PermissionResult,
+  ClassifierResult,
+  ToolCategory,
+  ToolProgressData,
+  ToolResult,
+  Message,
+  ToolCall,
+  AssistantMessage,
+  
+  // Schema 工具
+  LazySchema
+} from './tools/ToolV2.js'
+
+export {
+  // ToolV2 工厂函数
+  buildToolV2,
+  lazySchema,
+  resolveSchema,
+  createToolResult,
+  createToolError,
+  createToolCancelled,
+  isToolV2
+} from './tools/ToolV2.js'
+
+// ============================================================================
+// ToolV2 Registry (新注册表)
+// ============================================================================
+
+export {
+  ToolRegistryV2,
+  globalToolRegistryV2
+} from './tools/registry/ToolRegistryV2.js'
+
+// ============================================================================
+// Query Loop V2
+// ============================================================================
+
+export {
+  QueryLoopV2,
+  type QueryResult,
+  type QueryProgressData,
+} from './agent/QueryLoopV2.js'
+
+// ============================================================================
+// Context V2
+// ============================================================================
+
+export {
+  ConversationContextV2,
+  type LLMMessage,
+} from './context/ConversationContextV2.js'
+
+// ============================================================================
+// Compaction Engine
+// ============================================================================
+
+export {
+  CompactionEngine,
+  type CompactionResult,
+  type CompactionStrategy,
+} from './context/compact/CompactionEngine.js'
+
+// ============================================================================
+// LLM Service
+// ============================================================================
+
+export {
+  LLMService,
+  initializeLLMService,
+  getLLMService,
+} from './services/llm/LLMService.js'
+
+export type {
+  LLMServiceConfig,
+  LLMCompletionOptions,
+  LLMCompletionResult,
+  LLMStreamChunk,
+  LLMToolDefinition,
+} from './services/llm/types.js'
+
+// Ollama Provider
+export { OllamaProvider } from './services/llm/providers/ollama.js'
+
+// ============================================================================
+// Tool Adapters (适配器)
+// ============================================================================
+
+export {
+  adaptLegacyToV2,
+  adaptV2ToLegacy
+} from './tools/adapters/ToolAdapter.js'
+
+// ============================================================================
+// Core Types - Legacy (旧接口保持兼容)
 // ============================================================================
 
 export type {
@@ -14,10 +130,10 @@ export type {
   ToolDef,
   ToolMetadata,
   ToolProgressData,
-  ToolResult,
-  ToolCategory,
+  ToolResult as LegacyToolResult,
+  ToolCategory as LegacyToolCategory,
   ToolClassifierResult,
-  ToolCall,
+  ToolCall as LegacyToolCall,
   ToolExecutionResult,
   
   // Permission Types
@@ -56,9 +172,6 @@ export {
   ToolRegistry,
   buildTool,
   globalToolRegistry,
-  lazySchema,
-  isLazySchema,
-  resolveSchema,
   createFileStateCache,
 } from './tools/ToolClaudeCode.js'
 

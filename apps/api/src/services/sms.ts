@@ -1,5 +1,5 @@
 // 阿里云短信服务 Mock
-import { smsDb, generateId } from '../utils/database.js'
+import { smsDb } from '../utils/database.js'
 import type { SmsCode } from '../types/index.js'
 
 // 短信验证码配置
@@ -27,6 +27,20 @@ export interface SmsSendResult {
 export interface SmsVerifyResult {
   success: boolean
   message: string
+}
+
+// 生成数字验证码
+function generateSmsCode(length: number): string {
+  let code = ''
+  for (let i = 0; i < length; i++) {
+    code += Math.floor(Math.random() * 10).toString()
+  }
+  return code
+}
+
+// 生成唯一 ID
+function generateId(): string {
+  return Math.random().toString(36).substring(2, 15)
 }
 
 /**
@@ -60,6 +74,9 @@ export const smsService = {
     const code = generateSmsCode(SMS_CONFIG.codeLength)
     const requestId = `sms-${generateId()}`
     
+    // 删除旧验证码
+    await smsDb.delete(phone)
+    
     // 保存验证码
     const smsCode: SmsCode = {
       phone,
@@ -67,7 +84,7 @@ export const smsService = {
       expiresAt: Date.now() + SMS_CONFIG.expiryMinutes * 60 * 1000,
       attempts: 0,
     }
-    smsDb.save(smsCode)
+    await smsDb.save(smsCode)
     
     // 记录发送时间
     sendRecords.set(phone, Date.now())
@@ -88,7 +105,7 @@ export const smsService = {
    * 验证短信验证码
    */
   verifyCode: async (phone: string, code: string): Promise<SmsVerifyResult> => {
-    const smsCode = smsDb.findByPhone(phone)
+    const smsCode = await smsDb.findByPhone(phone)
     
     if (!smsCode) {
       return {
@@ -98,8 +115,8 @@ export const smsService = {
     }
     
     // 检查是否过期
-    if (smsCode.expiresAt < Date.now()) {
-      smsDb.delete(phone)
+    if (!smsCode.expires_at || new Date(smsCode.expires_at).getTime() < Date.now()) {
+      await smsDb.delete(phone)
       return {
         success: false,
         message: '验证码已过期，请重新获取',
@@ -108,7 +125,7 @@ export const smsService = {
     
     // 检查尝试次数
     if (smsCode.attempts >= SMS_CONFIG.maxAttempts) {
-      smsDb.delete(phone)
+      await smsDb.delete(phone)
       return {
         success: false,
         message: '验证次数过多，请重新获取验证码',
@@ -116,12 +133,11 @@ export const smsService = {
     }
     
     // 增加尝试次数
-    smsCode.attempts++
-    smsDb.save(smsCode)
+    await smsDb.updateAttempts(phone, smsCode.attempts + 1)
     
     // 验证验证码
     if (smsCode.code !== code) {
-      const remainingAttempts = SMS_CONFIG.maxAttempts - smsCode.attempts
+      const remainingAttempts = SMS_CONFIG.maxAttempts - (smsCode.attempts + 1)
       return {
         success: false,
         message: `验证码错误，还剩 ${remainingAttempts} 次机会`,
@@ -129,7 +145,7 @@ export const smsService = {
     }
     
     // 验证成功，删除验证码
-    smsDb.delete(phone)
+    await smsDb.delete(phone)
     
     return {
       success: true,
@@ -157,13 +173,13 @@ export const smsService = {
   /**
    * 获取验证码状态（用于调试）
    */
-  getCodeStatus: (phone: string): { exists: boolean; expired: boolean; attempts: number } | null => {
-    const smsCode = smsDb.findByPhone(phone)
+  getCodeStatus: async (phone: string): Promise<{ exists: boolean; expired: boolean; attempts: number } | null> => {
+    const smsCode = await smsDb.findByPhone(phone)
     if (!smsCode) return null
     
     return {
       exists: true,
-      expired: smsCode.expiresAt < Date.now(),
+      expired: !smsCode.expires_at || new Date(smsCode.expires_at).getTime() < Date.now(),
       attempts: smsCode.attempts,
     }
   },
@@ -171,21 +187,12 @@ export const smsService = {
   /**
    * 清理过期验证码
    */
-  cleanExpired: (): void => {
-    smsDb.cleanExpired()
+  cleanExpired: async (): Promise<void> => {
+    await smsDb.cleanExpired()
   },
-}
-
-// 生成数字验证码
-function generateSmsCode(length: number): string {
-  let code = ''
-  for (let i = 0; i < length; i++) {
-    code += Math.floor(Math.random() * 10).toString()
-  }
-  return code
 }
 
 // 定期清理过期验证码
 setInterval(() => {
-  smsService.cleanExpired()
+  smsService.cleanExpired().catch(console.error)
 }, 5 * 60 * 1000) // 每5分钟清理一次

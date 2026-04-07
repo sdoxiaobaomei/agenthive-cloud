@@ -75,7 +75,7 @@ export function useBrowserStorage<T>(
   })
   
   watch(storage, (newVal) => {
-    if (process.client) {
+    if (import.meta.client) {
       try {
         const store = type === 'local' ? localStorage : sessionStorage
         if (newVal === null || newVal === undefined) {

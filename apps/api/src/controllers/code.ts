@@ -1,6 +1,25 @@
 // Code 控制器
 import type { Request, Response } from 'express'
 import { codeDb, delay } from '../utils/database.js'
+import { readFile, writeFile, readdir, stat, mkdir, rm } from 'fs/promises'
+import { join, dirname, relative, resolve } from 'path'
+
+// 工作区基础路径
+const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/data/workspaces'
+
+// 获取用户工作区路径
+function getUserWorkspace(userId: string, projectId?: string): string {
+  if (projectId) {
+    return resolve(WORKSPACE_BASE, userId, projectId)
+  }
+  return resolve(WORKSPACE_BASE, userId, 'default')
+}
+
+// 确保路径在工作区内（安全检查）
+function isPathSafe(workspacePath: string, targetPath: string): boolean {
+  const resolved = resolve(targetPath)
+  return resolved.startsWith(workspacePath)
+}
 
 /**
  * 获取文件列表
@@ -12,7 +31,7 @@ export const getFileList = async (req: Request, res: Response) => {
     
     const { path = '/' } = req.query
     
-    const files = codeDb.findAll()
+    const files = await codeDb.findAll()
     
     res.json({
       success: true,
@@ -41,7 +60,7 @@ export const getFileContent = async (req: Request, res: Response) => {
     
     const filePath = '/' + req.params[0]
     
-    const file = codeDb.findByPath(filePath)
+    const file = await codeDb.findByPath(filePath)
     
     if (!file) {
       return res.status(404).json({
@@ -56,7 +75,7 @@ export const getFileContent = async (req: Request, res: Response) => {
         path: file.path,
         content: file.content,
         language: file.language,
-        lastModified: file.lastModified,
+        lastModified: file.last_modified,
       },
     })
   } catch (error) {
@@ -87,16 +106,16 @@ export const updateFile = async (req: Request, res: Response) => {
     }
     
     // 检查文件是否存在
-    const existingFile = codeDb.findByPath(filePath)
+    const existingFile = await codeDb.findByPath(filePath)
     
     let file
     if (existingFile) {
-      file = codeDb.update(filePath, content)
+      file = await codeDb.update(filePath, content)
     } else {
       // 创建新文件
       const fileName = filePath.split('/').pop() || 'untitled'
       const language = getLanguageFromFilename(fileName)
-      file = codeDb.create({
+      file = await codeDb.create({
         path: filePath,
         name: fileName,
         content,
@@ -110,7 +129,7 @@ export const updateFile = async (req: Request, res: Response) => {
         path: file!.path,
         content: file!.content,
         language: file!.language,
-        lastModified: file!.lastModified,
+        lastModified: file!.last_modified,
       },
     })
   } catch (error) {
@@ -132,7 +151,7 @@ export const deleteFile = async (req: Request, res: Response) => {
     
     const filePath = '/' + req.params[0]
     
-    const file = codeDb.findByPath(filePath)
+    const file = await codeDb.findByPath(filePath)
     if (!file) {
       return res.status(404).json({
         success: false,
@@ -140,7 +159,7 @@ export const deleteFile = async (req: Request, res: Response) => {
       })
     }
     
-    codeDb.delete(filePath)
+    await codeDb.delete(filePath)
     
     res.json({
       success: true,
@@ -172,7 +191,7 @@ export const searchFiles = async (req: Request, res: Response) => {
       })
     }
     
-    const files = codeDb.search(query as string)
+    const files = await codeDb.search(query as string)
     
     res.json({
       success: true,
@@ -201,7 +220,7 @@ export const getRecentFiles = async (req: Request, res: Response) => {
     
     const limit = parseInt(req.query.limit as string) || 10
     
-    const files = codeDb.getRecent(limit)
+    const files = await codeDb.getRecent(limit)
     
     res.json({
       success: true,
@@ -215,6 +234,225 @@ export const getRecentFiles = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: '获取最近文件失败',
+    })
+  }
+}
+
+/**
+ * 获取工作区文件列表
+ * GET /api/code/workspace/files
+ */
+export const getWorkspaceFiles = async (req: Request, res: Response) => {
+  try {
+    const { projectId, path = '' } = req.query
+    const userId = (req as any).userId || 'anonymous'
+    
+    const workspacePath = getUserWorkspace(userId, projectId as string)
+    const targetPath = join(workspacePath, path as string)
+    
+    // 安全检查
+    if (!isPathSafe(workspacePath, targetPath)) {
+      return res.status(403).json({
+        success: false,
+        error: '访问被拒绝：路径超出工作区范围',
+      })
+    }
+    
+    // 读取目录
+    const entries = await readdir(targetPath, { withFileTypes: true })
+    
+    const files = await Promise.all(
+      entries.map(async (entry) => {
+        const fullPath = join(targetPath, entry.name)
+        const relativePath = relative(workspacePath, fullPath)
+        const stats = await stat(fullPath)
+        
+        return {
+          name: entry.name,
+          path: relativePath,
+          type: entry.isDirectory() ? 'directory' : 'file',
+          size: stats.size,
+          modifiedAt: stats.mtime,
+        }
+      })
+    )
+    
+    res.json({
+      success: true,
+      data: {
+        files,
+        path: path as string,
+        workspace: workspacePath,
+      },
+    })
+  } catch (error) {
+    console.error('Get workspace files error:', error)
+    res.status(500).json({
+      success: false,
+      error: '获取工作区文件失败',
+    })
+  }
+}
+
+/**
+ * 获取工作区文件内容
+ * GET /api/code/workspace/files/content
+ */
+export const getWorkspaceFileContent = async (req: Request, res: Response) => {
+  try {
+    const { projectId, filePath } = req.query
+    const userId = (req as any).userId || 'anonymous'
+    
+    if (!filePath) {
+      return res.status(400).json({
+        success: false,
+        error: '文件路径不能为空',
+      })
+    }
+    
+    const workspacePath = getUserWorkspace(userId, projectId as string)
+    const targetPath = join(workspacePath, filePath as string)
+    
+    // 安全检查
+    if (!isPathSafe(workspacePath, targetPath)) {
+      return res.status(403).json({
+        success: false,
+        error: '访问被拒绝：路径超出工作区范围',
+      })
+    }
+    
+    // 读取文件
+    const content = await readFile(targetPath, 'utf-8')
+    const stats = await stat(targetPath)
+    
+    // 获取文件语言
+    const fileName = (filePath as string).split('/').pop() || ''
+    const language = getLanguageFromFilename(fileName)
+    
+    res.json({
+      success: true,
+      data: {
+        path: filePath,
+        content,
+        language,
+        size: stats.size,
+        modifiedAt: stats.mtime,
+      },
+    })
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      return res.status(404).json({
+        success: false,
+        error: '文件不存在',
+      })
+    }
+    console.error('Get workspace file content error:', error)
+    res.status(500).json({
+      success: false,
+      error: '获取文件内容失败',
+    })
+  }
+}
+
+/**
+ * 保存工作区文件
+ * POST /api/code/workspace/files/save
+ */
+export const saveWorkspaceFile = async (req: Request, res: Response) => {
+  try {
+    const { projectId, filePath, content } = req.body
+    const userId = (req as any).userId || 'anonymous'
+    
+    if (!filePath || content === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: '文件路径和内容不能为空',
+      })
+    }
+    
+    const workspacePath = getUserWorkspace(userId, projectId as string)
+    const targetPath = join(workspacePath, filePath)
+    
+    // 安全检查
+    if (!isPathSafe(workspacePath, targetPath)) {
+      return res.status(403).json({
+        success: false,
+        error: '访问被拒绝：路径超出工作区范围',
+      })
+    }
+    
+    // 确保目录存在
+    await mkdir(dirname(targetPath), { recursive: true })
+    
+    // 写入文件
+    await writeFile(targetPath, content, 'utf-8')
+    
+    const stats = await stat(targetPath)
+    const fileName = filePath.split('/').pop() || ''
+    
+    res.json({
+      success: true,
+      data: {
+        path: filePath,
+        size: stats.size,
+        modifiedAt: stats.mtime,
+        language: getLanguageFromFilename(fileName),
+      },
+    })
+  } catch (error) {
+    console.error('Save workspace file error:', error)
+    res.status(500).json({
+      success: false,
+      error: '保存文件失败',
+    })
+  }
+}
+
+/**
+ * 删除工作区文件
+ * DELETE /api/code/workspace/files
+ */
+export const deleteWorkspaceFile = async (req: Request, res: Response) => {
+  try {
+    const { projectId, filePath } = req.query
+    const userId = (req as any).userId || 'anonymous'
+    
+    if (!filePath) {
+      return res.status(400).json({
+        success: false,
+        error: '文件路径不能为空',
+      })
+    }
+    
+    const workspacePath = getUserWorkspace(userId, projectId as string)
+    const targetPath = join(workspacePath, filePath as string)
+    
+    // 安全检查
+    if (!isPathSafe(workspacePath, targetPath)) {
+      return res.status(403).json({
+        success: false,
+        error: '访问被拒绝：路径超出工作区范围',
+      })
+    }
+    
+    // 删除文件或目录
+    await rm(targetPath, { recursive: true, force: true })
+    
+    res.json({
+      success: true,
+      message: '文件已删除',
+    })
+  } catch (error: any) {
+    if (error.code === 'ENOENT') {
+      return res.status(404).json({
+        success: false,
+        error: '文件不存在',
+      })
+    }
+    console.error('Delete workspace file error:', error)
+    res.status(500).json({
+      success: false,
+      error: '删除文件失败',
     })
   }
 }

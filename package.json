@@ -1,0 +1,19 @@
+{
+  "name": "agenthive-cloud",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:landing": "npm run dev -w apps/landing",
+    "dev:api": "npm run dev -w apps/api",
+    "build": "npm run build -ws",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

@@ -3,7 +3,7 @@
  */
 import { z } from 'zod'
 import { buildTool, type ToolContext, type PermissionDecision } from '../ToolClaudeCode.js'
-import { glob } from 'fast-glob'
+import fastGlob from 'fast-glob'
 import { resolve, isAbsolute, relative } from 'path'
 
 const inputSchema = z.object({
@@ -46,7 +46,7 @@ Examples:
       ? resolveFullPath(input.cwd, context.workspacePath)
       : context.workspacePath
 
-    const files = await glob(input.pattern, {
+    const files = await fastGlob(input.pattern, {
       cwd,
       ignore: input.ignore || ['node_modules/**', '.git/**', 'dist/**', 'build/**'],
       absolute: false,
