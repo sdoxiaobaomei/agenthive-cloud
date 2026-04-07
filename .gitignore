@@ -74,12 +74,9 @@ backend.err
 server.err
 frontend.err
 
-# 测试覆盖率报告（保留 JSON 数据，移除 HTML）
-apps/*/coverage/**/*.html
-apps/*/coverage/**/*.css
-apps/*/coverage/**/*.js
-apps/*/coverage/**/*.png
-apps/*/coverage/favicon.png
+# 测试覆盖率报告（完全忽略）
+apps/*/coverage/
+packages/*/coverage/
 
 # 工作区运行时文件
 apps/api/workspaces/
