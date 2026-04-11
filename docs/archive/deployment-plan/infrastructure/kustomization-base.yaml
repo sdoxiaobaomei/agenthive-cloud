@@ -1,0 +1,54 @@
+# k8s/base/kustomization.yaml
+# Kustomize 基础配置
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: agenthive
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secrets.yaml
+  - landing/deployment.yaml
+  - landing/service.yaml
+  - landing/hpa.yaml
+  - api/deployment.yaml
+  - api/service.yaml
+  - api/hpa.yaml
+  - agent-runtime/deployment.yaml
+  - agent-runtime/service.yaml
+  - agent-runtime/keda.yaml
+  - ingress.yaml
+  - network-policies.yaml
+  - pdb.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: agenthive
+  app.kubernetes.io/managed-by: kustomize
+
+images:
+  - name: agenthive/landing
+    newName: ghcr.io/agenthive/landing
+    newTag: latest
+  - name: agenthive/api
+    newName: ghcr.io/agenthive/api
+    newTag: latest
+  - name: agenthive/agent-runtime
+    newName: ghcr.io/agenthive/agent-runtime
+    newTag: latest
+
+configMapGenerator:
+  - name: app-config
+    literals:
+      - NODE_ENV=production
+      - API_PORT=3001
+      - LANDING_PORT=3000
+      - AGENT_RUNTIME_PORT=8080
+
+secretGenerator:
+  - name: app-secrets
+    type: Opaque
+    behavior: create
+    options:
+      disableNameSuffixHash: true

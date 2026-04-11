@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: agenthive
+
+resources:
+  - 00-namespace.yaml
+  - 01-secrets.yaml
+  - 02-postgres.yaml
+  - 03-redis.yaml
+  - 04-api.yaml
+  - 05-landing.yaml
+
+# 通用标签
+commonLabels:
+  app.kubernetes.io/part-of: agenthive
+  app.kubernetes.io/managed-by: kustomize
+
+# 注释
+commonAnnotations:
+  deployment.kubernetes.io/revision: "1"

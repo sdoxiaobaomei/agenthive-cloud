@@ -1,0 +1,80 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: agenthive-production
+
+resources:
+  - ../../base
+  - ingress.yaml
+  - hpa.yaml
+
+# 生产镜像配置
+images:
+  - name: agenthive/api
+    newName: registry.cn-hangzhou.aliyuncs.com/agenthive/api
+    newTag: v1.0.0
+  - name: agenthive/landing
+    newName: registry.cn-hangzhou.aliyuncs.com/agenthive/landing
+    newTag: v1.0.0
+
+# 生产副本数
+replicas:
+  - name: api
+    count: 3
+  - name: landing
+    count: 3
+
+# 生产资源限制
+patches:
+  - target:
+      kind: Deployment
+      name: api
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "512Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "500m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Gi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1000m"
+  - target:
+      kind: Deployment
+      name: landing
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "256Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "250m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "512Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "500m"
+  # 生产环境 PDB 要求至少 50% 可用
+  - target:
+      kind: PodDisruptionBudget
+      name: api
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 2
+  - target:
+      kind: PodDisruptionBudget
+      name: landing
+    patch: |-
+      - op: replace
+        path: /spec/minAvailable
+        value: 2
+
+commonLabels:
+  environment: production
+
+namePrefix: prod-

@@ -1,0 +1,479 @@
+# .github/workflows/production-pipeline.yml
+# AgentHive Cloud 生产级 CI/CD 流水线
+
+name: Production Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: agenthive
+  TERRAFORM_VERSION: "1.6.0"
+  AWS_REGION: ap-southeast-1
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  # 阶段 1: 变更检测
+  # ============================================================================
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      landing: ${{ steps.changes.outputs.landing }}
+      api: ${{ steps.changes.outputs.api }}
+      agent-runtime: ${{ steps.changes.outputs.agent-runtime }}
+      infrastructure: ${{ steps.changes.outputs.infrastructure }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            landing:
+              - 'agenthive-cloud/apps/landing/**'
+              - 'packages/ui/**'
+              - 'packages/types/**'
+            api:
+              - 'agenthive-cloud/apps/api/**'
+              - 'packages/types/**'
+            agent-runtime:
+              - 'agenthive-cloud/apps/agent-runtime/**'
+              - 'packages/types/**'
+            infrastructure:
+              - 'docs/deployment-plan/infrastructure/**'
+              - 'k8s/**'
+
+  # ============================================================================
+  # 阶段 2: 代码质量检查
+  # ============================================================================
+  lint-and-test:
+    needs: detect-changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: 
+          - name: landing
+            changed: ${{ needs.detect-changes.outputs.landing }}
+          - name: api
+            changed: ${{ needs.detect-changes.outputs.api }}
+          - name: agent-runtime
+            changed: ${{ needs.detect-changes.outputs.agent-runtime }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Skip if no changes
+        if: matrix.app.changed == 'false'
+        run: exit 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: agenthive-cloud/apps/${{ matrix.app.name }}/package-lock.json
+          
+      - name: Install dependencies
+        working-directory: agenthive-cloud/apps/${{ matrix.app.name }}
+        run: npm ci
+          
+      - name: Run ESLint
+        working-directory: agenthive-cloud/apps/${{ matrix.app.name }}
+        run: npm run lint --if-present
+          
+      - name: Run Type Check
+        working-directory: agenthive-cloud/apps/${{ matrix.app.name }}
+        run: |
+          npm run type-check --if-present || \
+          npm run typecheck --if-present || \
+          echo "No typecheck script"
+          
+      - name: Run Unit Tests
+        working-directory: agenthive-cloud/apps/${{ matrix.app.name }}
+        run: |
+          npm run test:unit --if-present || \
+          npm run test --if-present || \
+          echo "No tests"
+
+      - name: Run Security Audit
+        working-directory: agenthive-cloud/apps/${{ matrix.app.name }}
+        run: npm audit --audit-level=high || true
+
+  # ============================================================================
+  # 阶段 3: 安全扫描
+  # ============================================================================
+  security-scan:
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      # Trivy 文件系统扫描
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      # Secret 检测
+      - name: Secret Detection
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # ============================================================================
+  # 阶段 4: 构建镜像
+  # ============================================================================
+  build-images:
+    needs: [detect-changes, lint-and-test]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - name: landing
+            dockerfile: Dockerfile
+            context: agenthive-cloud/apps/landing
+          - name: api
+            dockerfile: Dockerfile
+            context: agenthive-cloud/apps/api
+          - name: agent-runtime
+            dockerfile: Dockerfile
+            context: agenthive-cloud/apps/agent-runtime
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app.name }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.app.name }}
+            org.opencontainers.image.description=AgentHive ${{ matrix.app.name }} service
+            org.opencontainers.image.vendor=AgentHive
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.app.context }}
+          file: ./${{ matrix.app.context }}/${{ matrix.app.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.app.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app.name }}
+          platforms: linux/amd64,linux/arm64
+
+      # 镜像安全扫描
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app.name }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-image-results.sarif'
+      
+      - name: Upload image scan results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-image-results.sarif'
+          category: 'trivy-image-${{ matrix.app.name }}'
+
+      # 生成 SBOM
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.app.name }}:${{ github.sha }}
+          format: spdx-json
+          output-file: ${{ matrix.app.name }}-sbom.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app.name }}-sbom
+          path: ${{ matrix.app.name }}-sbom.spdx.json
+
+  # ============================================================================
+  # 阶段 5: Terraform Plan
+  # ============================================================================
+  terraform-plan:
+    needs: detect-changes
+    if: |
+      github.event_name == 'pull_request' && 
+      needs.detect-changes.outputs.infrastructure == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs/deployment-plan/infrastructure
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Format
+        run: terraform fmt -check
+
+      - name: Terraform Plan
+        run: terraform plan -no-color -out=tfplan
+        env:
+          TF_VAR_redis_auth_token: ${{ secrets.REDIS_AUTH_TOKEN }}
+
+      - name: Comment Plan
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('docs/deployment-plan/infrastructure/tfplan', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `#### Terraform Plan 📖\`\`\`\n${plan}\n\`\`\``
+            })
+
+  # ============================================================================
+  # 阶段 6: 部署到开发环境
+  # ============================================================================
+  deploy-development:
+    needs: [build-images, detect-changes]
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment:
+      name: development
+      url: https://dev.agenthive.cloud
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name agenthive-dev
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: '3.13.0'
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install agenthive ./k8s/helm-charts/agenthive \
+            --namespace agenthive \
+            --create-namespace \
+            --set global.environment=development \
+            --set global.image.tag=${{ github.sha }} \
+            --set landing.image.tag=${{ github.sha }} \
+            --set api.image.tag=${{ github.sha }} \
+            --set agentRuntime.image.tag=${{ github.sha }} \
+            --wait \
+            --timeout 10m
+
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/landing -n agenthive --timeout=300s
+          kubectl rollout status deployment/api -n agenthive --timeout=300s
+          kubectl rollout status deployment/agent-runtime -n agenthive --timeout=300s
+
+      - name: Run Smoke Tests
+        run: |
+          curl -f https://dev.agenthive.cloud/api/health || exit 1
+          curl -f https://dev.agenthive.cloud/api/ready || exit 1
+
+  # ============================================================================
+  # 阶段 7: 部署到预生产环境 (Staging)
+  # ============================================================================
+  deploy-staging:
+    needs: [build-images]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.agenthive.cloud
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name agenthive-staging
+
+      - name: Deploy with ArgoCD
+        run: |
+          argocd app sync agenthive-staging --prune --timeout 600
+
+      - name: Run Integration Tests
+        run: |
+          npm run test:integration --if-present
+
+  # ============================================================================
+  # 阶段 8: 生产部署 (金丝雀发布)
+  # ============================================================================
+  deploy-production:
+    needs: [build-images, deploy-staging]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://agenthive.cloud
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name agenthive-prod
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      # 金丝雀发布 - 10% 流量
+      - name: Canary Deployment (10%)
+        run: |
+          kubectl set image deployment/landing landing=ghcr.io/agenthive/landing:${{ steps.version.outputs.VERSION }} -n agenthive
+          kubectl set image deployment/api api=ghcr.io/agenthive/api:${{ steps.version.outputs.VERSION }} -n agenthive
+          kubectl set image deployment/agent-runtime agent-runtime=ghcr.io/agenthive/agent-runtime:${{ steps.version.outputs.VERSION }} -n agenthive
+          
+          # 设置金丝雀权重
+          kubectl patch ingress agenthive -n agenthive -p '{"metadata":{"annotations":{"nginx.ingress.kubernetes.io/canary":"true","nginx.ingress.kubernetes.io/canary-weight":"10"}}}'
+
+      - name: Wait for Canary
+        run: sleep 300  # 等待5分钟观察
+
+      - name: Check Canary Metrics
+        run: |
+          # 检查错误率
+          ERROR_RATE=$(curl -s "https://prometheus.agenthive.cloud/api/v1/query?query=sum(rate(http_requests_total{status=~'5..'}[5m]))" | jq -r '.data.result[0].value[1] // "0"')
+          if (( $(echo "$ERROR_RATE > 0.01" | bc -l) )); then
+            echo "Error rate too high: $ERROR_RATE"
+            exit 1
+          fi
+
+      # 全量发布
+      - name: Full Deployment
+        run: |
+          kubectl patch ingress agenthive -n agenthive -p '{"metadata":{"annotations":{"nginx.ingress.kubernetes.io/canary":"false"}}}'
+          
+          kubectl rollout status deployment/landing -n agenthive --timeout=600s
+          kubectl rollout status deployment/api -n agenthive --timeout=600s
+          kubectl rollout status deployment/agent-runtime -n agenthive --timeout=600s
+
+      - name: Notify Slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#deployments'
+          text: 'Production deployment ${{ steps.version.outputs.VERSION }} completed'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ============================================================================
+  # 阶段 9: 回滚 (故障时手动触发)
+  # ============================================================================
+  rollback-production:
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name agenthive-prod
+
+      - name: Rollback
+        run: |
+          kubectl rollout undo deployment/landing -n agenthive
+          kubectl rollout undo deployment/api -n agenthive
+          kubectl rollout undo deployment/agent-runtime -n agenthive
+
+      - name: Notify Rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          channel: '#alerts'
+          text: '⚠️ Production deployment failed and rolled back'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

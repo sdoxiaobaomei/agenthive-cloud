@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agenthive-ingress
+  namespace: agenthive-staging
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - staging.agenthive.cloud
+    - api-staging.agenthive.cloud
+    secretName: staging-tls-secret
+  rules:
+  - host: staging.agenthive.cloud
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: staging-landing
+            port:
+              number: 3000
+  - host: api-staging.agenthive.cloud
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: staging-api
+            port:
+              number: 3001

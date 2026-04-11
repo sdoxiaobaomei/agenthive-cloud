@@ -1,0 +1,311 @@
+# MLflow 模型生命周期管理平台部署
+# 用于 Agent AI 模型的版本管理、实验追踪和模型注册
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agenthive-mlops
+  labels:
+    name: agenthive-mlops
+    cost-allocation: mlops
+
+---
+# MLflow 后端存储 - PostgreSQL
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: mlflow-postgres
+  namespace: agenthive-mlops
+spec:
+  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.2
+  
+  storage:
+    size: 50Gi
+    storageClass: gp3-encrypted
+    
+  postgresql:
+    parameters:
+      max_connections: "100"
+      shared_buffers: "256MB"
+      
+  backup:
+    retentionPolicy: "7d"
+    schedule:
+      full: "0 3 * * *"
+    barmanObjectStore:
+      destinationPath: s3://agenthive-backups/mlflow-postgres
+
+---
+# MLflow 部署
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow
+  namespace: agenthive-mlops
+  labels:
+    app: mlflow
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mlflow
+  template:
+    metadata:
+      labels:
+        app: mlflow
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "5000"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - mlflow
+                topologyKey: topology.kubernetes.io/zone
+      containers:
+        - name: mlflow
+          image: mlflow/mlflow:v2.10.0
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+            - name: MLFLOW_BACKEND_STORE_URI
+              valueFrom:
+                secretKeyRef:
+                  name: mlflow-db-credentials
+                  key: uri
+            - name: MLFLOW_DEFAULT_ARTIFACT_ROOT
+              value: "s3://agenthive-mlflow/artifacts"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: mlflow-s3-credentials
+                  key: access-key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mlflow-s3-credentials
+                  key: secret-key
+            - name: MLFLOW_S3_ENDPOINT_URL
+              value: "https://s3.ap-southeast-1.amazonaws.com"
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow
+  namespace: agenthive-mlops
+spec:
+  selector:
+    app: mlflow
+  ports:
+    - port: 5000
+      targetPort: 5000
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mlflow
+  namespace: agenthive-mlops
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - mlflow.agenthive.cloud
+      secretName: mlflow-tls
+  rules:
+    - host: mlflow.agenthive.cloud
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: mlflow
+                port:
+                  number: 5000
+
+---
+# MLflow HPA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mlflow-hpa
+  namespace: agenthive-mlops
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: mlflow
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+
+---
+# MLflow 模型服务 - KServe InferenceService 示例
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: agent-llm-v1
+  namespace: agenthive-mlops
+  annotations:
+    prometheus.io/scrape: "true"
+    # 从 MLflow 加载模型
+    serving.kserve.io/deploymentMode: "Serverless"
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: mlflow
+      protocolVersion: v2
+      storageUri: s3://agenthive-mlflow/artifacts/1/model  # MLflow run_id
+    containerConcurrency: 10
+    minReplicas: 1
+    maxReplicas: 10
+    containers:
+      - name: predictor
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "1000m"
+          limits:
+            memory: "8Gi"
+            cpu: "2000m"
+
+---
+# 模型 A/B 测试配置
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: agent-llm-canary
+  namespace: agenthive-mlops
+  annotations:
+    # 10% 流量到新版本
+    serving.kserve.io/canaryTrafficPercent: "10"
+spec:
+  predictor:
+    canary:
+      model:
+        modelFormat:
+          name: mlflow
+        storageUri: s3://agenthive-mlflow/artifacts/2/model  # 新版本
+    model:
+      modelFormat:
+        name: mlflow
+      storageUri: s3://agenthive-mlflow/artifacts/1/model  # 稳定版本
+
+---
+# 模型性能监控 - 使用 Prometheus Adapter
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: mlflow-model-metrics
+  namespace: agenthive-mlops
+spec:
+  groups:
+    - name: model-performance
+      interval: 30s
+      rules:
+        - record: model:prediction_latency:p99
+          expr: |
+            histogram_quantile(0.99, 
+              sum(rate(predict_latency_bucket{namespace="agenthive-mlops"}[5m])) by (le, model_name)
+            )
+        - record: model:prediction_rate
+          expr: |
+            sum(rate(predict_total{namespace="agenthive-mlops"}[5m])) by (model_name)
+        - record: model:error_rate
+          expr: |
+            sum(rate(predict_errors_total{namespace="agenthive-mlops"}[5m])) by (model_name)
+            /
+            sum(rate(predict_total{namespace="agenthive-mlops"}[5m])) by (model_name)
+
+---
+# 模型漂移检测 CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: model-drift-detector
+  namespace: agenthive-mlops
+spec:
+  schedule: "0 */6 * * *"  # 每6小时运行一次
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: detector
+              image: agenthive/ml-drift-detector:latest
+              env:
+                - name: MLFLOW_TRACKING_URI
+                  value: "http://mlflow:5000"
+                - name: MODEL_NAME
+                  value: "agent-llm"
+                - name: THRESHOLD
+                  value: "0.05"
+              resources:
+                requests:
+                  memory: "1Gi"
+                  cpu: "500m"
+          restartPolicy: OnFailure
+
+---
+# Feature Store (Feast) 配置
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feast-config
+  namespace: agenthive-mlops
+data:
+  feature_store.yaml: |
+    project: agenthive
+    provider: aws
+    registry: s3://agenthive-feature-store/registry.db
+    online_store:
+      type: redis
+      connection_string: redis://redis.agenthive.svc.cluster.local:6379
+    offline_store:
+      type: redshift
+      host: redshift-cluster.agenthive.region.redshift.amazonaws.com
+      port: 5439
+      database: feast
+      schema: public
+    entity_key_serialization_version: 2

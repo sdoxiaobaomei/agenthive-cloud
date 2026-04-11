@@ -1,0 +1,471 @@
+{
+  "$schema": "./tool-schema.json",
+  "version": "1.1.0",
+  "description": "AI Digital Twin - Agent Tool Registry",
+  "tools": [
+    {
+      "name": "file_read",
+      "description": "读取文件内容，支持偏移量和行数限制",
+      "category": "file",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "文件的绝对或相对路径"
+          },
+          "offset": {
+            "type": "number",
+            "description": "起始行号（从1开始）",
+            "default": 1
+          },
+          "limit": {
+            "type": "number",
+            "description": "读取的最大行数",
+            "default": 100
+          }
+        },
+        "required": [
+          "file_path"
+        ]
+      },
+      "isReadOnly": true,
+      "isConcurrencySafe": true,
+      "isDestructive": false,
+      "maxResultSizeChars": 100000,
+      "allowedAgents": [
+        "*"
+      ],
+      "deniedAgents": [],
+      "alwaysLoad": true,
+      "interruptBehavior": "cancel"
+    },
+    {
+      "name": "file_write",
+      "description": "创建新文件或覆盖现有文件",
+      "category": "file",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "目标文件路径"
+          },
+          "content": {
+            "type": "string",
+            "description": "文件内容"
+          }
+        },
+        "required": [
+          "file_path",
+          "content"
+        ]
+      },
+      "isReadOnly": false,
+      "isConcurrencySafe": false,
+      "isDestructive": true,
+      "allowedAgents": [
+        "backend-dev",
+        "frontend-dev",
+        "devops-engineer",
+        "technical-writer"
+      ],
+      "deniedAgents": [
+        "scrum-master",
+        "qa-engineer",
+        "ux-researcher"
+      ],
+      "interruptBehavior": "block"
+    },
+    {
+      "name": "file_edit",
+      "description": "编辑现有文件的特定部分",
+      "category": "file",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "file_path": {
+            "type": "string",
+            "description": "要编辑的文件路径"
+          },
+          "old_string": {
+            "type": "string",
+            "description": "要替换的旧文本"
+          },
+          "new_string": {
+            "type": "string",
+            "description": "新文本"
+          }
+        },
+        "required": [
+          "file_path",
+          "old_string",
+          "new_string"
+        ]
+      },
+      "isReadOnly": false,
+      "isConcurrencySafe": false,
+      "isDestructive": true,
+      "allowedAgents": [
+        "backend-dev",
+        "frontend-dev",
+        "devops-engineer"
+      ],
+      "deniedAgents": [
+        "scrum-master",
+        "qa-engineer",
+        "ux-researcher",
+        "technical-writer"
+      ],
+      "interruptBehavior": "block"
+    },
+    {
+      "name": "glob_search",
+      "description": "使用 glob 模式搜索文件",
+      "category": "search",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "Glob 模式，如 'src/**/*.ts'"
+          },
+          "path": {
+            "type": "string",
+            "description": "搜索起始路径",
+            "default": "."
+          }
+        },
+        "required": [
+          "pattern"
+        ]
+      },
+      "isReadOnly": true,
+      "isConcurrencySafe": true,
+      "allowedAgents": [
+        "*"
+      ]
+    },
+    {
+      "name": "grep_search",
+      "description": "使用正则表达式搜索文件内容",
+      "category": "search",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string",
+            "description": "搜索的正则表达式"
+          },
+          "path": {
+            "type": "string",
+            "description": "搜索路径",
+            "default": "."
+          },
+          "file_pattern": {
+            "type": "string",
+            "description": "文件过滤模式，如 '*.go'",
+            "default": "*"
+          }
+        },
+        "required": [
+          "pattern"
+        ]
+      },
+      "isReadOnly": true,
+      "isConcurrencySafe": true,
+      "allowedAgents": [
+        "*"
+      ]
+    },
+    {
+      "name": "bash",
+      "description": "执行 shell 命令",
+      "category": "system",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "command": {
+            "type": "string",
+            "description": "要执行的 shell 命令"
+          },
+          "timeout": {
+            "type": "number",
+            "description": "超时时间（秒）",
+            "default": 60
+          },
+          "working_dir": {
+            "type": "string",
+            "description": "工作目录",
+            "default": "."
+          }
+        },
+        "required": [
+          "command"
+        ]
+      },
+      "isReadOnly": false,
+      "isConcurrencySafe": false,
+      "isDestructive": true,
+      "allowedAgents": [
+        "backend-dev",
+        "frontend-dev",
+        "devops-engineer",
+        "qa-engineer"
+      ],
+      "sensitiveCommands": [
+        "rm",
+        "drop",
+        "delete",
+        "force",
+        "push",
+        "deploy"
+      ],
+      "interruptBehavior": "cancel"
+    },
+    {
+      "name": "git",
+      "description": "执行 git 命令",
+      "category": "vcs",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "subcommand": {
+            "type": "string",
+            "description": "Git 子命令",
+            "enum": [
+              "status",
+              "log",
+              "diff",
+              "branch",
+              "checkout",
+              "add",
+              "commit",
+              "push",
+              "pull",
+              "merge"
+            ]
+          },
+          "args": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "额外参数"
+          }
+        },
+        "required": [
+          "subcommand"
+        ]
+      },
+      "isReadOnly": false,
+      "isConcurrencySafe": false,
+      "isDestructive": true,
+      "allowedAgents": [
+        "backend-dev",
+        "frontend-dev",
+        "devops-engineer",
+        "tech-lead"
+      ],
+      "redLineChecks": [
+        {
+          "pattern": "push.*master",
+          "message": "绝对禁止直接推送到 master 分支",
+          "severity": "fatal"
+        },
+        {
+          "pattern": "push.*--force",
+          "message": "绝对禁止 force push",
+          "severity": "fatal"
+        },
+        {
+          "pattern": "commit.*master",
+          "message": "绝对禁止在 master 分支创建 commit",
+          "severity": "fatal"
+        }
+      ],
+      "interruptBehavior": "block"
+    },
+    {
+      "name": "agent_spawn",
+      "description": "调用其他 Agent 执行任务",
+      "category": "orchestration",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "agent_type": {
+            "type": "string",
+            "description": "要调用的 Agent 类型"
+          },
+          "task": {
+            "type": "string",
+            "description": "任务描述"
+          },
+          "context": {
+            "type": "object",
+            "description": "传递给子 Agent 的上下文"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "sync",
+              "async_fork"
+            ],
+            "default": "sync",
+            "description": "调用模式：同步或 Fork"
+          }
+        },
+        "required": [
+          "agent_type",
+          "task"
+        ]
+      },
+      "isReadOnly": false,
+      "isConcurrencySafe": false,
+      "allowedAgents": [
+        "scrum-master",
+        "tech-lead",
+        "code-reviewer"
+      ],
+      "spawnRules": {
+        "maxDepth": 3,
+        "maxConcurrent": 5
+      },
+      "interruptBehavior": "block"
+    },
+    {
+      "name": "test_run",
+      "description": "运行测试套件",
+      "category": "quality",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "unit",
+              "integration",
+              "e2e"
+            ],
+            "description": "测试类型"
+          },
+          "pattern": {
+            "type": "string",
+            "description": "测试文件匹配模式"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "isReadOnly": true,
+      "isConcurrencySafe": false,
+      "allowedAgents": [
+        "qa-engineer",
+        "backend-dev",
+        "frontend-dev"
+      ]
+    },
+    {
+      "name": "code_review",
+      "description": "请求代码审查",
+      "category": "quality",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "要审查的文件列表"
+          },
+          "description": {
+            "type": "string",
+            "description": "变更说明"
+          }
+        },
+        "required": [
+          "files"
+        ]
+      },
+      "isReadOnly": true,
+      "allowedAgents": [
+        "backend-dev",
+        "frontend-dev",
+        "devops-engineer"
+      ],
+      "autoSpawn": {
+        "agent": "code-reviewer",
+        "trigger": "on_request"
+      }
+    },
+    {
+      "name": "document_update",
+      "description": "更新项目文档",
+      "category": "documentation",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "doc_path": {
+            "type": "string",
+            "description": "文档路径"
+          },
+          "update_type": {
+            "type": "string",
+            "enum": [
+              "create",
+              "update",
+              "append"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "description": "文档内容"
+          }
+        },
+        "required": [
+          "doc_path",
+          "update_type",
+          "content"
+        ]
+      },
+      "isReadOnly": false,
+      "allowedAgents": [
+        "technical-writer",
+        "scrum-master",
+        "tech-lead",
+        "*"
+      ]
+    }
+  ],
+  "toolSets": {
+    "readOnly": [
+      "file_read",
+      "glob_search",
+      "grep_search",
+      "test_run"
+    ],
+    "writeOperations": [
+      "file_write",
+      "file_edit"
+    ],
+    "vcsOperations": [
+      "git"
+    ],
+    "searchOperations": [
+      "glob_search",
+      "grep_search"
+    ],
+    "qualityChecks": [
+      "test_run",
+      "code_review"
+    ]
+  },
+  "defaultLimits": {
+    "maxFileReadLines": 1000,
+    "maxSearchResults": 100,
+    "maxCommandTimeout": 300,
+    "maxToolResultSize": 100000
+  }
+}

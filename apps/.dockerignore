@@ -1,0 +1,95 @@
+# ==================== 保留的构建输出（必须放最前面）====================
+!apps/agent-runtime/dist/**
+!apps/api/dist/**
+!apps/landing/.output-new/**
+!apps/landing/.output-new/server/node_modules/**
+!**/node_modules/**/dist/**
+
+# ==================== 依赖目录（最大）====================
+**/node_modules
+.pnpm-store
+**/.pnpm-store
+.npm
+**/.npm
+.yarn
+**/.yarn
+
+# ==================== 构建输出 ====================
+# 保留 node_modules 里的 dist
+!**/node_modules/**/dist/**
+**/dist
+**/.nuxt
+**/.output
+**/.turbo
+**/.cache
+**/build
+
+# ==================== 测试和日志 ====================
+**/*.log
+**/test
+**/__tests__
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
+**/coverage
+
+# ==================== 本地环境文件 ====================
+**/.env
+**/.env.local
+**/.env.*.local
+**/.envrc
+
+# ==================== IDE 和编辑器 ====================
+**/.vscode
+**/.idea
+**/*.swp
+**/*.swo
+**/*~
+
+# ==================== 版本控制 ====================
+.git
+.gitignore
+.gitattributes
+.gitmodules
+
+# ==================== 文档（不需要在容器中）====================
+**/README.md
+**/CHANGELOG.md
+**/LICENSE
+**/CONTRIBUTING.md
+
+# ==================== CI/CD ====================
+.github
+.gitlab-ci.yml
+azure-pipelines.yml
+.travis.yml
+.circleci
+
+# ==================== Docker 相关 ====================
+**/Dockerfile*
+**/.dockerignore
+docker-compose*.yml
+.docker
+
+# ==================== 其他工具 ====================
+.playwright-mcp
+
+# 视频/图片资源（如果在代码仓库中）
+**/*.mp4
+**/*.mov
+**/*.avi
+
+# 备份文件
+**/*.bak
+**/*.backup
+
+# 操作系统文件
+**/.DS_Store
+**/Thumbs.db
+desktop.ini
+
+# 临时文件
+**/tmp
+**/temp
+**/*.tmp

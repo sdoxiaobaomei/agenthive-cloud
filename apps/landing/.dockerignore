@@ -1,13 +1,3 @@
-node_modules
-.nuxt
-.output
-dist
-.env
-.env.local
-npm-debug.log
-yarn-debug.log
-.git
-.gitignore
-.vscode
-.idea
-*.md
+# Ignore everything except .output-new
+*
+!.output-new/**

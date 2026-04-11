@@ -1,0 +1,280 @@
+# PrometheusRule 配置
+# 包含所有关键告警规则
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: agenthive-critical-alerts
+  namespace: monitoring
+  labels:
+    app: kube-prometheus-stack
+    release: prometheus
+spec:
+  groups:
+    # =========================================================================
+    # 关键服务可用性告警
+    # =========================================================================
+    - name: service-availability
+      rules:
+        - alert: ServiceDown
+          expr: up{namespace="agenthive"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "{{ $labels.job }} service is down"
+            description: "{{ $labels.job }} has been down for more than 1 minute"
+            runbook_url: "https://wiki.agenthive.cloud/runbooks/service-down"
+            
+        - alert: HighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{namespace="agenthive",status=~"5.."}[5m])) by (service)
+              /
+              sum(rate(http_requests_total{namespace="agenthive"}[5m])) by (service)
+            ) > 0.05
+          for: 2m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "High error rate on {{ $labels.service }}"
+            description: "Error rate is {{ $value | humanizePercentage }}"
+            
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.99, 
+              sum(rate(http_request_duration_seconds_bucket{namespace="agenthive"}[5m])) by (le, service)
+            ) > 2
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "High latency on {{ $labels.service }}"
+            description: "P99 latency is {{ $value }}s"
+
+    # =========================================================================
+    # Agent Runtime 专项监控
+    # =========================================================================
+    - name: agent-runtime
+      rules:
+        - alert: AgentRuntimeTaskQueueBacklog
+          expr: redis_key_size{key="agent-tasks"} > 50
+          for: 5m
+          labels:
+            severity: warning
+            team: ai-platform
+          annotations:
+            summary: "Agent task queue is backing up"
+            description: "Current queue length: {{ $value }}"
+            
+        - alert: AgentRuntimeHighMemoryUsage
+          expr: |
+            container_memory_usage_bytes{namespace="agenthive",container="agent-runtime"}
+            /
+            container_spec_memory_limit_bytes{namespace="agenthive",container="agent-runtime"} > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            team: ai-platform
+          annotations:
+            summary: "Agent Runtime memory usage is high"
+            description: "Memory usage: {{ $value | humanizePercentage }}"
+            
+        - alert: AgentRuntimeOOMKilled
+          expr: |
+            kube_pod_container_status_last_terminated_reason{namespace="agenthive",container="agent-runtime",reason="OOMKilled"} == 1
+          for: 0m
+          labels:
+            severity: critical
+            team: ai-platform
+          annotations:
+            summary: "Agent Runtime container OOM killed"
+            description: "Pod {{ $labels.pod }} was OOM killed"
+            
+        - alert: LLMAPIErrorRate
+          expr: |
+            sum(rate(llm_api_errors_total{namespace="agenthive"}[5m])) 
+            / 
+            sum(rate(llm_api_calls_total{namespace="agenthive"}[5m])) > 0.1
+          for: 3m
+          labels:
+            severity: critical
+            team: ai-platform
+          annotations:
+            summary: "High LLM API error rate"
+            description: "LLM error rate: {{ $value | humanizePercentage }}"
+
+    # =========================================================================
+    # 数据库监控
+    # =========================================================================
+    - name: database
+      rules:
+        - alert: PostgreSQLDown
+          expr: pg_up{namespace="agenthive"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            team: dba
+          annotations:
+            summary: "PostgreSQL is down"
+            
+        - alert: PostgreSQLConnectionsNearLimit
+          expr: |
+            pg_stat_activity_count 
+            / 
+            pg_settings_max_connections > 0.8
+          for: 5m
+          labels:
+            severity: warning
+            team: dba
+          annotations:
+            summary: "PostgreSQL connections near limit"
+            description: "{{ $value | humanizePercentage }} of connections used"
+            
+        - alert: PostgreSQLReplicationLag
+          expr: pg_stat_replication_lag_seconds > 30
+          for: 5m
+          labels:
+            severity: critical
+            team: dba
+          annotations:
+            summary: "PostgreSQL replication lag is high"
+            description: "Lag: {{ $value }}s"
+            
+        - alert: PostgreSQLSlowQueries
+          expr: |
+            sum(rate(pg_stat_statements_calls{query_duration_bucket="1min+"}[5m])) > 10
+          for: 5m
+          labels:
+            severity: warning
+            team: dba
+          annotations:
+            summary: "PostgreSQL slow queries detected"
+            
+        - alert: RedisDown
+          expr: redis_up{namespace="agenthive"} == 0
+          for: 1m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Redis is down"
+            
+        - alert: RedisMemoryHigh
+          expr: |
+            redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Redis memory usage is high"
+            description: "Memory usage: {{ $value | humanizePercentage }}"
+
+    # =========================================================================
+    # 基础设施监控
+    # =========================================================================
+    - name: infrastructure
+      rules:
+        - alert: NodeMemoryPressure
+          expr: |
+            (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) 
+            / 
+            node_memory_MemTotal_bytes > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Node memory pressure"
+            description: "Node {{ $labels.instance }} memory usage: {{ $value | humanizePercentage }}"
+            
+        - alert: NodeDiskPressure
+          expr: |
+            node_filesystem_avail_bytes{mountpoint="/"} 
+            / 
+            node_filesystem_size_bytes{mountpoint="/"} < 0.1
+          for: 5m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Node disk pressure"
+            description: "Node {{ $labels.instance }} disk available: {{ $value | humanizePercentage }}"
+            
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total{namespace="agenthive"}[15m]) > 0
+          for: 5m
+          labels:
+            severity: critical
+            team: platform
+          annotations:
+            summary: "Pod crash looping"
+            description: "Pod {{ $labels.pod }} is crash looping"
+            
+        - alert: PodNotReady
+          expr: |
+            kube_pod_status_phase{namespace="agenthive",phase=~"Pending|Unknown|Failed"} == 1
+          for: 10m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Pod not ready"
+            description: "Pod {{ $labels.pod }} is in {{ $labels.phase }} state"
+            
+        - alert: HPAMaxReplicas
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas{namespace="agenthive"}
+            ==
+            kube_horizontalpodautoscaler_spec_max_replicas{namespace="agenthive"}
+          for: 15m
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "HPA at max replicas"
+            description: "{{ $labels.horizontalpodautoscaler }} is at max replicas"
+            
+        - alert: CertificateExpiringSoon
+          expr: |
+            certmanager_certificate_expiration_timestamp_seconds - time() < 86400 * 7
+          for: 1h
+          labels:
+            severity: warning
+            team: platform
+          annotations:
+            summary: "Certificate expiring soon"
+            description: "Certificate {{ $labels.name }} expires in {{ $value | humanizeDuration }}"
+
+    # =========================================================================
+    # 业务指标监控
+    # =========================================================================
+    - name: business-metrics
+      rules:
+        - alert: LowUserActivity
+          expr: |
+            sum(rate(http_requests_total{namespace="agenthive",path="/api"}[1h])) < 10
+          for: 30m
+          labels:
+            severity: info
+            team: product
+          annotations:
+            summary: "Low user activity detected"
+            
+        - alert: HighAgentTaskFailureRate
+          expr: |
+            sum(rate(agent_tasks_failed_total{namespace="agenthive"}[5m]))
+            /
+            sum(rate(agent_tasks_total{namespace="agenthive"}[5m])) > 0.2
+          for: 5m
+          labels:
+            severity: warning
+            team: ai-platform
+          annotations:
+            summary: "High agent task failure rate"
+            description: "Failure rate: {{ $value | humanizePercentage }}"

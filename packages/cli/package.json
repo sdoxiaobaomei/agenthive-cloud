@@ -1,0 +1,12 @@
+{
+  "name": "@agenthive/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "agenthive": "./bin/agenthive"
+  },
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {}
+}

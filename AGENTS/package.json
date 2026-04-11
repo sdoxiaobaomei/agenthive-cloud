@@ -1,0 +1,21 @@
+{
+  "name": "agenthive-builders",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "agent": "tsx orchestrator.ts",
+    "worker:fe": "tsx workers/frontend-dev.ts",
+    "worker:be": "tsx workers/backend-dev.ts",
+    "worker:qa": "tsx workers/qa-engineer.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}

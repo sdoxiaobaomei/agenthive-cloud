@@ -1,27 +1,32 @@
-# 构建阶段
-FROM node:20-alpine AS builder
+# Landing Dockerfile - Nuxt 3 SSR (Node.js)
+
+# ============================================
+# Production (Node.js)
+# ============================================
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# 安装依赖
-COPY package*.json ./
-RUN npm ci
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S appuser -u 1001 -G nodejs
 
-# 复制源代码
-COPY . .
+# Copy pre-built output
+COPY --chown=appuser:nodejs .output-new /app/.output
 
-# 构建静态站点
-RUN npm run generate
+# Fix symlinks: reinstall dependencies in container
+RUN cd /app/.output/server && \
+    rm -rf node_modules && \
+    npm install --production
 
-# 生产阶段
-FROM nginx:alpine
+USER appuser
 
-# 复制构建产物到 nginx
-COPY --from=builder /app/.output/public /usr/share/nginx/html
-
-# 复制 nginx 配置
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+ENV NODE_ENV=production
+ENV NITRO_PORT=80
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost/ || exit 1
+
+CMD ["node", ".output/server/index.mjs"]
