@@ -10,11 +10,16 @@ resources:
   - 03-redis.yaml
   - 04-api.yaml
   - 05-landing.yaml
+  - 06-networkpolicy.yaml
+  - 07-hpa.yaml
+  - 08-configmap.yaml
+  - 09-ingress.yaml
 
 # 通用标签
 commonLabels:
   app.kubernetes.io/part-of: agenthive
   app.kubernetes.io/managed-by: kustomize
+  app.kubernetes.io/version: "1.0.0"
 
 # 注释
 commonAnnotations:
