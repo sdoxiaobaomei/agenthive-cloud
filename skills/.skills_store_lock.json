@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "k8s": {
+      "name": "Kubernetes",
+      "zip_url": "https://lightmake.site/api/v1/download?slug=k8s",
+      "source": "skillhub",
+      "version": "1.0.0"
+    }
+  }
+}
