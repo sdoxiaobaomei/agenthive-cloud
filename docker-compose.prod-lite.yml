@@ -124,10 +124,83 @@ services:
         limits:
           memory: 64M
 
+  # Node Exporter - 系统指标采集
+  node-exporter:
+    image: prom/node-exporter:v1.6.0
+    container_name: agenthive-node-exporter
+    restart: unless-stopped
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - '/:/host:ro,rslave'
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    networks:
+      - monitoring
+
+  # Prometheus - 监控数据收集
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: agenthive-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      - node-exporter
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    networks:
+      - monitoring
+
+  # Grafana - 可视化面板
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: agenthive-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+      GF_SERVER_ROOT_URL: http://localhost:3001
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+    deploy:
+      resources:
+        limits:
+          memory: 192M
+        reservations:
+          memory: 96M
+    networks:
+      - monitoring
+
 volumes:
   postgres_data:
   redis_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
   default:
+    driver: bridge
+  monitoring:
     driver: bridge
