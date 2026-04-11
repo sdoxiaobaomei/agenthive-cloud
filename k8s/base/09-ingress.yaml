@@ -1,0 +1,85 @@
+# Ingress - 外部访问配置
+# 提供 HTTPS 终端和路由规则
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agenthive-ingress
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: agenthive
+  annotations:
+    # Nginx Ingress 配置
+    kubernetes.io/ingress.class: nginx
+    # 限流配置
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    # 连接配置
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # 安全配置
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # CORS 配置（如需要）
+    # nginx.ingress.kubernetes.io/enable-cors: "true"
+    # nginx.ingress.kubernetes.io/cors-allow-origin: "https://example.com"
+spec:
+  ingressClassName: nginx
+  tls:
+  - hosts:
+    - agenthive.example.com
+    secretName: agenthive-tls
+  rules:
+  - host: agenthive.example.com
+    http:
+      paths:
+      # API 路由
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 3001
+      # 前端路由
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: landing
+            port:
+              number: 3000
+---
+# 本地测试用 Ingress（无 HTTPS）
+# 仅用于本地开发环境
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agenthive-ingress-local
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: agenthive
+    app.kubernetes.io/component: testing
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: agenthive.local
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 3001
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: landing
+            port:
+              number: 3000
