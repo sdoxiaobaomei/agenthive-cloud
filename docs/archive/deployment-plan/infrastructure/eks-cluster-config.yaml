@@ -1,0 +1,233 @@
+# EKS 集群配置 - Production
+# 使用 eksctl 创建
+
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: agenthive-prod
+  region: ap-southeast-1
+  version: "1.29"
+  tags:
+    Environment: production
+    Project: agenthive
+    CostCenter: platform-engineering
+    ManagedBy: eksctl
+
+vpc:
+  id: vpc-xxxxxxxx  # 替换为您的VPC ID，或留空自动创建
+  cidr: "10.0.0.0/16"
+  autoAllocateIPv6: false
+  nat:
+    gateway: HighlyAvailable  # 每个AZ一个NAT Gateway
+  clusterEndpoints:
+    publicAccess: true
+    privateAccess: true
+  publicAccessCIDRs:
+    - "0.0.0.0/0"  # 生产环境应限制为办公室IP
+  
+  # 子网配置
+  subnets:
+    private:
+      ap-southeast-1a:
+        id: subnet-xxxxxx1a  # 可选：使用现有子网
+        cidr: "10.0.1.0/24"
+      ap-southeast-1b:
+        id: subnet-xxxxxx1b
+        cidr: "10.0.2.0/24"
+      ap-southeast-1c:
+        id: subnet-xxxxxx1c
+        cidr: "10.0.3.0/24"
+    public:
+      ap-southeast-1a:
+        id: subnet-xxxxxx1a-pub
+        cidr: "10.0.101.0/24"
+      ap-southeast-1b:
+        id: subnet-xxxxxx1b-pub
+        cidr: "10.0.102.0/24"
+      ap-southeast-1c:
+        id: subnet-xxxxxx1c-pub
+        cidr: "10.0.103.0/24"
+
+# 身份认证配置
+identityMappings:
+  - arn: arn:aws:iam::ACCOUNT_ID:role/AdminRole
+    groups:
+      - system:masters
+    username: admin
+  - arn: arn:aws:iam::ACCOUNT_ID:role/DeveloperRole
+    groups:
+      - agenthive-developers
+    username: developer
+
+# 节点组配置
+managedNodeGroups:
+  # 系统节点组 - 运行关键基础设施
+  - name: system-ng
+    instanceType: t3.medium
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 4
+    volumeSize: 50
+    volumeType: gp3
+    volumeEncrypted: true
+    privateNetworking: true
+    labels:
+      workload-type: system
+      cost-allocation: infrastructure
+    taints:
+      - key: dedicated
+        value: system
+        effect: NoSchedule
+    tags:
+      CostCenter: platform-engineering
+      Environment: production
+    iam:
+      withAddonPolicies:
+        cloudWatch: true
+        autoScaler: true
+        externalDNS: true
+        certManager: true
+        ebs: true
+        efs: true
+
+  # 应用节点组 - Spot实例优化成本
+  - name: app-spot-ng
+    instanceTypes:
+      - t3.large
+      - t3a.large
+      - m6i.large
+      - m5.large
+    spot: true
+    desiredCapacity: 3
+    minSize: 2
+    maxSize: 20
+    volumeSize: 100
+    volumeType: gp3
+    volumeEncrypted: true
+    privateNetworking: true
+    labels:
+      workload-type: app
+      cost-optimization: spot
+    tags:
+      CostCenter: application
+      Environment: production
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/agenthive-prod: "owned"
+    iam:
+      withAddonPolicies:
+        cloudWatch: true
+        autoScaler: true
+        ebs: true
+    # 实例多样性配置
+    instancesDistribution:
+      maxPrice: 0.10  # Spot最高价格
+      instanceTypes:
+        - t3.large
+        - t3a.large
+        - m6i.large
+      onDemandBaseCapacity: 0
+      onDemandPercentageAboveBaseCapacity: 0
+      spotAllocationStrategy: capacity-optimized
+
+  # Agent Runtime 专用节点组 - 高内存需求
+  - name: agent-runtime-ng
+    instanceType: r6i.xlarge
+    desiredCapacity: 2
+    minSize: 1
+    maxSize: 10
+    volumeSize: 200
+    volumeType: gp3
+    volumeEncrypted: true
+    privateNetworking: true
+    labels:
+      workload-type: agent-runtime
+      memory-optimized: "true"
+    taints:
+      - key: dedicated
+        value: agent-runtime
+        effect: NoSchedule
+    tags:
+      CostCenter: ai-platform
+      Environment: production
+    iam:
+      withAddonPolicies:
+        cloudWatch: true
+        autoScaler: true
+        ebs: true
+
+  # 监控节点组
+  - name: monitoring-ng
+    instanceType: t3.large
+    desiredCapacity: 2
+    minSize: 2
+    maxSize: 4
+    volumeSize: 100
+    volumeType: gp3
+    volumeEncrypted: true
+    privateNetworking: true
+    labels:
+      workload-type: monitoring
+    taints:
+      - key: dedicated
+        value: monitoring
+        effect: NoSchedule
+    tags:
+      CostCenter: observability
+      Environment: production
+
+# Fargate 配置 (可选 - 用于无服务器工作负载)
+fargateProfiles:
+  - name: fp-default
+    selectors:
+      - namespace: kube-system
+        labels:
+          app: coredns
+      - namespace: agenthive-serverless
+    subnets:
+      - subnet-xxxxxx1a
+      - subnet-xxxxxx1b
+      - subnet-xxxxxx1c
+
+# 插件配置
+addons:
+  - name: vpc-cni
+    version: latest
+    configurationValues: |
+      {
+        "env": {
+          "ENABLE_PREFIX_DELEGATION": "true",
+          "WARM_PREFIX_TARGET": "1"
+        }
+      }
+  - name: coredns
+    version: latest
+  - name: kube-proxy
+    version: latest
+  - name: aws-ebs-csi-driver
+    version: latest
+  - name: aws-efs-csi-driver
+    version: latest
+  - name: amazon-cloudwatch-observability
+    version: latest
+
+# 集群自动扩缩容配置
+autoScaler:
+  enable: true
+  version: latest
+
+# CloudWatch 日志
+cloudWatch:
+  clusterLogging:
+    enableTypes:
+      - api
+      - audit
+      - authenticator
+      - controllerManager
+      - scheduler
+    logRetentionInDays: 30
+
+# Karpenter 配置 (可选 - 比Cluster Autoscaler更灵活)
+# karpenter:
+#   version: v0.34.0
+#   createServiceAccount: true

@@ -1,0 +1,221 @@
+{
+  "main": {
+    "id": "706ee26ccb17f355",
+    "type": "split",
+    "children": [
+      {
+        "id": "f10face5749264e1",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9884e6c712a38d73",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "HANDS-ON-K8S-MIGRATION.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "HANDS-ON-K8S-MIGRATION"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "62f54dcddd31b7c6",
+    "type": "split",
+    "children": [
+      {
+        "id": "f1224b7f0ae1b762",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "44eab87eb4357488",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "文件列表"
+            }
+          },
+          {
+            "id": "b857e9b89d29c39a",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "搜索"
+            }
+          },
+          {
+            "id": "6449b4892ef8dbbc",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "书签"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "5fc8f2caacd966e5",
+    "type": "split",
+    "children": [
+      {
+        "id": "377c3bdc27fad442",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b3f35200bf612361",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "HANDS-ON-K8S-MIGRATION.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "HANDS-ON-K8S-MIGRATION 的反向链接列表"
+            }
+          },
+          {
+            "id": "bf38a0832526edb5",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "HANDS-ON-K8S-MIGRATION.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "HANDS-ON-K8S-MIGRATION 的出链列表"
+            }
+          },
+          {
+            "id": "d6429800cf96fed2",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "标签"
+            }
+          },
+          {
+            "id": "703b756b4dcd64ab",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "添加笔记属性"
+            }
+          },
+          {
+            "id": "9c68f2f6bd7e9ce5",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "HANDS-ON-K8S-MIGRATION.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "HANDS-ON-K8S-MIGRATION 的大纲"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:打开快速切换": false,
+      "graph:查看关系图谱": false,
+      "canvas:新建白板": false,
+      "daily-notes:打开/创建今天的日记": false,
+      "templates:插入模板": false,
+      "command-palette:打开命令面板": false,
+      "bases:新建数据库": false
+    }
+  },
+  "active": "9884e6c712a38d73",
+  "lastOpenFiles": [
+    "K8S-KUBEADM-CLARIFICATION.md",
+    "HANDS-ON-K8S-MIGRATION.md",
+    "DOCKER-DESKTOP-NETWORK-EXPLAINED.md",
+    "CI-CD-USAGE.md",
+    "CI-BUILD-OPTIMIZATION.md",
+    "DOCUMENTATION-REFACTORING-SUMMARY.md",
+    "operation/README.md",
+    "DOCUMENT-MAP.md",
+    "project/README.md",
+    "reference/README.md",
+    "architecture/README.md",
+    "development/README.md",
+    "guides/README.md",
+    "operation",
+    "project",
+    "reference",
+    "architecture",
+    "development",
+    "guides",
+    "DOCKER-DESKTOP-PROCESS-ISOLATION.md",
+    "DOCKER-NPM-INSTALL-EXPLAINED.md",
+    "archive/K8S-SETUP-SUMMARY.md",
+    "archive/K8S-ARCHITECTURE-EXPLAINED.md",
+    "archive/README.md",
+    "K8S-ARCHITECTURE-EXPLAINED.md",
+    "K8S-SETUP-SUMMARY.md",
+    "archive/git-cheatsheet.md",
+    "archive/DEVOPS_CLEANUP_REPORT.md",
+    "archive/LANDING-DOCKER-ISSUES.md",
+    "archive/K8S-WINDOWS-GUIDE.md",
+    "archive/LOCAL-K8S-DOCKER-DESKTOP.md",
+    "archive/K8S-CHEATSHEET.md"
+  ]
+}

@@ -1,102 +1,62 @@
-# 依赖目录
-node_modules
-.pnpm-store
-.yarn
-.npm
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
 
-# 本地环境文件（敏感）
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.log
+
+# Environment files
 .env
 .env.local
-.env.*.local
-.envrc
-
-# 日志文件
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# 构建输出
-dist
-build
-.nuxt
-.output
-.cache
-.turbo
-
-# 测试
-/test/coverage
-.nyc_output
+.env.development
+.env.production
+*.env
 
 # IDE
-.idea
-.vscode
+.vscode/
+.idea/
 *.swp
 *.swo
 *~
 
-# 操作系统文件
+# OS
 .DS_Store
 Thumbs.db
-desktop.ini
 
-# 缓存
-.playwright-mcp
-.parcel-cache
+# AGENTS workspace (temporary files)
+AGENTS/workspace/
+AGENTS/.obsidian/
 
-# 临时文件
-*.tmp
+# Playwright
+.playwright-mcp/
+
+# Test
+coverage/
+.nyc_output/
+
+# Temporary files
 tmp/
 temp/
-FILE-ANALYSIS.md
-GIT-ANALYSIS.md
+*.tmp
 
-# 截图（开发测试用）
-/*.png
-/*.jpg
-/*.jpeg
+# Docker
+*.pid
+*.seed
+*.pid.lock
 
-# 本地数据库
-*.db
-*.sqlite
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# 证书
-*.pem
-*.key
-
-# ========================================
-# Backend 专用 .gitignore 补充
-# ========================================
-
-# 错误日志
-*.err
-backend.err
-server.err
-frontend.err
-
-# 测试覆盖率报告（完全忽略）
-apps/*/coverage/
-packages/*/coverage/
-
-# 工作区运行时文件
-apps/api/workspaces/
-!apps/api/workspaces/.gitkeep
-
-# 临时测试脚本（如需保留请注释）
-apps/api/test-hello.js
-apps/api/test-db.mjs
-apps/api/test-full-flow.js
-apps/api/test-ollama-direct.js
-apps/landing/test-login-*.mjs
-
-# npm 锁定文件（使用 pnpm）
-apps/*/package-lock.json
-
-# 运行时生成的任务结果
-apps/api/task-results/
-
-# 本地 SQLite 数据库（如有）
-*.sqlite
-*.db
-
-.nuxt/
+# Runtime data
+pids/

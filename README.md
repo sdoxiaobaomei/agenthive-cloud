@@ -1,134 +1,122 @@
-# AgentHive Cloud
+# AgentHive Cloud - AI 数字孪生平台
 
-> 🐝 云原生多Agent协作开发平台 - 可视化AI研发团队管理
+> 🐝 **Hive Mode (蜂群模式)**: 多 Agent 协作的 AI 驱动开发系统
 
-## 架构概览
+## 项目概述
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     AgentHive Cloud                          │
-├─────────────────────────────────────────────────────────────┤
-│  Web UI (Vue3)  ←→  Agent Supervisor  ←→  Agent Pods (K8s)  │
-│  ├─ Chat View       ├─ Task Scheduler    ├─ Director        │
-│  ├─ Agent Panel     ├─ State Manager     ├─ Backend Dev     │
-│  ├─ Sprint Board    ├─ Event Bus         ├─ Frontend Dev    │
-│  └─ Code Viewer     └─ WebSocket Hub     ├─ QA Engineer     │
-│                     └─ REST API          └─ Custom Agents   │
-└─────────────────────────────────────────────────────────────┘
-```
+AgentHive Cloud 是一个 AI 数字孪生平台，采用多 Agent 协作架构（称为"蜂群模式"），模拟软件开发团队的协作方式。
 
-## 项目结构
+## 📁 项目结构
 
 ```
-agenthive-cloud/
-├── apps/                    # 应用代码
-│   ├── api/                 # REST API Server (Node.js)
-│   ├── web/                 # Vue3 Web UI
-│   ├── landing/             # Nuxt3 Landing Page
-│   └── agent-runtime/       # Agent运行时 (Node.js + K8s)
+agenthive-cloud/              # 项目根目录
+├── apps/                     # 核心应用代码
+│   ├── apps/
+│   │   ├── landing/          # Nuxt 3 营销官网
+│   │   ├── api/              # Express API 服务
+│   │   └── agent-runtime/    # Agent 运行时服务
+│   ├── packages/             # 共享包
+│   └── docs/                 # 应用文档
 │
-├── deploy/                  # K8s部署
-│   ├── helm/               # Helm charts
-│   └── manifests/          # Raw K8s YAML
+├── AGENTS/                   # Multi-Agent 开发系统
+│   ├── orchestrator.ts       # 阿黄 - 任务调度器 (Tech Lead)
+│   ├── workers/              # Worker Agents
+│   └── tools/                # Agent 工具集
 │
-├── agents/                  # Agent配置
-│   ├── roles/              # 角色定义
-│   └── prompts/            # LLM提示词
+├── packages/                 # monorepo 共享包
+│   ├── cli/                  # CLI 工具
+│   ├── types/                # 共享类型定义
+│   ├── ui/                   # UI 组件库
+│   └── workflow-engine/      # 工作流引擎
 │
-├── platform/               # 平台工具
-│   ├── docker/            # Dockerfiles
-│   └── scripts/           # 自动化脚本
-│
-└── docs/                  # 文档
+├── scripts/                  # 自动化脚本
+├── nginx/                    # Nginx 配置
+├── k8s/                      # Kubernetes 配置
+├── docs/                     # 项目文档
+└── docker-compose*.yml       # Docker 配置
 ```
 
-## 快速开始
+## 🚀 快速开始
 
-### 前置要求
-- Docker Desktop + Kubernetes
-- kubectl
-- Helm 3
-- Go 1.21+
-- Node.js 18+
-- Skaffold (可选，用于热重载开发)
+### 环境要求
 
-### 本地开发
+- Node.js 20+
+- Docker & Docker Compose
+- pnpm (推荐) 或 npm
+
+### 安装依赖
 
 ```bash
-# 1. 启动本地K8s集群
-make cluster-up
-
-# 2. 部署依赖服务 (Redis, PostgreSQL, MinIO)
-make infra-up
-
-# 3. 启动所有应用 (热重载模式)
-make dev-up
-
-# 4. 访问Web UI
-open http://localhost:8080
+cd apps
+pnpm install
 ```
 
-### 生产部署
+### 启动开发环境
+
+**方式 1: Docker Compose（推荐）**
 
 ```bash
-# 使用Helm部署到生产集群
-helm upgrade --install agenthive ./deploy/helm/agenthive \
-  --namespace agenthive \
-  --values ./deploy/helm/agenthive/values-production.yaml
+# 本地开发模式（使用宿主机 Ollama）
+docker-compose -f docker-compose.local.yml up -d
+
+# 完整模式
+docker-compose -f docker-compose.full.yml up -d
 ```
 
-## 开发工作流
-
-### 添加新的Agent角色
-
-1. 在 `agents/roles/` 创建角色定义
-2. 在 `apps/agent-runtime/roles/` 实现运行时
-3. 更新 Helm values 添加新角色配置
-4. 部署测试
-
-### 修改Web UI
+**方式 2: 本地开发**
 
 ```bash
-cd apps/web
-npm install
-npm run dev        # 本地开发
-npm run build      # 生产构建
+# 终端 1 - Landing
+cd apps/apps/landing && npm run dev
+
+# 终端 2 - API
+cd apps/apps/api && npm run dev
 ```
 
-### 修改Supervisor
+### AGENTS 系统使用
 
 ```bash
-cd apps/supervisor
-go mod tidy
-go run ./cmd/server  # 本地运行
-make docker-build    # 构建镜像
+cd AGENTS
+
+# 创建 .env 文件
+cp .env.example .env
+# 编辑 .env，填入你的 LLM API Key
+
+# 运行 Agent
+npx tsx orchestrator.ts "给 Dashboard 增加导出功能"
+
+# 恢复任务
+npx tsx orchestrator.ts --resume T001
 ```
 
-## 关键文档
+## 🏗️ 技术栈
 
-- [架构设计](docs/architecture/README.md)
-- [API文档](docs/api/README.md)
-- [部署手册](docs/runbooks/deployment.md)
-- [Agent开发指南](docs/agent-development.md)
+### 前端
+| 应用 | 框架 | 技术细节 |
+|------|------|----------|
+| **Landing** | Nuxt 3 | Vue 3 + TypeScript + Element Plus + Tailwind CSS |
 
-## 项目状态
+### 后端
+| 服务 | 运行时 | 技术细节 |
+|------|--------|----------|
+| **API** | Node.js + Express | TypeScript + REST API + JWT 认证 |
+| **Agent Runtime** | Node.js | WebSocket + Zod 验证 + LLM 集成 |
 
-| 组件 | 状态 | 说明 |
-|------|------|------|
-| API Server | ✅ Done | REST API + 单元测试 |
-| Web UI | ✅ Done | Vue3 + Element Plus |
-| Landing | ✅ Done | Nuxt3 Landing Page |
-| Agent Runtime | ✅ Done | K8s-enabled Agent runtime |
-| K8s部署 | ✅ Done | Helm charts + HPA |
-| CI/CD | 📋 Planned | GitHub Actions |
+### 基础设施
+- **容器化**: Docker + Kubernetes
+- **数据库**: PostgreSQL + Redis
+- **反向代理**: Nginx
 
-## 贡献指南
+## 📚 相关文档
 
-1. 从 `main` 分支创建 feature 分支
-2. 提交 PR 到 `develop` 分支
-3. 通过 CI 检查和 Code Review
-4. 合并后自动部署到测试环境
+- [AGENTS.md](./AGENTS.md) - Multi-Agent 系统说明
+- [WORKFLOW.md](./WORKFLOW.md) - 工作流指南
+- [MIGRATION-NOTES.md](./MIGRATION-NOTES.md) - 迁移说明
 
-## 许可证
+## 📝 项目历史
 
-MIT License
+本项目已从 `ai-digital-twin` 整合为独立的 `agenthive-cloud` 项目。
+
+---
+
+> **Hive Mode**: *Many minds, one goal.* 🐝

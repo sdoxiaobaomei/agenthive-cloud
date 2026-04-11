@@ -1,0 +1,98 @@
+#!/usr/bin/env node
+/**
+ * 智能工作区初始化脚本
+ * 使用符号链接避免重复 node_modules
+ */
+
+import fs from 'fs/promises'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const ROOT = path.resolve(__dirname, '..')
+const SOURCE_REPO = path.join(ROOT, 'agenthive-cloud')
+
+async function initWorkspace(ticketId) {
+  const workspaceDir = path.join(ROOT, 'AGENTS', 'workspace', ticketId)
+  const repoDir = path.join(workspaceDir, 'repo')
+  
+  console.log(`🚀 初始化工作区: ${ticketId}`)
+  
+  // 1. 创建目录结构（不包含 node_modules�?
+  await fs.mkdir(repoDir, { recursive: true })
+  
+  // 2. 复制源代码（排除 node_modules�?
+  await copySource(SOURCE_REPO, repoDir)
+  
+  // 3. 创建符号链接指向主仓库的 node_modules
+  await linkNodeModules(repoDir)
+  
+  console.log(`�?工作�?${ticketId} 初始化完成`)
+}
+
+async function copySource(src, dest) {
+  const entries = await fs.readdir(src, { withFileTypes: true })
+  
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name)
+    const destPath = path.join(dest, entry.name)
+    
+    // 跳过 node_modules �?.git
+    if (entry.name === 'node_modules' || entry.name === '.git') {
+      continue
+    }
+    
+    if (entry.isDirectory()) {
+      await fs.mkdir(destPath, { recursive: true })
+      await copySource(srcPath, destPath)
+    } else {
+      await fs.copyFile(srcPath, destPath)
+    }
+  }
+}
+
+async function linkNodeModules(repoDir) {
+  // 链接 landing �?node_modules
+  const landingModules = path.join(repoDir, 'apps', 'landing', 'node_modules')
+  const sourceLandingModules = path.join(SOURCE_REPO, 'apps', 'landing', 'node_modules')
+  
+  await fs.mkdir(path.dirname(landingModules), { recursive: true })
+  
+  try {
+    // Windows 使用 junction，Unix 使用 symlink
+    if (process.platform === 'win32') {
+      await fs.symlink(sourceLandingModules, landingModules, 'junction')
+    } else {
+      await fs.symlink(sourceLandingModules, landingModules, 'dir')
+    }
+    console.log(`  📎 已链�? landing/node_modules`)
+  } catch (e) {
+    console.warn(`  ⚠️ 链接失败: ${e.message}`)
+  }
+  
+  // 链接 web �?node_modules
+  const webModules = path.join(repoDir, 'apps', 'web', 'node_modules')
+  const sourceWebModules = path.join(SOURCE_REPO, 'apps', 'web', 'node_modules')
+  
+  await fs.mkdir(path.dirname(webModules), { recursive: true })
+  
+  try {
+    if (process.platform === 'win32') {
+      await fs.symlink(sourceWebModules, webModules, 'junction')
+    } else {
+      await fs.symlink(sourceWebModules, webModules, 'dir')
+    }
+    console.log(`  📎 已链�? web/node_modules`)
+  } catch (e) {
+    console.warn(`  ⚠️ 链接失败: ${e.message}`)
+  }
+}
+
+// CLI
+const ticketId = process.argv[2]
+if (!ticketId) {
+  console.error('Usage: node init-workspace.js <ticket-id>')
+  process.exit(1)
+}
+
+initWorkspace(ticketId).catch(console.error)

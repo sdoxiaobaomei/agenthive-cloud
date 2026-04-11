@@ -1,0 +1,54 @@
+:root {
+  /* Primary - Atoms.dev inspired blue */
+  --ah-primary-50: #ecf1ff;
+  --ah-primary-100: #dde7ff;
+  --ah-primary-200: #cbdaff;
+  --ah-primary-300: #9ab4ff;
+  --ah-primary-400: #7d9aff;
+  --ah-primary-500: #4267ff;
+  --ah-primary-600: #425ce1;
+  --ah-primary-700: #293a90;
+  --ah-primary-800: #212675;
+  --ah-primary-900: #141754;
+
+  /* Beige / Cream - Atoms.dev background system */
+  --ah-beige-50: #ffffff;
+  --ah-beige-100: #f6f6f6;
+  --ah-beige-150: #f1f1f1;
+  --ah-beige-200: #ebebea;
+  --ah-beige-300: #e1e0e0;
+  --ah-beige-400: #d7d6d6;
+
+  /* Gray */
+  --ah-grey-50: #f5f5f5;
+  --ah-grey-100: #e6e6e6;
+  --ah-grey-200: #d9d9d9;
+  --ah-grey-300: #b2b2b4;
+  --ah-grey-400: #6a6a6c;
+  --ah-grey-500: #58585a;
+  --ah-grey-600: #474748;
+  --ah-grey-700: #353536;
+  --ah-grey-800: #232324;
+  --ah-grey-900: #171717;
+  --ah-grey-950: #0f0f0f;
+
+  /* Semantic */
+  --ah-bg-page: var(--ah-beige-100);
+  --ah-bg-surface: var(--ah-beige-50);
+  --ah-bg-elevated: var(--ah-beige-200);
+  --ah-bg-header: rgba(246, 246, 246, 0.85);
+  
+  --ah-text-primary: var(--ah-grey-900);
+  --ah-text-secondary: var(--ah-grey-600);
+  --ah-text-muted: var(--ah-grey-400);
+  
+  --ah-border-default: var(--ah-beige-300);
+  --ah-border-subtle: var(--ah-beige-200);
+  
+  --ah-radius-sm: 0.375rem;
+  --ah-radius-md: 0.5rem;
+  --ah-radius-lg: 0.75rem;
+  --ah-radius-xl: 1rem;
+  --ah-radius-2xl: 1.5rem;
+  --ah-radius-full: 9999px;
+}

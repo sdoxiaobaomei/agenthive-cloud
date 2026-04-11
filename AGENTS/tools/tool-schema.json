@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tool Registry Schema",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "string" },
+    "description": { "type": "string" },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": ["file", "search", "system", "vcs", "orchestration", "quality", "documentation"]
+          },
+          "inputSchema": { "type": "object" },
+          "isReadOnly": { "type": "boolean" },
+          "isConcurrencySafe": { "type": "boolean" },
+          "isDestructive": { "type": "boolean" },
+          "alwaysLoad": { "type": "boolean", "description": "是否始终加载该工具（不延迟）" },
+          "shouldDefer": { "type": "boolean", "description": "是否延迟加载（需 ToolSearch 解锁）" },
+          "interruptBehavior": {
+            "type": "string",
+            "enum": ["cancel", "block"],
+            "description": "运行中被打断时的行为"
+          },
+          "maxResultSizeChars": { "type": "number" },
+          "allowedAgents": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "deniedAgents": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "sensitiveCommands": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "redLineChecks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pattern": { "type": "string" },
+                "message": { "type": "string" },
+                "severity": { "type": "string", "enum": ["fatal", "error", "warning"] }
+              }
+            }
+          }
+        },
+        "required": ["name", "description", "inputSchema"]
+      }
+    }
+  },
+  "required": ["version", "tools"]
+}

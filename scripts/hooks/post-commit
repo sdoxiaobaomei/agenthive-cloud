@@ -1,0 +1,39 @@
+#!/bin/bash
+# Git Post-Commit Hook
+# Reminds to update progress files
+
+YELLOW='\033[1;33m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
+echo "📝 Post-Commit Reminder"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
+echo "Don't forget to:"
+echo "  1. Update AGENTS/{agent}/memory/session-progress.md"
+echo "  2. Update AGENTS/{agent}/duty/feature-list.json (if feature completed)"
+echo "  3. Create handoff document if needed"
+echo ""
+echo -e "${YELLOW}💡 Tip: Run ./scripts/workstation/sync-progress.sh to auto-update${NC}"
+echo ""
+
+# Try to identify agent from commit message
+COMMIT_MSG=$(git log -1 --pretty=%B)
+if echo "$COMMIT_MSG" | grep -qE '^\[[a-z-]+\]'; then
+    AGENT=$(echo "$COMMIT_MSG" | grep -oE '^\[\K[a-z-]+' | head -1)
+    echo "Detected agent: $AGENT"
+    
+    # Check if progress file exists
+    if [ -f "AGENTS/$AGENT/memory/session-progress.md" ]; then
+        echo "Progress file: AGENTS/$AGENT/memory/session-progress.md"
+    fi
+    
+    # Check if feature was completed
+    if echo "$COMMIT_MSG" | grep -qiE "(complete|finish|done)"; then
+        echo -e "${GREEN}✓ Feature may be complete - remember to update feature-list.json!${NC}"
+    fi
+fi
+
+echo ""

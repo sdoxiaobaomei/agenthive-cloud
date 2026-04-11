@@ -1,0 +1,16 @@
+# Kustomize 配置入口
+# 使用方式: kubectl apply -k k8s/
+#
+# 推荐使用具体环境的 overlay:
+#   kubectl apply -k k8s/overlays/local/
+#   kubectl apply -k k8s/overlays/staging/
+#   kubectl apply -k k8s/overlays/production/
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - base
+
+# 默认使用本地配置
+# 如需其他环境，请使用 overlays 目录
