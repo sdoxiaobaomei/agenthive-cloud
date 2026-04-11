@@ -1,0 +1,133 @@
+# AgentHive Cloud - 阿里云 ECS 精简版部署配置
+# 适用：2 核 2G 内存，年付 99 元入门机型
+
+version: '3.8'
+
+services:
+  # PostgreSQL - 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: agenthive-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: agenthive
+      POSTGRES_USER: agenthive
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ChangeMe123!}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agenthive"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis - 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: agenthive-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API 后端
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: agenthive-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://agenthive:${DB_PASSWORD:-ChangeMe123!}@postgres:5432/agenthive
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-GenerateRandomSecret123!}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+    ports:
+      - "3001:3001"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Landing 前端
+  landing:
+    build:
+      context: ./apps/landing
+      dockerfile: Dockerfile
+    container_name: agenthive-landing
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      API_BASE_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 192M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # Nginx - 反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: agenthive-nginx
+    restart: unless-stopped
+    depends_on:
+      - api
+      - landing
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  default:
+    driver: bridge
