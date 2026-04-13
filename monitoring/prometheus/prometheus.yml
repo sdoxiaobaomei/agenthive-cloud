@@ -1,0 +1,47 @@
+# Prometheus 配置
+# 适用于 Docker / Docker Compose / Kubernetes 环境
+#
+# ⚠️ 重要提示：在 Docker 容器中，localhost / 127.0.0.1 指向的是容器自身，不是宿主机。
+# 因此，所有跨容器的采集目标必须写容器名（自定义网络下）或宿主机内网 IP。
+# 详见 monitoring/docs/01-搭建与部署-setup.md 中的 "常见坑：Prometheus 配置里的 localhost 指向的是容器自身"
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'agenthive-cloud'
+
+# 告警规则（可选）
+rule_files:
+  # - "alerts.yml"
+
+# 采集目标
+scrape_configs:
+  # Prometheus 自身
+  # localhost:9090 在 Prometheus 容器内指向自己，这是唯一可以安全使用 localhost 的地方
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter - 系统指标
+  # 在 Docker 自定义网络中，使用容器名 node-exporter 进行 DNS 解析
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    metrics_path: /metrics
+
+  # API 服务 - 应用指标（示例）
+  # 如果 Prometheus 和 API 不在同一网络/主机，请改为 API 的实际内网 IP 或主机名
+  # - job_name: 'api'
+  #   static_configs:
+  #     - targets: ['api:3001']
+  #   metrics_path: /metrics
+
+  # Nginx 指标（需启用 nginx-prometheus-exporter）
+  # - job_name: 'nginx'
+  #   static_configs:
+  #     - targets: ['nginx-exporter:9113']
+
+# 远程存储（可选）
+# remote_write:
+#   - url: "http://your-remote-storage/api/v1/write"
