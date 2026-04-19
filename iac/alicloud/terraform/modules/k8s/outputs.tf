@@ -16,5 +16,5 @@ output "kubeconfig" {
 
 output "api_server_internet" {
   description = "API Server 公网端点"
-  value       = alicloud_cs_managed_kubernetes.main.api_server_internet
+  value       = alicloud_cs_managed_kubernetes.main.connections.api_server_internet
 }
