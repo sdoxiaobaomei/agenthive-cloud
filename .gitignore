@@ -60,3 +60,7 @@ pnpm-debug.log*
 
 # Runtime data
 pids/
+
+# KIMI agent files
+# Keep project skills in git for team sharing
+# .agents/

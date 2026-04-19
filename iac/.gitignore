@@ -1,0 +1,37 @@
+# Terraform
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/.terraform.lock.hcl
+**/*.tfvars
+!**/*.tfvars.example
+**/crash.log
+**/tfplan
+
+# CDK
+cdk.out/
+node_modules/
+*.js
+*.d.ts
+!.eslintrc.js
+
+# Bicep
+*.json
+!*/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.pem
+*.key
+.env
+.env.local
