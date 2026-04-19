@@ -1,0 +1,116 @@
+# ROS YAML 模板范例
+# 部署一个 ECS + VPC 的基础环境
+# 最后更新: 2026-04-15
+
+ROSTemplateFormatVersion: '2015-09-01'
+Description:
+  en: Deploy a basic ECS instance within a VPC.
+  zh-cn: 在 VPC 内部署一台基础 ECS 实例。
+
+Parameters:
+  ZoneId:
+    Type: String
+    Label:
+      zh-cn: 可用区ID
+      en: Zone ID
+    AssociationProperty: ALIYUN::ECS::Instance::ZoneId
+
+  InstanceType:
+    Type: String
+    Label:
+      zh-cn: 实例规格
+      en: Instance Type
+    AssociationProperty: ALIYUN::ECS::Instance::InstanceType
+    AssociationPropertyMetadata:
+      ZoneId: ${ZoneId}
+      DefaultValueStrategy: recent
+
+  SystemDiskCategory:
+    Type: String
+    Label:
+      zh-cn: 系统盘类型
+      en: System Disk Category
+    AssociationProperty: ALIYUN::ECS::Disk::SystemDiskCategory
+    AssociationPropertyMetadata:
+      ZoneId: ${ZoneId}
+      InstanceType: ${InstanceType}
+      AutoSelectFirst: true
+
+  Password:
+    Type: String
+    Label:
+      zh-cn: 实例密码
+      en: Instance Password
+    ConstraintDescription:
+      zh-cn: 长度8-30，必须包含三项（大写字母、小写字母、数字、特殊符号）。
+    AllowedPattern: '[0-9A-Za-z\_\-\&:;''<>,=%`~!@#\(\)\$\^\*\+\|\{\}\[\]\.\?\/]+$'
+    MinLength: 8
+    MaxLength: 30
+    NoEcho: true
+
+Resources:
+  Vpc:
+    Type: ALIYUN::ECS::VPC
+    Properties:
+      CidrBlock: 192.168.0.0/16
+      VpcName: ros-demo-vpc
+
+  VSwitch:
+    Type: ALIYUN::ECS::VSwitch
+    Properties:
+      ZoneId:
+        Ref: ZoneId
+      VpcId:
+        Ref: Vpc
+      CidrBlock: 192.168.0.0/24
+      VSwitchName: ros-demo-vswitch
+
+  SecurityGroup:
+    Type: ALIYUN::ECS::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: Vpc
+      SecurityGroupName: ros-demo-sg
+
+  SecurityGroupIngress_22:
+    Type: ALIYUN::ECS::SecurityGroupIngress
+    Properties:
+      SecurityGroupId:
+        Ref: SecurityGroup
+      IpProtocol: tcp
+      PortRange: 22/22
+      SourceCidrIp: 0.0.0.0/0
+      NicType: intranet
+
+  EcsInstance:
+    Type: ALIYUN::ECS::Instance
+    Properties:
+      ImageId: ubuntu_22_04_x64_20G_alibase_20240530.vhd
+      InstanceType:
+        Ref: InstanceType
+      SecurityGroupId:
+        Ref: SecurityGroup
+      VSwitchId:
+        Ref: VSwitch
+      SystemDiskCategory:
+        Ref: SystemDiskCategory
+      Password:
+        Ref: Password
+      InternetMaxBandwidthOut: 5
+      HostName: ros-demo-ecs
+
+Outputs:
+  InstanceId:
+    Description:
+      zh-cn: ECS 实例 ID
+      en: ECS Instance ID
+    Value:
+      Ref: EcsInstance
+  PublicIp:
+    Description:
+      zh-cn: 公网 IP 地址
+      en: Public IP Address
+    Value:
+      Fn::GetAtt:
+        - EcsInstance
+        - PublicIp

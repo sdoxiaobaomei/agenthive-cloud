@@ -1,0 +1,66 @@
+name: 🚀 IaC Apply (Demo)
+
+# 手动触发：只在需要展示 Demo 环境时执行
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '确认创建 Demo 资源（约 ¥0.6/小时）'
+        required: true
+        default: false
+        type: boolean
+
+env:
+  ALICLOUD_ACCESS_KEY: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+  ALICLOUD_SECRET_KEY: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+  TF_PLUGIN_CACHE_DIR: ~/.terraform.d/plugin-cache
+
+jobs:
+  apply:
+    name: Terraform Apply (demo-ask)
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'true' }}
+    timeout-minutes: 30
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.8"
+          terraform_wrapper: false
+
+      - name: 💾 Cache Terraform Providers
+        uses: actions/cache@v4
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: ${{ runner.os }}-terraform-${{ hashFiles('iac/alicloud/terraform/demo-ask/.terraform.lock.hcl') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
+
+      - name: 🔧 Terraform Init
+        working-directory: iac/alicloud/terraform/demo-ask
+        run: terraform init -input=false
+
+      - name: 📋 Terraform Plan
+        working-directory: iac/alicloud/terraform/demo-ask
+        run: terraform plan -input=false -no-color
+
+      - name: 🚀 Terraform Apply
+        working-directory: iac/alicloud/terraform/demo-ask
+        run: terraform apply -input=false -auto-approve -no-color
+
+      - name: 📊 Deployment Summary
+        if: always()
+        run: |
+          echo "## 🚀 IaC Apply Summary (demo-ask)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 项目 | 值 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| **状态** | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **执行者** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **触发方式** | workflow_dispatch |" >> $GITHUB_STEP_SUMMARY
+          echo "| **成本** | 约 ¥0.6/小时 |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> 使用完毕后请运行 **IaC Destroy (Demo)** 工作流销毁资源，避免持续计费。" >> $GITHUB_STEP_SUMMARY

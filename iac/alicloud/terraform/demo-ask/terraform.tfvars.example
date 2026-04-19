@@ -1,0 +1,36 @@
+# ============================================================================
+# ASK Demo 环境 - 变量值示例文件
+# ============================================================================
+# 使用方式:
+#   1. 复制此文件: cp terraform.tfvars.example terraform.tfvars
+#   2. 编辑 terraform.tfvars，填入你的实际值
+#   3. 运行 terraform plan / apply
+#
+# 注意: terraform.tfvars 不会被 Git 跟踪（已加入 .gitignore），
+#       可以放心存放地域等配置，但不要放 AccessKey/密码等敏感信息。
+# ============================================================================
+
+# region: 阿里云地域 ID
+# 常用地域:
+#   cn-beijing    = 华北 2（北京）
+#   cn-shanghai   = 华东 2（上海）
+#   cn-hangzhou   = 华东 1（杭州）
+#   cn-shenzhen   = 华南 1（深圳）
+#   cn-chengdu    = 西南 1（成都）
+# 地域选择建议:
+#   - 选离你用户最近的地域，降低网络延迟
+#   - Demo 场景任选即可
+region = "cn-beijing"
+
+# zone_id: 可用区 ID
+# 格式: {region}-{letter}，如 cn-beijing-a, cn-beijing-b
+# 选择建议:
+#   - 先确定 region，然后在阿里云控制台查看该地域有哪些可用区
+#   - Demo 场景选第一个即可（通常 -a 是最老的可用区，资源最充足）
+zone_id = "cn-beijing-a"
+
+# project_name: 项目名称
+# 所有资源都会以此命名，例如:
+#   - VPC 名称: agenthive-demo-vpc
+#   - 集群名称: agenthive-demo-ask
+# project_name = "agenthive"
