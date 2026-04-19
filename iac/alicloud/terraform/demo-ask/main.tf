@@ -127,7 +127,7 @@ resource "alicloud_nat_gateway" "demo" {
   nat_gateway_name = "${var.project_name}-demo-nat"
   payment_type     = "PayAsYouGo"
   vswitch_id       = alicloud_vswitch.demo.id
-  nat_type         = "Normal"
+  nat_type         = "Enhanced"
 }
 
 # ----------------------------------------------------------------------------
