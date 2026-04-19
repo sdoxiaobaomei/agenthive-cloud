@@ -249,11 +249,11 @@ resource "alicloud_cs_kubernetes_node_pool" "demo" {
   node_pool_name       = "${var.project_name}-demo-pool"
   cluster_id           = alicloud_cs_managed_kubernetes.demo.id
   vswitch_ids          = [alicloud_vswitch.demo.id]
-  instance_types       = ["ecs.u2a-c1m1.xlarge"]   # 4 vCPU / 4 GB，通用型，各可用区支持度高
+  instance_types       = ["ecs.u2a-c1m1.xlarge"] # 4 vCPU / 4 GB，通用型，各可用区支持度高
   desired_size         = 1
-  system_disk_category = "cloud_essd"       # cn-beijing-l 等新区主要支持 ESSD
+  system_disk_category = "cloud_essd" # cn-beijing-l 等新区主要支持 ESSD
   system_disk_size     = 40
-  instance_charge_type = "PostPaid"         # 按量付费，用多少付多少
+  instance_charge_type = "PostPaid" # 按量付费，用多少付多少
 }
 
 # ----------------------------------------------------------------------------
