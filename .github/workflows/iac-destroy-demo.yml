@@ -32,15 +32,17 @@ jobs:
 
       - name: 🔧 Terraform Init
         working-directory: iac/alicloud/terraform/demo-ask
-        run: terraform init -input=false
+        run: |
+          mkdir -p ~/.terraform.d/plugin-cache
+          terraform init -input=false
 
       - name: 📋 Terraform Plan (Destroy)
         working-directory: iac/alicloud/terraform/demo-ask
-        run: terraform plan -destroy -input=false -no-color
+        run: terraform plan -destroy -input=false -no-color -lock=false
 
       - name: 💥 Terraform Destroy
         working-directory: iac/alicloud/terraform/demo-ask
-        run: terraform destroy -input=false -auto-approve -no-color
+        run: terraform destroy -input=false -auto-approve -no-color -lock=false
 
       - name: 📊 Destroy Summary
         if: always()
