@@ -9,7 +9,9 @@ on:
       - 'AGENTS/**'
       - 'Dockerfile*'
       - 'docker-compose*.yml'
-      - '.github/workflows/**'
+      - '.github/workflows/ci-cd.yml'
+      - '.github/workflows/deploy-*.yml'
+      - '.github/workflows/build-*.yml'
   pull_request:
     branches: [master, main]
     paths:
@@ -51,7 +53,11 @@ jobs:
       - name: 📂 Get pnpm store directory
         id: pnpm-cache
         shell: bash
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+        run: |
+          STORE_PATH=$(pnpm store path)
+          echo "STORE_PATH<<EOF" >> $GITHUB_OUTPUT
+          echo "$STORE_PATH" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: 💾 Cache pnpm dependencies
         uses: actions/cache@v4
