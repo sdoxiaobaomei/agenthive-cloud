@@ -122,60 +122,6 @@ resource "alicloud_vswitch" "demo" {
 # nat_type: NAT 网关类型
 #   "Enhanced" = 增强型（性能更好，新规格，推荐）
 #   "Normal" = 普通型（旧规格）
-resource "alicloud_nat_gateway" "demo" {
-  vpc_id           = alicloud_vpc.demo.id
-  nat_gateway_name = "${var.project_name}-demo-nat"
-  payment_type     = "PayAsYouGo"
-  vswitch_id       = alicloud_vswitch.demo.id
-  nat_type         = "Enhanced"
-}
-
-# ----------------------------------------------------------------------------
-# resource "alicloud_eip_address" "demo": 创建弹性公网 IP
-# ----------------------------------------------------------------------------
-# EIP 是一个独立的公网 IP 地址资源。
-# NAT 网关需要一个公网 IP 才能将内网流量转发到公网。
-#
-# address_name: EIP 的名称
-# isp: 运营商类型
-#   "BGP" = 多线 BGP（推荐，覆盖三大运营商）
-# internet_charge_type: 公网计费方式
-#   "PayAsYouGo" = 按量付费（按实际流量计费，适合低流量 Demo）
-#   "Subscription" = 包年包月带宽
-# bandwidth: 带宽上限（Mbps），仅影响峰值，按量付费按实际使用流量计费
-resource "alicloud_eip_address" "demo" {
-  address_name         = "${var.project_name}-demo-eip"
-  isp                  = "BGP"
-  internet_charge_type = "PayByTraffic"
-  bandwidth            = 10
-}
-
-# ----------------------------------------------------------------------------
-# resource "alicloud_eip_association" "demo": 将 EIP 绑定到 NAT 网关
-# ----------------------------------------------------------------------------
-# allocation_id: 要绑定的 EIP ID（引用上面的 eip_address 资源）
-# instance_id: 要绑定到的目标实例（这里是 NAT 网关的 ID）
-resource "alicloud_eip_association" "demo" {
-  allocation_id = alicloud_eip_address.demo.id
-  instance_id   = alicloud_nat_gateway.demo.id
-}
-
-# ----------------------------------------------------------------------------
-# resource "alicloud_snat_entry" "demo": 创建 SNAT 条目
-# ----------------------------------------------------------------------------
-# SNAT (Source Network Address Translation): 源地址转换。
-# 作用: 将内网源 IP 转换为公网 IP，使得内网资源可以主动访问公网。
-# 没有 SNAT，Pod 就无法拉取 Docker Hub 镜像或访问外部 API。
-#
-# snat_table_id: SNAT 表 ID（NAT 网关自动创建，通过属性引用）
-# source_vswitch_id: 哪些 VSwitch 内的资源可以使用此 SNAT（即允许出网的网段）
-# snat_ip: 用于 NAT 转换的公网 IP 地址（引用上面创建的 EIP）
-resource "alicloud_snat_entry" "demo" {
-  snat_table_id     = alicloud_nat_gateway.demo.snat_table_ids
-  source_vswitch_id = alicloud_vswitch.demo.id
-  snat_ip           = alicloud_eip_address.demo.ip_address
-}
-
 # ============================================================================
 # 第二层: 容器集群 (ACK - 托管版 Kubernetes)
 # ============================================================================
@@ -196,8 +142,8 @@ resource "alicloud_snat_entry" "demo" {
 #   本 Demo 使用单可用区 + 单节点，简化配置和学习成本。
 #
 # new_nat_gateway: 是否为集群自动创建 NAT 网关
-#   false = 使用上面手动创建的 NAT（推荐，资源统一管理）
-#   true = 自动创建（方便但不易管理）
+#   true = 自动创建（Demo 简化配置，避免手动 NAT 库存问题）
+#   false = 手动创建（更灵活但需要确保库存充足）
 #
 # slb_internet_enabled: 是否开启公网 API Server 访问
 #   true = 可以通过公网 kubectl 连接集群（Demo 必需）
@@ -220,7 +166,7 @@ resource "alicloud_snat_entry" "demo" {
 resource "alicloud_cs_managed_kubernetes" "demo" {
   name                 = "${var.project_name}-demo-ask"
   vswitch_ids          = [alicloud_vswitch.demo.id]
-  new_nat_gateway      = false
+  new_nat_gateway      = true
   slb_internet_enabled = true
   deletion_protection  = false
   service_cidr         = "172.21.0.0/20"
@@ -251,7 +197,7 @@ resource "alicloud_cs_kubernetes_node_pool" "demo" {
   vswitch_ids          = [alicloud_vswitch.demo.id]
   instance_types       = ["ecs.ic5.xlarge"] # 4 vCPU / 4 GB，计算型，当前区域可用
   desired_size         = 1
-  system_disk_category = "cloud_essd" # cn-beijing-l 等新区主要支持 ESSD
+  system_disk_category = "cloud_efficiency" # 使用高效云盘（ESSD 可能缺货）
   system_disk_size     = 40
   instance_charge_type = "PostPaid" # 按量付费，用多少付多少
 }
