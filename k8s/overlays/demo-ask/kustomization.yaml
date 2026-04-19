@@ -1,0 +1,31 @@
+# ============================================================================
+# ASK Demo 环境 Kustomize 配置
+# ============================================================================
+# 说明:
+#   此 overlay 专为阿里云 ASK (Serverless Kubernetes) 设计。
+#   与 local/production overlay 的区别:
+#     - 使用公开镜像（无需本地构建或私有仓库）
+#     - 资源限制最小化（ASK 按实际使用计费）
+#     - 移除 ASK 不支持的特性（如 imagePullPolicy: Never）
+#     - 使用 NodePort Service 替代 LoadBalancer（节省 SLB 费用）
+#
+# 使用方式:
+#   kubectl apply -k k8s/overlays/demo-ask
+# ============================================================================
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# 命名空间
+namespace: agenthive
+
+# 基础资源（可选: 可以引用 base，也可以只部署简化版）
+# 这里我们先定义一个独立的轻量 demo，验证集群可用性
+resources:
+  - namespace.yaml
+  - nginx-demo.yaml
+
+# 统一标签
+commonLabels:
+  environment: demo-ask
+  managed-by: terraform

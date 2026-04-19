@@ -1,0 +1,78 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: production
+  namespace: elasticsearch
+spec:
+  version: 8.19.14
+  nodeSets:
+    - name: master
+      count: 3
+      config:
+        node.roles: ["master"]
+        node.store.allow_mmap: false
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 2Gi
+                  cpu: 500m
+                limits:
+                  memory: 4Gi
+                  cpu: 2
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        elasticsearch.k8s.elastic.co/cluster-name: production
+                    topologyKey: kubernetes.io/hostname
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            storageClassName: fast-ssd
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+    - name: data
+      count: 3
+      config:
+        node.roles: ["data", "ingest"]
+        node.store.allow_mmap: false
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 4Gi
+                  cpu: 1
+                limits:
+                  memory: 8Gi
+                  cpu: 4
+          affinity:
+            podAntiAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - weight: 100
+                  podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        elasticsearch.k8s.elastic.co/cluster-name: production
+                    topologyKey: kubernetes.io/hostname
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            storageClassName: fast-ssd
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 100Gi
