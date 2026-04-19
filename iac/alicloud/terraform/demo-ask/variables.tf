@@ -44,7 +44,7 @@ variable "region" {
 variable "zone_id" {
   description = "可用区 ID，如 cn-beijing-a。ASK 只需单可用区。"
   type        = string
-  default     = "cn-beijing-b"
+  default     = "cn-beijing-d"
 }
 
 # ----------------------------------------------------------------------------
