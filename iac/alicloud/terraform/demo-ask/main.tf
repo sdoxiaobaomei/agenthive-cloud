@@ -249,7 +249,7 @@ resource "alicloud_cs_kubernetes_node_pool" "demo" {
   node_pool_name       = "${var.project_name}-demo-pool"
   cluster_id           = alicloud_cs_managed_kubernetes.demo.id
   vswitch_ids          = [alicloud_vswitch.demo.id]
-  instance_types       = ["ecs.c7.xlarge"] # 4 vCPU / 8 GB，通用型，各可用区支持度高
+  instance_types       = ["ecs.ic5.xlarge"] # 4 vCPU / 4 GB，计算型，当前区域可用
   desired_size         = 1
   system_disk_category = "cloud_essd" # cn-beijing-l 等新区主要支持 ESSD
   system_disk_size     = 40
