@@ -1,0 +1,55 @@
+name: 💥 IaC Destroy (Demo)
+
+# 手动触发：展示结束后销毁 Demo 资源，停止计费
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '⚠️ 确认销毁所有 Demo 资源（不可恢复）'
+        required: true
+        default: false
+        type: boolean
+
+env:
+  ALICLOUD_ACCESS_KEY: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+  ALICLOUD_SECRET_KEY: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
+
+jobs:
+  destroy:
+    name: Terraform Destroy (demo-ask)
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'true' }}
+    timeout-minutes: 30
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🛠️ Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.8"
+          terraform_wrapper: false
+
+      - name: 🔧 Terraform Init
+        working-directory: iac/alicloud/terraform/demo-ask
+        run: terraform init -input=false
+
+      - name: 📋 Terraform Plan (Destroy)
+        working-directory: iac/alicloud/terraform/demo-ask
+        run: terraform plan -destroy -input=false -no-color
+
+      - name: 💥 Terraform Destroy
+        working-directory: iac/alicloud/terraform/demo-ask
+        run: terraform destroy -input=false -auto-approve -no-color
+
+      - name: 📊 Destroy Summary
+        if: always()
+        run: |
+          echo "## 💥 IaC Destroy Summary (demo-ask)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 项目 | 值 |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| **状态** | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **执行者** | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Demo 资源已销毁，计费停止。如需再次展示，请运行 **IaC Apply (Demo)** 工作流。" >> $GITHUB_STEP_SUMMARY
