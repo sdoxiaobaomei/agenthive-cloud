@@ -41,15 +41,17 @@ jobs:
 
       - name: 🔧 Terraform Init
         working-directory: iac/alicloud/terraform/demo-ask
-        run: terraform init -input=false
+        run: |
+          mkdir -p ~/.terraform.d/plugin-cache
+          terraform init -input=false
 
       - name: 📋 Terraform Plan
         working-directory: iac/alicloud/terraform/demo-ask
-        run: terraform plan -input=false -no-color
+        run: terraform plan -input=false -no-color -lock=false
 
       - name: 🚀 Terraform Apply
         working-directory: iac/alicloud/terraform/demo-ask
-        run: terraform apply -input=false -auto-approve -no-color
+        run: terraform apply -input=false -auto-approve -no-color -lock=false
 
       - name: 📊 Deployment Summary
         if: always()
