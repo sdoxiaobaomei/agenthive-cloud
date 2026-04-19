@@ -38,8 +38,8 @@ terraform {
   backend "oss" {
     bucket              = "agenthive-terraform-state"
     prefix              = "demo-ask"
-    region              = "cn-beijing"
-    tablestore_endpoint = "https://agenthive-locks.cn-beijing.ots.aliyuncs.com"
+    region              = "cn-hangzhou"
+    tablestore_endpoint = "https://agenthive-locks.cn-hangzhou.ots.aliyuncs.com"
     tablestore_table    = "terraform_locks"
   }
 }
