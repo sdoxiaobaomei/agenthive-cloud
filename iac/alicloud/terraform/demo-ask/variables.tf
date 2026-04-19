@@ -24,7 +24,7 @@
 variable "region" {
   description = "阿里云地域 ID，决定资源创建在哪个数据中心"
   type        = string
-  default     = "cn-hangzhou"
+  default     = "cn-beijing"
 }
 
 # ----------------------------------------------------------------------------
@@ -44,7 +44,7 @@ variable "region" {
 variable "zone_id" {
   description = "可用区 ID，如 cn-beijing-a。ASK 只需单可用区。"
   type        = string
-  default     = "cn-hangzhou-a"
+  default     = "cn-beijing-b"
 }
 
 # ----------------------------------------------------------------------------
