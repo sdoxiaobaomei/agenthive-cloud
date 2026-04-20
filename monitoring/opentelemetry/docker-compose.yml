@@ -1,0 +1,76 @@
+# OpenTelemetry 本地开发环境
+# 包含：OTel Collector + Jaeger（Traces 后端）+ Prometheus（Metrics 后端）
+#
+# 用法：
+#   cd monitoring/opentelemetry
+#   docker-compose up -d
+#
+# 访问地址：
+#   Jaeger UI:  http://localhost:16686
+#   Prometheus: http://localhost:9091
+#   Collector:  gRPC 4317 / HTTP 4318 / Metrics 8889
+
+version: "3.8"
+
+services:
+  # --------------------------------------------------------------------------
+  # OTel Collector：统一接收/处理/导出三种信号
+  # --------------------------------------------------------------------------
+  otel-collector:
+    build: ./otel-collector
+    container_name: otel-collector
+    restart: unless-stopped
+    ports:
+      # OTLP 接收端口
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      # Prometheus 自监控 + 导出指标
+      - "8888:8888"   # Collector 内部 metrics（Prometheus 格式）
+      - "8889:8889"   # 外部暴露的聚合 metrics
+      # 其他可选接收器
+      - "13133:13133" # Health check
+    volumes:
+      - ./otel-collector/otel-collector.yml:/etc/otel-collector.yml:ro
+    environment:
+      - OTEL_COLLECTOR_CONFIG_FILE=/etc/otel-collector.yml
+    networks:
+      - otel-net
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:13133/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # --------------------------------------------------------------------------
+  # Jaeger：Traces 存储与可视化
+  # --------------------------------------------------------------------------
+  jaeger:
+    image: jaegertracing/all-in-one:1.53.0
+    container_name: jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "14250:14250"   # OTLP gRPC (Traces)
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - otel-net
+
+  # --------------------------------------------------------------------------
+  # Prometheus（独立实例，用于接收 OTel 导出的 Metrics）
+  # 如果你已经在 monitoring/docker-compose.yml 中跑了 Prometheus，可以复用那个
+  # --------------------------------------------------------------------------
+  prometheus-otel:
+    image: prom/prometheus:v2.48.0
+    container_name: prometheus-otel
+    restart: unless-stopped
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./otel-collector/prometheus-otel.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - otel-net
+
+networks:
+  otel-net:
+    driver: bridge

@@ -19,6 +19,17 @@ monitoring/
 │   └── provisioning/        # 预配置数据源和 Dashboard
 ├── node-exporter/           # Node Exporter 镜像构建
 │   └── Dockerfile
+├── opentelemetry/           # 📡 OpenTelemetry 可观测性（Traces + Metrics + Logs）
+│   ├── docs/                # 架构、接入、集成文档
+│   │   ├── README.md
+│   │   ├── 01-架构与组件-architecture.md
+│   │   ├── 02-应用接入-instrumentation.md
+│   │   └── 03-集成现有栈-integration.md
+│   ├── otel-collector/      # Collector 配置
+│   │   ├── otel-collector.yml
+│   │   └── prometheus-otel.yml
+│   └── k8s/                 # Kubernetes 部署
+│       └── otel-collector.yaml
 ├── docker-compose.yml       # 本地开发测试
 ├── deploy-vm.sh             # VM 部署脚本
 ├── Makefile                 # 构建与部署辅助命令
@@ -35,6 +46,10 @@ monitoring/
 | [docs/01-搭建与部署-setup.md](./docs/01-搭建与部署-setup.md) | 从零搭建：docker run 参数逐条详解 |
 | [docs/02-运维与排障-operations.md](./docs/02-运维与排障-operations.md) | 日常运维：状态检查、日志跟踪、服务探活 |
 | [docs/03-NodeExporter文件系统-node-exporter.md](./docs/03-NodeExporter文件系统-node-exporter.md) | 文件系统排除规则深度指南 |
+| [opentelemetry/docs/README.md](./opentelemetry/docs/README.md) | OpenTelemetry 知识库首页（Traces/Metrics/Logs） |
+| [opentelemetry/docs/01-架构与组件-architecture.md](./opentelemetry/docs/01-架构与组件-architecture.md) | OTel Collector 架构与三种信号详解 |
+| [opentelemetry/docs/02-应用接入-instrumentation.md](./opentelemetry/docs/02-应用接入-instrumentation.md) | Node.js / Vue 3 / Nuxt 3 应用接入指南 |
+| [opentelemetry/docs/03-集成现有栈-integration.md](./opentelemetry/docs/03-集成现有栈-integration.md) | 与 Prometheus / ELK / Kubernetes 集成 |
 
 ## 🚀 快速开始
 
@@ -160,6 +175,24 @@ docker history registry.cn-hangzhou.aliyuncs.com/agenthive/prometheus:v1.0.0
 | `agenthive/prometheus` | 时序数据库，存储指标 | 9090 |
 | `agenthive/grafana` | 可视化仪表盘 | 3000 |
 | `agenthive/node-exporter` | 系统指标采集器 | 9100 |
+| `otel/opentelemetry-collector-contrib` | OTel Collector（采集 Traces/Metrics/Logs） | 4317/4318 |
+
+## 🔭 OpenTelemetry（可观测性增强）
+
+OpenTelemetry 不是替换现有 Prometheus 栈，而是在 **Metrics 之外补充 Traces（链路追踪）和 Logs（日志）**，形成完整的三支柱可观测性。
+
+**本地快速启动（独立）**：
+```bash
+cd monitoring/opentelemetry
+docker-compose up -d
+```
+
+**Kubernetes 部署**：
+```bash
+kubectl apply -f monitoring/opentelemetry/k8s/otel-collector.yaml
+```
+
+详细文档参见 [opentelemetry/docs/](./opentelemetry/docs/) 目录。
 
 ## 🔒 安全建议
 
