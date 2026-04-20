@@ -24,7 +24,7 @@
 |------|----------|------|
 | [`terraform/demo-ask/`](terraform/demo-ask/) | 学习入口 | 最小可用 Demo，286 行逐行注释，从 VPC 到 ACK 完整链路 |
 | [`terraform/environments/`](terraform/environments/) | 多环境管理 | Terraform Workspace 实现 dev/staging/prod 隔离 |
-| [`terraform/modules/`](terraform/modules/) | 可复用模块 | VPC 网络模块 + K8s 集群模块 |
+| [`terraform/modules/`](terraform/modules/) | 可复用模块 | VPC 网络模块 + K8s 集群模块 + GitHub OIDC 角色模块 |
 | [`lessons-learned-terraform-demo.md`](lessons-learned-terraform-demo.md) | 运维经验 | ASK Demo 部署踩坑实录（DNS、库存、权限、计费） |
 | [`ros/template.yml`](ros/template.yml) | 参考模板 | ROS 资源编排服务模板 |
 
@@ -58,7 +58,7 @@
 
 | 实践项 | 要求 | 说明 |
 |--------|------|------|
-| 凭证管理 | RAM 子账号 + STS 临时凭证 | 禁止主账号 AccessKey 写入任何配置文件 |
+| 凭证管理 | **GitHub OIDC 联邦身份** + RAM 角色 + STS 临时凭证 | 彻底消除长期 AccessKey，CI/CD 零持久密钥 |
 | 网络隔离 | 数据库放 Private VSwitch | 生产 RDS、Redis 不暴露公网入口 |
 | 标签治理 | 所有资源必须打标签 | `Environment`、`Project`、`ManagedBy` 三个必填标签 |
 | 成本追踪 | 按标签分账 | 通过 `Environment=demo` 标签筛选 Demo 环境费用 |

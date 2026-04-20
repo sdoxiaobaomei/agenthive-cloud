@@ -96,16 +96,16 @@ resource "alicloud_vpc" "demo" {
 #   ASK Serverless 只需要一个可用区即可工作，简化配置。
 #   可用区格式: {region}-{letter}，如 cn-beijing-a
 # vswitch_name: 交换机名称
-resource "alicloud_vswitch" "demo" {
-  vpc_id       = alicloud_vpc.demo.id
-  cidr_block   = "172.16.1.0/24"
-  zone_id      = var.zone_id
-  vswitch_name = "${var.project_name}-demo-vswitch"
-  tags = {
-    Environment = "demo"
-    Project     = var.project_name
-  }
-}
+# [TEST-OIDC] resource "alicloud_vswitch" "demo" {
+# [TEST-OIDC]   vpc_id       = alicloud_vpc.demo.id
+# [TEST-OIDC]   cidr_block   = "172.16.1.0/24"
+# [TEST-OIDC]   zone_id      = var.zone_id
+# [TEST-OIDC]   vswitch_name = "${var.project_name}-demo-vswitch"
+# [TEST-OIDC]   tags = {
+# [TEST-OIDC]     Environment = "demo"
+# [TEST-OIDC]     Project     = var.project_name
+# [TEST-OIDC]   }
+# [TEST-OIDC] }
 
 # ----------------------------------------------------------------------------
 # resource "alicloud_nat_gateway" "demo": 创建 NAT 网关
@@ -163,44 +163,44 @@ resource "alicloud_vswitch" "demo" {
 #   metrics-server: 集群指标采集，支持 kubectl top / HPA 等
 # Basic ACK cluster (no CSK Pro required)
 # Trade-off: Uses 1 small ECS worker node (~$15/month) instead of serverless ASK
-resource "alicloud_cs_managed_kubernetes" "demo" {
-  name                 = "${var.project_name}-demo-ask"
-  vswitch_ids          = [alicloud_vswitch.demo.id]
-  new_nat_gateway      = true
-  slb_internet_enabled = true
-  deletion_protection  = false
-  service_cidr         = "172.21.0.0/20"
-  pod_cidr             = "172.20.0.0/16"
-
-  addons {
-    name = "csi-plugin"
-  }
-  addons {
-    name = "managed-csiprovisioner"
-  }
-  addons {
-    name = "metrics-server"
-  }
-
-  tags = {
-    Environment = "demo"
-    Project     = var.project_name
-    ManagedBy   = "terraform"
-    AutoCleanup = "true"
-  }
-}
+# [TEST-OIDC] resource "alicloud_cs_managed_kubernetes" "demo" {
+# [TEST-OIDC]   name                 = "${var.project_name}-demo-ask"
+# [TEST-OIDC]   vswitch_ids          = [alicloud_vswitch.demo.id]
+# [TEST-OIDC]   new_nat_gateway      = true
+# [TEST-OIDC]   slb_internet_enabled = true
+# [TEST-OIDC]   deletion_protection  = false
+# [TEST-OIDC]   service_cidr         = "172.21.0.0/20"
+# [TEST-OIDC]   pod_cidr             = "172.20.0.0/16"
+# [TEST-OIDC] 
+# [TEST-OIDC]   addons {
+# [TEST-OIDC]     name = "csi-plugin"
+# [TEST-OIDC]   }
+# [TEST-OIDC]   addons {
+# [TEST-OIDC]     name = "managed-csiprovisioner"
+# [TEST-OIDC]   }
+# [TEST-OIDC]   addons {
+# [TEST-OIDC]     name = "metrics-server"
+# [TEST-OIDC]   }
+# [TEST-OIDC] 
+# [TEST-OIDC]   tags = {
+# [TEST-OIDC]     Environment = "demo"
+# [TEST-OIDC]     Project     = var.project_name
+# [TEST-OIDC]     ManagedBy   = "terraform"
+# [TEST-OIDC]     AutoCleanup = "true"
+# [TEST-OIDC]   }
+# [TEST-OIDC] }
 
 # Worker node pool (required for basic ACK — provider v1.212.0+ uses separate resource)
-resource "alicloud_cs_kubernetes_node_pool" "demo" {
-  node_pool_name       = "${var.project_name}-demo-pool"
-  cluster_id           = alicloud_cs_managed_kubernetes.demo.id
-  vswitch_ids          = [alicloud_vswitch.demo.id]
-  instance_types       = ["ecs.ic5.xlarge"] # 4 vCPU / 4 GB，计算型，当前区域可用
-  desired_size         = 1
-  system_disk_category = "cloud_efficiency" # 使用高效云盘（ESSD 可能缺货）
-  system_disk_size     = 40
-  instance_charge_type = "PostPaid" # 按量付费，用多少付多少
-}
+# [TEST-OIDC] resource "alicloud_cs_kubernetes_node_pool" "demo" {
+# [TEST-OIDC]   node_pool_name       = "${var.project_name}-demo-pool"
+# [TEST-OIDC]   cluster_id           = alicloud_cs_managed_kubernetes.demo.id
+# [TEST-OIDC]   vswitch_ids          = [alicloud_vswitch.demo.id]
+# [TEST-OIDC]   instance_types       = ["ecs.ic5.xlarge"] # 4 vCPU / 4 GB，计算型，当前区域可用
+# [TEST-OIDC]   desired_size         = 1
+# [TEST-OIDC]   system_disk_category = "cloud_efficiency" # 使用高效云盘（ESSD 可能缺货）
+# [TEST-OIDC]   system_disk_size     = 40
+# [TEST-OIDC]   instance_charge_type = "PostPaid" # 按量付费，用多少付多少
+# [TEST-OIDC] }
 
 # ----------------------------------------------------------------------------
 # data "alicloud_cs_cluster_credential" "demo": 查询集群凭证数据源
@@ -211,9 +211,9 @@ resource "alicloud_cs_kubernetes_node_pool" "demo" {
 # cluster_id: 目标集群的 ID（引用上面创建的 ASK 集群）
 # 获取的信息包括: kubeconfig、client_certificate、client_key、cluster_ca_certificate 等
 # 常用于: 将 kubeconfig 输出到文件，供本地 kubectl 或 CI/CD 使用
-data "alicloud_cs_cluster_credential" "demo" {
-  cluster_id = alicloud_cs_managed_kubernetes.demo.id
-}
+# [TEST-OIDC] data "alicloud_cs_cluster_credential" "demo" {
+# [TEST-OIDC]   cluster_id = alicloud_cs_managed_kubernetes.demo.id
+# [TEST-OIDC] }
 
 # ============================================================================
 # 权限说明 (README)
