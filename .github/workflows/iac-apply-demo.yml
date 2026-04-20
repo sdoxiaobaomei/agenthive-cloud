@@ -32,6 +32,7 @@ jobs:
           set -e
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.aliyuncs.com" | jq -r '.value')
+          echo "$TOKEN" > /tmp/oidc-token
 
           pip install -q alibabacloud_credentials
 
@@ -43,10 +44,8 @@ jobs:
           config = CredConfig(
               type='oidc_role_arn',
               oidc_provider_arn='acs:ram::1261729158179509:oidc-provider/GitHubActions',
-              oidc_token='$TOKEN',
-              role_arn='acs:ram::1261729158179509:role/agenthive-cloud-github-actions-role',
-              role_session_name=f"github-{os.environ['GITHUB_RUN_ID']}",
-              duration_seconds=3600
+              oidc_token_file_path='/tmp/oidc-token',
+              role_arn='acs:ram::1261729158179509:role/agenthive-cloud-github-actions-role'
           )
           cred_client = CredClient(config)
           cred = cred_client.get_credential()
