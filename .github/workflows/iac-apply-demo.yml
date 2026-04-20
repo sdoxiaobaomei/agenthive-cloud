@@ -32,25 +32,31 @@ jobs:
           set -e
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.aliyuncs.com" | jq -r '.value')
+          echo "OIDC_TOKEN=$TOKEN" >> $GITHUB_ENV
 
-          # 安装阿里云 CLI
-          curl -fsSL "https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz" -o aliyun-cli.tgz
-          tar -xzf aliyun-cli.tgz
-          chmod +x aliyun
-          sudo mv aliyun /usr/local/bin/
+          pip install -q alibabacloud_credentials
 
-          # 获取临时凭证（CLI 自动处理 RPC 签名）
-          CREDS=$(aliyun sts AssumeRoleWithOIDC \
-            --OIDCProviderArn "acs:ram::1261729158179509:oidc-provider/GitHubActions" \
-            --RoleArn "acs:ram::1261729158179509:role/agenthive-cloud-github-actions-role" \
-            --OIDCToken "$TOKEN" \
-            --RoleSessionName "github-${GITHUB_RUN_ID}" \
-            --DurationSeconds 3600 \
-            --region cn-beijing)
+          python3 << 'PYEOF'
+          import os
+          from alibabacloud_credentials.client import Client as CredClient
+          from alibabacloud_credentials.models import Config as CredConfig
 
-          echo "ALICLOUD_ACCESS_KEY=$(echo "$CREDS" | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
-          echo "ALICLOUD_SECRET_KEY=$(echo "$CREDS" | jq -r '.Credentials.AccessKeySecret')" >> $GITHUB_ENV
-          echo "ALICLOUD_SECURITY_TOKEN=$(echo "$CREDS" | jq -r '.Credentials.SecurityToken')" >> $GITHUB_ENV
+          config = CredConfig(
+              type='oidc_role_arn',
+              oidc_provider_arn='acs:ram::1261729158179509:oidc-provider/GitHubActions',
+              oidc_token=os.environ['OIDC_TOKEN'],
+              role_arn='acs:ram::1261729158179509:role/agenthive-cloud-github-actions-role',
+              role_session_name=f"github-{os.environ['GITHUB_RUN_ID']}",
+              duration_seconds=3600
+          )
+          cred_client = CredClient(config)
+          cred = cred_client.get_credential()
+
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write(f"ALICLOUD_ACCESS_KEY={cred.access_key_id}\n")
+              f.write(f"ALICLOUD_SECRET_KEY={cred.access_key_secret}\n")
+              f.write(f"ALICLOUD_SECURITY_TOKEN={cred.security_token}\n")
+          PYEOF
 
       - name: 🛠️ Setup Terraform
         uses: hashicorp/setup-terraform@v3
