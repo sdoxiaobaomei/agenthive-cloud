@@ -67,11 +67,11 @@ jobs:
 
       - name: 📋 Terraform Plan (Destroy)
         working-directory: iac/alicloud/terraform/demo-ask
-        run: terraform plan -destroy -input=false -no-color -lock=false
+        run: terraform plan -destroy -input=false -no-color
 
       - name: 💥 Terraform Destroy
         working-directory: iac/alicloud/terraform/demo-ask
-        run: terraform destroy -input=false -auto-approve -no-color -lock=false
+        run: terraform destroy -input=false -auto-approve -no-color
 
       - name: 📊 Destroy Summary
         if: always()

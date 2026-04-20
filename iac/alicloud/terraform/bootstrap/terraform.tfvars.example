@@ -1,0 +1,20 @@
+# 复制本文件为 terraform.tfvars，填入实际值
+
+# 阿里云账号 ID（12 位数字）
+aliyun_account_id = "1261729158179509"
+
+# GitHub Actions OIDC Provider 证书 thumbprints
+# 获取方式:
+#   1. 如果已在阿里云控制台创建过 Provider，直接复制控制台中的 thumbprint
+#   2. 或运行以下命令获取:
+#      openssl s_client -servername token.actions.githubusercontent.com \
+#        -showcerts -connect token.actions.githubusercontent.com:443 2>/dev/null | \
+#        openssl x509 -fingerprint -sha1 -noout | sed 's/://g' | cut -d= -f2
+github_oidc_thumbprints = ["1b511abead59c6ce207077c0bf0e0043b1382612"]
+
+# 其他配置（默认值通常不需要修改）
+# region              = "cn-beijing"
+# project_name        = "agenthive"
+# github_repo         = "sdoxiaobaomei/agenthive-cloud"
+# role_name           = "agenthive-cloud-github-actions-role"
+# oss_bucket_name     = "agenthive-terraform-state"
