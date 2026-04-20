@@ -1,0 +1,128 @@
+# ============================================================================
+# OpenTelemetry Collector 配置
+# 模式：本地开发（接收 → 处理 → 多后端导出）
+# ============================================================================
+
+receivers:
+  # --------------------------------------------------------------------------
+  # OTLP：应用 SDK 发送数据的标准协议（gRPC + HTTP）
+  # --------------------------------------------------------------------------
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # --------------------------------------------------------------------------
+  # Prometheus：从现有 Prometheus 生态兼容端点拉取指标
+  # --------------------------------------------------------------------------
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'otel-collector-self'
+          scrape_interval: 10s
+          static_configs:
+            - targets: ['localhost:8888']
+
+processors:
+  # --------------------------------------------------------------------------
+  # Batch：聚合数据包，减少网络请求次数
+  # --------------------------------------------------------------------------
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+  # --------------------------------------------------------------------------
+  # Resource：注入/修改资源属性（如 service.name, environment）
+  # --------------------------------------------------------------------------
+  resource:
+    attributes:
+      - key: environment
+        value: local
+        action: upsert
+      - key: project
+        value: agenthive
+        action: upsert
+
+  # --------------------------------------------------------------------------
+  # Attributes：过滤敏感字段（生产环境必配）
+  # --------------------------------------------------------------------------
+  attributes/filter:
+    actions:
+      - key: http.request.header.authorization
+        action: delete
+      - key: password
+        action: delete
+      - key: token
+        action: delete
+
+exporters:
+  # --------------------------------------------------------------------------
+  # Jaeger：Traces 后端
+  # --------------------------------------------------------------------------
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # --------------------------------------------------------------------------
+  # Prometheus Remote Write：Metrics 后端
+  # --------------------------------------------------------------------------
+  prometheusremotewrite:
+    endpoint: http://prometheus-otel:9090/api/v1/write
+    tls:
+      insecure: true
+
+  # --------------------------------------------------------------------------
+  # Prometheus Exporter：在 8889 端口暴露聚合后的 Metrics
+  # 供现有 Prometheus 实例 scrape
+  # --------------------------------------------------------------------------
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: otel
+
+  # --------------------------------------------------------------------------
+  # Logging：开发调试，打印到 stdout
+  # --------------------------------------------------------------------------
+  logging:
+    verbosity: detailed
+
+  # --------------------------------------------------------------------------
+  # OTLP/HTTP → ELK（Logs）
+  # 取消注释并修改 endpoint 即可接入现有 ELK 栈
+  # --------------------------------------------------------------------------
+  # otlphttp/elk:
+  #   endpoint: http://logstash:5044/otel
+  #   tls:
+  #     insecure: true
+
+# ============================================================================
+# Service：Pipeline 定义（接收 → 处理 → 导出）
+# ============================================================================
+service:
+  pipelines:
+    # Metrics 管道
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [resource, batch]
+      exporters: [prometheus, logging]
+
+    # Traces 管道
+    traces:
+      receivers: [otlp]
+      processors: [resource, attributes/filter, batch]
+      exporters: [otlp/jaeger, logging]
+
+    # Logs 管道（开发环境先打到 stdout，生产接 ELK）
+    logs:
+      receivers: [otlp]
+      processors: [resource, attributes/filter, batch]
+      exporters: [logging]
+      # 生产环境：exporters: [otlphttp/elk]
+
+  # Collector 自监控
+  telemetry:
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888
