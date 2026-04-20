@@ -38,7 +38,6 @@ jobs:
           tar -xzf aliyun-cli.tgz
           chmod +x aliyun
           sudo mv aliyun /usr/local/bin/
-          aliyun configure set --region cn-beijing
 
           # 获取临时凭证（CLI 自动处理 RPC 签名）
           CREDS=$(aliyun sts AssumeRoleWithOIDC \
@@ -46,7 +45,8 @@ jobs:
             --RoleArn "acs:ram::1261729158179509:role/agenthive-cloud-github-actions-role" \
             --OIDCToken "$TOKEN" \
             --RoleSessionName "github-${GITHUB_RUN_ID}" \
-            --DurationSeconds 3600)
+            --DurationSeconds 3600 \
+            --region cn-beijing)
 
           echo "ALICLOUD_ACCESS_KEY=$(echo "$CREDS" | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
           echo "ALICLOUD_SECRET_KEY=$(echo "$CREDS" | jq -r '.Credentials.AccessKeySecret')" >> $GITHUB_ENV
