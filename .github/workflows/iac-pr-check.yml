@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  id-token: write      # 必须：允许获取 OIDC JWT
 
 jobs:
   # ===========================================
@@ -101,11 +102,28 @@ jobs:
     runs-on: ubuntu-latest
     needs: [detect-changes, static-check]
     if: ${{ needs.detect-changes.outputs.demo-ask == 'true' || needs.detect-changes.outputs.environments == 'true' }}
-    env:
-      ALICLOUD_ACCESS_KEY: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
-      ALICLOUD_SECRET_KEY: ${{ secrets.ALIYUN_ACCESS_KEY_SECRET }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: 🔐 Configure Aliyun OIDC Credentials
+        run: |
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.aliyuncs.com" | jq -r '.value')
+
+          CREDS=$(curl -s "https://sts.aliyuncs.com/" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            --data "Action=AssumeRoleWithOIDC" \
+            --data "OIDCProviderArn=acs:ram::1261729158179509:oidc-provider/GitHubActions" \
+            --data "RoleArn=acs:ram::1261729158179509:role/agenthive-cloud-github-actions-role" \
+            --data "OIDCToken=$TOKEN" \
+            --data "RoleSessionName=github-${GITHUB_RUN_ID}" \
+            --data "DurationSeconds=3600" \
+            --data "Format=JSON" \
+            --data "Version=2015-04-01")
+
+          echo "ALICLOUD_ACCESS_KEY=$(echo $CREDS | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
+          echo "ALICLOUD_SECRET_KEY=$(echo $CREDS | jq -r '.Credentials.AccessKeySecret')" >> $GITHUB_ENV
+          echo "ALICLOUD_SECURITY_TOKEN=$(echo $CREDS | jq -r '.Credentials.SecurityToken')" >> $GITHUB_ENV
 
       - uses: hashicorp/setup-terraform@v3
         with:
