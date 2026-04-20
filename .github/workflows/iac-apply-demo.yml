@@ -32,32 +32,25 @@ jobs:
           set -e
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.aliyuncs.com" | jq -r '.value')
-          echo "OIDC Token length: ${#TOKEN}"
 
-          RESPONSE=$(curl -s -w "\n%{http_code}" "https://sts.aliyuncs.com/" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            --data "Action=AssumeRoleWithOIDC" \
-            --data "OIDCProviderArn=acs:ram::1261729158179509:oidc-provider/GitHubActions" \
-            --data "RoleArn=acs:ram::1261729158179509:role/agenthive-cloud-github-actions-role" \
-            --data "OIDCToken=$TOKEN" \
-            --data "RoleSessionName=github-${GITHUB_RUN_ID}" \
-            --data "DurationSeconds=3600" \
-            --data "Format=JSON" \
-            --data "Version=2015-04-01")
+          # 安装阿里云 CLI
+          curl -fsSL "https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz" -o aliyun-cli.tgz
+          tar -xzf aliyun-cli.tgz
+          chmod +x aliyun
+          sudo mv aliyun /usr/local/bin/
 
-          HTTP_CODE=$(echo "$RESPONSE" | tail -n 1)
-          BODY=$(echo "$RESPONSE" | sed '$d')
-          echo "STS HTTP Code: $HTTP_CODE"
-          echo "STS Response: $BODY"
+          # 获取临时凭证（CLI 自动处理 RPC 签名）
+          CREDS=$(aliyun sts AssumeRoleWithOIDC \
+            --OIDCProviderArn "acs:ram::1261729158179509:oidc-provider/GitHubActions" \
+            --RoleArn "acs:ram::1261729158179509:role/agenthive-cloud-github-actions-role" \
+            --OIDCToken "$TOKEN" \
+            --RoleSessionName "github-${GITHUB_RUN_ID}" \
+            --DurationSeconds 3600 \
+            --output json)
 
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "::error::AssumeRoleWithOIDC failed (HTTP $HTTP_CODE)"
-            exit 1
-          fi
-
-          echo "ALICLOUD_ACCESS_KEY=$(echo "$BODY" | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
-          echo "ALICLOUD_SECRET_KEY=$(echo "$BODY" | jq -r '.Credentials.AccessKeySecret')" >> $GITHUB_ENV
-          echo "ALICLOUD_SECURITY_TOKEN=$(echo "$BODY" | jq -r '.Credentials.SecurityToken')" >> $GITHUB_ENV
+          echo "ALICLOUD_ACCESS_KEY=$(echo "$CREDS" | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
+          echo "ALICLOUD_SECRET_KEY=$(echo "$CREDS" | jq -r '.Credentials.AccessKeySecret')" >> $GITHUB_ENV
+          echo "ALICLOUD_SECURITY_TOKEN=$(echo "$CREDS" | jq -r '.Credentials.SecurityToken')" >> $GITHUB_ENV
 
       - name: 🛠️ Setup Terraform
         uses: hashicorp/setup-terraform@v3
