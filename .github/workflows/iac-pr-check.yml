@@ -76,6 +76,12 @@ jobs:
           terraform init -backend=false
           terraform validate
 
+      - name: Terraform Validate (modules/github-oidc-role)
+        working-directory: iac/alicloud/terraform/modules/github-oidc-role
+        run: |
+          terraform init -backend=false
+          terraform validate
+
   # ===========================================
   # Layer 1b: Security Scan (no credentials)
   # ===========================================

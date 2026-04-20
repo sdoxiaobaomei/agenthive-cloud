@@ -12,7 +12,7 @@ output "role_name" {
 
 output "trust_policy_document" {
   description = "最终生效的角色信任策略 JSON"
-  value       = data.alicloud_ram_policy_document.trust.json
+  value       = jsonencode(local.trust_policy)
 }
 
 output "custom_policy_name" {
