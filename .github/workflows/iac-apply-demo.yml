@@ -45,8 +45,7 @@ jobs:
             --RoleArn "acs:ram::1261729158179509:role/agenthive-cloud-github-actions-role" \
             --OIDCToken "$TOKEN" \
             --RoleSessionName "github-${GITHUB_RUN_ID}" \
-            --DurationSeconds 3600 \
-            --output json)
+            --DurationSeconds 3600)
 
           echo "ALICLOUD_ACCESS_KEY=$(echo "$CREDS" | jq -r '.Credentials.AccessKeyId')" >> $GITHUB_ENV
           echo "ALICLOUD_SECRET_KEY=$(echo "$CREDS" | jq -r '.Credentials.AccessKeySecret')" >> $GITHUB_ENV
