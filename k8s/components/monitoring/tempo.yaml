@@ -1,0 +1,142 @@
+# ============================================================================
+# Grafana Tempo K8s 部署
+# 模式：单实例（开发/测试）
+# 生产建议使用 Tempo Distributed Helm Chart
+# ============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tempo-config
+  namespace: monitoring
+data:
+  tempo.yml: |
+    server:
+      http_listen_port: 3200
+      grpc_listen_port: 9095
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
+            http:
+              endpoint: 0.0.0.0:4318
+    ingester:
+      max_block_duration: 5m
+      trace_idle_period: 10s
+    compactor:
+      compaction:
+        compaction_window: 1h
+        block_retention: 720h
+    storage:
+      trace:
+        backend: local
+        wal:
+          path: /tmp/tempo/wal
+        local:
+          path: /tmp/tempo/blocks
+    overrides:
+      defaults:
+        ingestion:
+          max_traces_per_user: 100000
+    querier:
+      search:
+        query_timeout: 30s
+    query_frontend:
+      search:
+        query_timeout: 30s
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tempo
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: tempo
+spec:
+  serviceName: tempo
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tempo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tempo
+    spec:
+      containers:
+        - name: tempo
+          image: grafana/tempo:2.5.0
+          args:
+            - -config.file=/etc/tempo/tempo.yml
+          ports:
+            - containerPort: 3200
+              name: http
+            - containerPort: 9095
+              name: grpc
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo
+            - name: storage
+              mountPath: /tmp/tempo
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "1000m"
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: tempo-config
+  volumeClaimTemplates:
+    - metadata:
+        name: storage
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tempo
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: tempo
+spec:
+  selector:
+    app.kubernetes.io/name: tempo
+  ports:
+    - port: 3200
+      name: http
+      targetPort: 3200
+    - port: 9095
+      name: grpc
+      targetPort: 9095
+    - port: 4317
+      name: otlp-grpc
+      targetPort: 4317
+    - port: 4318
+      name: otlp-http
+      targetPort: 4318
+  type: ClusterIP

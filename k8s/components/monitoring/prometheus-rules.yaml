@@ -1,0 +1,235 @@
+# ============================================================================
+# PrometheusRules - AgentHive Cloud SLO / 告警规则
+# 包含系统层 + AI 业务层告警
+# ============================================================================
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: agenthive-rules
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: agenthive
+    app.kubernetes.io/component: alerting
+spec:
+  groups:
+    # --------------------------------------------------------------------------
+    # 服务可用性
+    # --------------------------------------------------------------------------
+    - name: service-availability
+      interval: 30s
+      rules:
+        - alert: ServiceDown
+          expr: up{job=~"agenthive-.*"} == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Service {{ $labels.job }} is down"
+            description: "Service {{ $labels.job }} has been down for more than 1 minute."
+
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_server_duration_count{status=~"5.."}[5m])) by (job)
+            /
+            sum(rate(http_server_duration_count[5m])) by (job) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High error rate on {{ $labels.job }}"
+            description: "Error rate is above 5% for 2 minutes."
+
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_server_duration_bucket[5m])) by (le, job)
+            ) > 5
+          for: 3m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High latency on {{ $labels.job }}"
+            description: "P95 latency is above 5s for 3 minutes."
+
+    # --------------------------------------------------------------------------
+    # AI / LLM 业务告警
+    # --------------------------------------------------------------------------
+    - name: ai-business
+      interval: 30s
+      rules:
+        - alert: LLMAPIErrorRate
+          expr: |
+            sum(rate(agenthive_llm_errors_total[5m])) by (llm_provider)
+            /
+            sum(rate(agenthive_llm_requests_total[5m])) by (llm_provider) > 0.05
+          for: 2m
+          labels:
+            severity: warning
+            category: ai
+          annotations:
+            summary: "High LLM error rate for {{ $labels.llm_provider }}"
+            description: "LLM API error rate is above 5% for provider {{ $labels.llm_provider }}."
+
+        - alert: LLMAPILatencyP95
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(agenthive_llm_latency_bucket[5m])) by (le, llm_provider)
+            ) > 10000
+          for: 3m
+          labels:
+            severity: warning
+            category: ai
+          annotations:
+            summary: "High LLM latency for {{ $labels.llm_provider }}"
+            description: "LLM P95 latency is above 10s for provider {{ $labels.llm_provider }}."
+
+        - alert: HighAgentTaskFailureRate
+          expr: |
+            sum(rate(agenthive_agent_tasks_total{status="failed"}[10m]))
+            /
+            sum(rate(agenthive_agent_tasks_total[10m])) > 0.1
+          for: 5m
+          labels:
+            severity: warning
+            category: ai
+          annotations:
+            summary: "High agent task failure rate"
+            description: "Task failure rate is above 10% in the last 10 minutes."
+
+        - alert: DailyLLMCostExceedsBudget
+          expr: sum(increase(agenthive_llm_cost_total[1d])) > 100
+          for: 1m
+          labels:
+            severity: warning
+            category: cost
+          annotations:
+            summary: "Daily LLM cost exceeds budget"
+            description: "Daily LLM cost has exceeded $100. Current: ${{ $value }}."
+
+    # --------------------------------------------------------------------------
+    # Agent Runtime 资源
+    # --------------------------------------------------------------------------
+    - name: agent-runtime
+      interval: 30s
+      rules:
+        - alert: AgentRuntimeHighMemoryUsage
+          expr: |
+            container_memory_working_set_bytes{pod=~"agent-runtime-.*"}
+            /
+            container_spec_memory_limit_bytes{pod=~"agent-runtime-.*"} > 0.85
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Agent Runtime high memory usage"
+            description: "Memory usage is above 85% for pod {{ $labels.pod }}."
+
+        - alert: AgentRuntimeTaskQueueBacklog
+          expr: |
+            sum(agenthive_agent_tasks_total{status="pending"}) > 100
+          for: 5m
+          labels:
+            severity: warning
+            category: ai
+          annotations:
+            summary: "Agent task queue backlog"
+            description: "More than 100 tasks are pending in the queue."
+
+    # --------------------------------------------------------------------------
+    # 数据库 / Redis
+    # --------------------------------------------------------------------------
+    - name: database
+      interval: 30s
+      rules:
+        - alert: PostgreSQLDown
+          expr: pg_up == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "PostgreSQL is down"
+            description: "PostgreSQL instance {{ $labels.instance }} is not responding."
+
+        - alert: PostgreSQLConnectionsNearLimit
+          expr: |
+            pg_stat_activity_count
+            /
+            pg_settings_max_connections > 0.8
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "PostgreSQL connections near limit"
+            description: "Connection usage is above 80%."
+
+        - alert: RedisDown
+          expr: redis_up == 0
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Redis is down"
+            description: "Redis instance {{ $labels.instance }} is not responding."
+
+        - alert: RedisMemoryHigh
+          expr: |
+            redis_memory_used_bytes
+            /
+            redis_memory_max_bytes > 0.9
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Redis memory usage high"
+            description: "Redis memory usage is above 90%."
+
+    # --------------------------------------------------------------------------
+    # 基础设施 / K8s
+    # --------------------------------------------------------------------------
+    - name: infrastructure
+      interval: 30s
+      rules:
+        - alert: NodeMemoryPressure
+          expr: |
+            (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.9
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Node memory pressure"
+            description: "Node {{ $labels.instance }} memory usage is above 90%."
+
+        - alert: NodeDiskPressure
+          expr: |
+            (node_filesystem_size_bytes - node_filesystem_avail_bytes)
+            /
+            node_filesystem_size_bytes > 0.85
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node disk pressure"
+            description: "Node {{ $labels.instance }} disk usage is above 85%."
+
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total[10m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod crash looping"
+            description: "Pod {{ $labels.pod }} is crash looping."
+
+        - alert: HPAMaxReplicas
+          expr: |
+            kube_horizontalpodautoscaler_status_current_replicas
+            /
+            kube_horizontalpodautoscaler_spec_max_replicas >= 1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "HPA at max replicas"
+            description: "HPA {{ $labels.horizontalpodautoscaler }} is at max replicas."

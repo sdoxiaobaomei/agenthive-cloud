@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
+import { requestLogger } from './middleware/request-logger.js'
 import { corsConfig } from './config/cors.js'
 import routes from './routes/index.js'
 
@@ -11,11 +12,8 @@ app.use(cors(corsConfig))
 app.use(express.json())
 app.use(cookieParser())
 
-// 请求日志
-app.use((req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`)
-  next()
-})
+// 请求日志（结构化，含 trace_id）
+app.use(requestLogger())
 
 // API 路由
 app.use('/api', routes)

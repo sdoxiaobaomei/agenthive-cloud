@@ -1,0 +1,197 @@
+# ============================================================================
+# OpenTelemetry Collector Gateway - K8s Deployment
+# 集中接收应用 OTLP 数据，导出到 Tempo / Prometheus / Loki
+# ============================================================================
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-gateway-config
+  namespace: monitoring
+data:
+  otel-collector.yml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'otel-collector-self'
+              scrape_interval: 10s
+              static_configs:
+                - targets: ['localhost:8888']
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 512
+        spike_limit_mib: 128
+      batch:
+        timeout: 1s
+        send_batch_size: 1024
+      resource:
+        attributes:
+          - key: environment
+            value: production
+            action: upsert
+          - key: project
+            value: agenthive
+            action: upsert
+      attributes/filter:
+        actions:
+          - key: http.request.header.authorization
+            action: delete
+          - key: password
+            action: delete
+          - key: token
+            action: delete
+          - key: api_key
+            action: delete
+    exporters:
+      otlp/tempo:
+        endpoint: tempo.monitoring:4317
+        tls:
+          insecure: true
+      prometheusremotewrite:
+        endpoint: http://prometheus.monitoring:9090/api/v1/write
+        tls:
+          insecure: true
+      otlphttp/loki:
+        endpoint: http://loki.monitoring:3100/otlp
+        tls:
+          insecure: true
+      logging:
+        verbosity: basic
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      pprof:
+        endpoint: 0.0.0.0:1777
+    service:
+      extensions: [health_check, pprof]
+      pipelines:
+        metrics:
+          receivers: [otlp, prometheus]
+          processors: [memory_limiter, resource, batch]
+          exporters: [prometheusremotewrite, logging]
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, attributes/filter, batch]
+          exporters: [otlp/tempo, logging]
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resource, attributes/filter, batch]
+          exporters: [otlphttp/loki, logging]
+      telemetry:
+        metrics:
+          level: detailed
+          address: 0.0.0.0:8888
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector-gateway
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: otel-collector-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: otel-collector-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: otel-collector-gateway
+    spec:
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.96.0
+          args:
+            - --config=/etc/otel-collector/otel-collector.yml
+          ports:
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
+            - containerPort: 8888
+              name: metrics
+            - containerPort: 13133
+              name: health
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otel-collector
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-gateway-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector-gateway
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: otel-collector-gateway
+spec:
+  selector:
+    app.kubernetes.io/name: otel-collector-gateway
+  ports:
+    - port: 4317
+      name: otlp-grpc
+      targetPort: otlp-grpc
+    - port: 4318
+      name: otlp-http
+      targetPort: otlp-http
+    - port: 8888
+      name: metrics
+      targetPort: metrics
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: otel-collector-gateway
+  namespace: monitoring
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: otel-collector-gateway
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80

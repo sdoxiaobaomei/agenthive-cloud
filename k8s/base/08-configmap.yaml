@@ -33,3 +33,15 @@ data:
   MAX_CONNECTIONS: "100"
   REQUEST_TIMEOUT: "30000"
   CACHE_TTL: "3600"
+
+  # OpenTelemetry
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-gateway.monitoring:4317"
+  OTEL_EXPORTER_OTLP_INSECURE: "true"
+  OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
+  OTEL_TRACES_SAMPLER_ARG: "0.1"
+  OTEL_LOG_LEVEL: "warn"
+  OTEL_SDK_DISABLED: "false"
+
+  # Logging
+  LOG_LEVEL: "info"
+  STRUCTURED_LOGGING: "true"

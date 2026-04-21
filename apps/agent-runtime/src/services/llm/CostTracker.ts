@@ -9,6 +9,8 @@
  * - Cost reporting
  */
 import { EventEmitter } from 'events'
+import { metrics } from '@opentelemetry/api'
+import { AI_METRICS, AI_ATTRIBUTES } from '@agenthive/observability'
 import { Logger } from '../../utils/logger.js'
 
 // Pricing per 1K tokens (as of 2024 - update as needed)
@@ -163,6 +165,7 @@ export class CostTracker extends EventEmitter {
     }
     
     this.emit('usage', record)
+    this.recordOtelMetrics(record)
     
     this.logger.debug('Usage recorded', {
       model,
@@ -345,6 +348,47 @@ export class CostTracker extends EventEmitter {
     return { exceeded: false }
   }
   
+  /**
+   * Export cost data as OpenTelemetry metrics
+   */
+  private recordOtelMetrics(record: UsageRecord): void {
+    try {
+      const meter = metrics.getMeter('agenthive-cost-tracker')
+      
+      // LLM 请求计数器
+      const requestCounter = meter.createCounter(AI_METRICS.LLM_REQUESTS_TOTAL, {
+        description: 'Total LLM API requests',
+      })
+      requestCounter.add(1, {
+        [AI_ATTRIBUTES.LLM_PROVIDER]: record.provider,
+        [AI_ATTRIBUTES.LLM_MODEL]: record.model,
+        [AI_ATTRIBUTES.LLM_STREAMING]: record.requestType === 'stream',
+      })
+      
+      // Token 直方图
+      const tokenHistogram = meter.createHistogram(AI_METRICS.LLM_TOKENS_TOTAL, {
+        description: 'Total tokens per request',
+        unit: '1',
+      })
+      tokenHistogram.record(record.totalTokens, {
+        [AI_ATTRIBUTES.LLM_PROVIDER]: record.provider,
+        [AI_ATTRIBUTES.LLM_MODEL]: record.model,
+      })
+      
+      // 成本计数器
+      const costCounter = meter.createCounter(AI_METRICS.LLM_COST_TOTAL, {
+        description: 'Total LLM cost in USD',
+        unit: 'USD',
+      })
+      costCounter.add(record.totalCost, {
+        [AI_ATTRIBUTES.LLM_PROVIDER]: record.provider,
+        [AI_ATTRIBUTES.LLM_MODEL]: record.model,
+      })
+    } catch {
+      // OTel metrics 失败不应影响业务逻辑
+    }
+  }
+
   private checkReset(): void {
     const now = Date.now()
     

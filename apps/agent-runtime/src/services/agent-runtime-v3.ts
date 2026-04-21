@@ -1,5 +1,7 @@
 // Agent Runtime V3 - 使用 LLM 和 QueryLoop 的完整 AI Agent
 import { EventEmitter } from 'events'
+import { trace, SpanStatusCode } from '@opentelemetry/api'
+import { AI_ATTRIBUTES, AI_SPAN_NAMES } from '@agenthive/observability'
 import type { AgentConfig, AgentStatus, Task, Command } from '../types/index.js'
 import { WebSocketClient } from './websocket-client.js'
 import { TaskExecutorManagerV3 } from './task-executor-v3.js'
@@ -212,6 +214,17 @@ export class AgentRuntimeV3 extends EventEmitter {
     this.logger.info('Starting task execution', { taskId: task.id, type: task.type })
     this.emit('task:started', task)
 
+    const tracer = trace.getTracer('agenthive-agent-runtime')
+    const span = tracer.startSpan(AI_SPAN_NAMES.RUNTIME_TASK, {
+      attributes: {
+        [AI_ATTRIBUTES.AGENT_ID]: this.config.id,
+        [AI_ATTRIBUTES.AGENT_TYPE]: this.config.role || 'unknown',
+        [AI_ATTRIBUTES.TASK_ID]: task.id,
+        [AI_ATTRIBUTES.TASK_TYPE]: task.type,
+        [AI_ATTRIBUTES.WORKSPACE_ID]: this.config.workspacePath || 'default',
+      },
+    })
+
     try {
       const context = {
         agentId: this.config.id,
@@ -231,10 +244,17 @@ export class AgentRuntimeV3 extends EventEmitter {
         logs: result.logs
       })
       this.logger.info('Task execution completed', { taskId: task.id, success: result.success })
+      span.setAttributes({
+        [AI_ATTRIBUTES.TASK_STATUS]: result.success ? 'completed' : 'failed',
+        'task.output_length': JSON.stringify(result.output).length,
+      })
+      span.setStatus({ code: SpanStatusCode.OK })
       this.emit('task:completed', { task, result })
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
       this.logger.error('Task execution failed', { taskId: task.id, error: message })
+      span.recordException(error as Error)
+      span.setStatus({ code: SpanStatusCode.ERROR, message })
       await this.wsClient.send('task:completed', {
         taskId: task.id,
         status: 'failed',
@@ -242,6 +262,7 @@ export class AgentRuntimeV3 extends EventEmitter {
       })
       this.emit('task:failed', { task, error })
     } finally {
+      span.end()
       this.currentTask = null
       this.status = 'idle'
     }

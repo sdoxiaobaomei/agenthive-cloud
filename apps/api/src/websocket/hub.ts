@@ -1,6 +1,8 @@
 // WebSocket Hub - Socket.io 实时通信
 import { Server as SocketIOServer, Socket } from 'socket.io'
 import { Server as HttpServer } from 'http'
+import { trace, SpanStatusCode } from '@opentelemetry/api'
+import { AI_ATTRIBUTES, AI_SPAN_NAMES, extractTraceContextFromPayload } from '@agenthive/observability'
 import { redisCache } from '../services/redis-cache.js'
 import { jwt } from '../utils/jwt.js'
 
@@ -23,10 +25,16 @@ export function initWebSocket(server: HttpServer): SocketIOServer {
     pingInterval: 25000,
   })
 
-  // 中间件：身份验证
+  // 中间件：身份验证 + Trace Context 提取
   io.use(async (socket: Socket, next) => {
     try {
       const token = socket.handshake.auth.token
+      
+      // 从 HTTP handshake headers 提取 traceparent
+      const traceparent = socket.handshake.headers['traceparent'] as string | undefined
+      if (traceparent) {
+        socket.data.traceContext = { traceparent }
+      }
       
       if (!token) {
         // 访客模式
@@ -154,18 +162,34 @@ function setupAgentHandlers(socket: Socket) {
   // Agent 心跳（由 Agent 服务发送）
   socket.on('agent:heartbeat', async (data: { agentId: string; status: string; metadata?: Record<string, unknown> }) => {
     const { agentId, status, metadata } = data
-    
-    // 更新 Redis 中的状态
-    await redisCache.setAgentStatus(agentId, status, metadata)
-    await redisCache.updateAgentHeartbeat(agentId)
-    
-    // 广播给所有订阅者
-    io?.to(`agent:${agentId}`).emit('agent:status', {
-      agentId,
-      status,
-      metadata,
-      timestamp: Date.now(),
+    const tracer = trace.getTracer('agenthive-api-websocket')
+    const span = tracer.startSpan(AI_SPAN_NAMES.WS_HEARTBEAT, {
+      attributes: {
+        [AI_ATTRIBUTES.AGENT_ID]: agentId,
+        [AI_ATTRIBUTES.AGENT_STATUS]: status,
+        [AI_ATTRIBUTES.WS_CONNECTION_ID]: socket.id,
+      },
     })
+
+    try {
+      // 更新 Redis 中的状态
+      await redisCache.setAgentStatus(agentId, status, metadata)
+      await redisCache.updateAgentHeartbeat(agentId)
+      
+      // 广播给所有订阅者
+      io?.to(`agent:${agentId}`).emit('agent:status', {
+        agentId,
+        status,
+        metadata,
+        timestamp: Date.now(),
+      })
+      span.setStatus({ code: SpanStatusCode.OK })
+    } catch (error) {
+      span.recordException(error as Error)
+      span.setStatus({ code: SpanStatusCode.ERROR })
+    } finally {
+      span.end()
+    }
   })
   
   // 发送命令给 Agent

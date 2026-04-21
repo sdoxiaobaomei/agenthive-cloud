@@ -1,0 +1,59 @@
+# ============================================================================
+# Grafana Beyla (eBPF) - 无侵入可观测
+# 需要 privileged 模式或 CAP_SYS_ADMIN + CAP_BPF
+# ============================================================================
+
+version: "3.8"
+
+services:
+  beyla:
+    image: grafana/beyla:1.7.0
+    container_name: agenthive-beyla
+    pid: host
+    network_mode: host
+    privileged: true
+    # 如果无法 privileged，使用 capabilities:
+    # cap_add:
+    #   - SYS_ADMIN
+    #   - BPF
+    #   - PERFMON
+    #   - NET_RAW
+    #   - SYS_PTRACE
+    volumes:
+      - ./beyla.yml:/config/beyla.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      BEYLA_CONFIG_PATH: /config/beyla.yml
+      BEYLA_PRINT_TRACES: "true"
+      OTEL_SERVICE_NAME: beyla
+      OTEL_RESOURCE_ATTRIBUTES: "deployment.environment=local,host.name=${HOSTNAME}"
+    command: ["--config=/config/beyla.yml"]
+    depends_on:
+      - otel-collector
+    networks:
+      - agenthive-monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+    # 健康检查通过 Beyla 的 Prometheus 端点
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/metrics || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # 引用 OTel Collector（假设在同一网络）
+  otel-collector:
+    extends:
+      file: ../opentelemetry/docker-compose.yml
+      service: otel-collector
+
+networks:
+  agenthive-monitoring:
+    name: agenthive-monitoring
+    driver: bridge

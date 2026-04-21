@@ -1,6 +1,7 @@
 // WebSocket 客户端 - 与 Supervisor 通信
 import { EventEmitter } from 'events'
 import WebSocket from 'ws'
+import { injectTraceContextIntoPayload } from '@agenthive/observability'
 
 interface WSMessage {
   type: string
@@ -108,9 +109,14 @@ export class WebSocketClient extends EventEmitter {
 
   // 发送消息
   async send(type: string, payload: unknown): Promise<void> {
+    // 注入 trace context 到 payload，实现跨 WebSocket 的追踪传播
+    const payloadWithTrace = typeof payload === 'object' && payload !== null
+      ? injectTraceContextIntoPayload(payload as Record<string, unknown>)
+      : payload
+
     const message: WSMessage = {
       type,
-      payload,
+      payload: payloadWithTrace,
       timestamp: new Date().toISOString()
     }
 

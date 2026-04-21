@@ -1,0 +1,203 @@
+# ============================================================================
+# OTel Collector Gateway (生产环境集中网关模式)
+# 部署方式：K8s Deployment (多副本) 或 Docker Compose
+# 职责：接收来自各 Agent Collector 的数据 → 路由到后端存储
+# ============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        max_recv_msg_size_mib: 64
+        # 启用 keepalive 防连接泄漏
+        keepalive:
+          server_parameters:
+            max_connection_age: 120s
+            max_connection_age_grace: 30s
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins: ["*"]
+          allowed_headers: ["*"]
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: 'otel-gateway-self'
+          scrape_interval: 10s
+          static_configs:
+            - targets: ['localhost:8888']
+
+processors:
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 1536
+    spike_limit_mib: 256
+
+  batch:
+    timeout: 1s
+    send_batch_size: 2048
+    send_batch_max_size: 4096
+
+  resource:
+    attributes:
+      - key: environment
+        from_attribute: deployment.environment
+        action: upsert
+      - key: project
+        value: agenthive
+        action: upsert
+      - key: collector.layer
+        value: gateway
+        action: upsert
+
+  # 尾部采样（关键：在生产网关层做决策）
+  tail_sampling:
+    # 等待所有 span 到达的最长时间
+    decision_wait: 10s
+    # 同时评估的 trace 数量
+    num_traces: 100000
+    # 预期同时到达的新 trace 速率
+    expected_new_traces_per_sec: 1000
+    policies:
+      # 策略 1：所有错误的 trace 100% 保留
+      - name: errors
+        type: status_code
+        status_code: {status_codes: [ERROR]}
+      # 策略 2：慢请求（>5s）保留
+      - name: slow_requests
+        type: latency
+        latency: {threshold_ms: 5000}
+      # 策略 3：AI 高成本调用保留
+      - name: high_cost_ai
+        type: string_attribute
+        string_attribute:
+          key: llm.cost_usd
+          values: [">0.01"]
+          enabled_regex_matching: true
+      # 策略 4：Agent 任务失败保留
+      - name: agent_task_failed
+        type: string_attribute
+        string_attribute:
+          key: agent.task.status
+          values: ["failed", "timeout", "error"]
+      # 策略 5：10% 概率采样（兜底）
+      - name: probabilistic
+        type: probabilistic
+        probabilistic: {sampling_percentage: 10}
+      # 策略 6：组合策略（满足任一条件）
+      - name: composite
+        type: composite
+        composite:
+          max_total_spans_per_second: 1000
+          policy_order: [errors, slow_requests, high_cost_ai, agent_task_failed, probabilistic]
+
+  attributes/filter:
+    actions:
+      - key: http.request.header.authorization
+        action: delete
+      - key: http.request.header.cookie
+        action: delete
+      - key: password
+        action: delete
+      - key: token
+        action: delete
+      - key: api_key
+        action: delete
+      - key: llm.api_key
+        action: delete
+      - key: private_key
+        action: delete
+
+exporters:
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 120s
+    sending_queue:
+      enabled: true
+      num_consumers: 20
+      queue_size: 5000
+      # 持久化队列（防止 Collector 重启丢数据）
+      storage: file_storage
+
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/write
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 120s
+    sending_queue:
+      enabled: true
+      num_consumers: 10
+      queue_size: 3000
+      storage: file_storage
+
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 30s
+      max_elapsed_time: 120s
+    sending_queue:
+      enabled: true
+      num_consumers: 10
+      queue_size: 3000
+      storage: file_storage
+
+  logging:
+    verbosity: basic
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: /health
+
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+  zpages:
+    endpoint: 0.0.0.0:55679
+
+  # 文件存储扩展（用于持久化队列）
+  file_storage:
+    directory: /var/lib/otelcol/file_storage
+    timeout: 10s
+
+service:
+  extensions: [health_check, pprof, zpages, file_storage]
+
+  pipelines:
+    metrics:
+      receivers: [otlp, prometheus]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheusremotewrite, logging]
+
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/filter, tail_sampling, batch]
+      exporters: [otlp/tempo, logging]
+
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, attributes/filter, batch]
+      exporters: [otlphttp/loki, logging]
+
+  telemetry:
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888
+    logs:
+      level: warn

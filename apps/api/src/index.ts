@@ -1,4 +1,5 @@
 // API 服务器入口
+import './telemetry.js' // OpenTelemetry 必须在其他 import 之前初始化
 import { createServer } from 'http'
 import { mkdir } from 'fs/promises'
 import app from './app.js'

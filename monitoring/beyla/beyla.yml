@@ -1,0 +1,92 @@
+# ============================================================================
+# Grafana Beyla 配置
+# 模式：无侵入 eBPF 自动采集
+# 协议：HTTP, gRPC, Redis
+# 输出：OTLP → Collector
+# ============================================================================
+
+# 网络接口发现（自动）
+network:
+  # 启用所有接口
+  enable: true
+
+# 被观测的进程（通过端口或二进制名匹配）
+discovery:
+  services:
+    - name: agenthive-api
+      namespace: agenthive
+      open_ports: 3001
+    - name: agenthive-landing
+      namespace: agenthive
+      open_ports: 3000
+    - name: agenthive-agent-runtime
+      namespace: agenthive
+      open_ports: 8080
+    - name: agenthive-redis
+      namespace: agenthive
+      open_ports: 6379
+    - name: agenthive-postgres
+      namespace: agenthive
+      open_ports: 5432
+
+# 协议解码
+protocols:
+  - http
+  - grpc
+  - redis
+
+# 指标配置
+metrics:
+  # 启用哪些指标类型
+  features:
+    - application
+    - network
+  # 应用层指标：HTTP 服务端/客户端
+  application:
+    http:
+      routes:
+        # 将动态路径合并为通用路径，降低 cardinality
+        patterns:
+          - /api/agents/:id
+          - /api/tasks/:id
+          - /api/tasks/:id/execute
+          - /api/code/workspace/files/:path
+          - /api/code/files/:path
+      request_timeout: 30s
+    # gRPC 指标
+    grpc:
+      request_timeout: 30s
+
+# Trace 配置
+traces:
+  enabled: true
+  # 采样率（Beyla 层）
+  sampling_ratio: 1.0
+  # 每个 trace 的最大 span 数
+  max_spans: 100
+
+# OTLP 输出
+otel_metrics_export:
+  enabled: true
+  endpoint: http://otel-collector:4317
+  # 或 HTTP: endpoint: http://otel-collector:4318/v1/metrics
+  export_interval: 30s
+  # 如果 Collector 不可用，不阻塞
+  report_target: true
+  report_peer: true
+
+otel_traces_export:
+  enabled: true
+  endpoint: http://otel-collector:4317
+  # 或 HTTP: endpoint: http://otel-collector:4318/v1/traces
+  max_queue_size: 2048
+  max_export_batch_size: 512
+  export_timeout: 30s
+
+# 日志
+log_level: INFO
+
+# 内部 Prometheus 端点（自监控）
+prometheus:
+  port: 9090
+  path: /metrics
