@@ -1,22 +1,21 @@
 # ============================================================================
-# OpenTelemetry Collector 配置
-# 模式：本地开发（接收 → 处理 → 多后端导出）
+# OpenTelemetry Collector 配置 (开发环境统一模式)
+# 接收 → 处理 → 多后端导出 (Tempo + Prometheus + Loki)
+# 升级内容：新增 Tempo traces, Loki logs, MemoryLimiter, TailSampling
 # ============================================================================
 
 receivers:
-  # --------------------------------------------------------------------------
-  # OTLP：应用 SDK 发送数据的标准协议（gRPC + HTTP）
-  # --------------------------------------------------------------------------
   otlp:
     protocols:
       grpc:
         endpoint: 0.0.0.0:4317
+        max_recv_msg_size_mib: 16
       http:
         endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins: ["*"]
+          allowed_headers: ["*"]
 
-  # --------------------------------------------------------------------------
-  # Prometheus：从现有 Prometheus 生态兼容端点拉取指标
-  # --------------------------------------------------------------------------
   prometheus:
     config:
       scrape_configs:
@@ -24,18 +23,31 @@ receivers:
           scrape_interval: 10s
           static_configs:
             - targets: ['localhost:8888']
+        - job_name: 'agenthive-api-metrics'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['api:3001']
+          metrics_path: /metrics
+        - job_name: 'agenthive-agent-runtime-metrics'
+          scrape_interval: 15s
+          static_configs:
+            - targets: ['agent-runtime:8080']
+          metrics_path: /metrics
 
 processors:
-  # --------------------------------------------------------------------------
-  # Batch：聚合数据包，减少网络请求次数
-  # --------------------------------------------------------------------------
+  # 内存限制器（高并发防 OOM）
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # 批量聚合
   batch:
     timeout: 1s
     send_batch_size: 1024
+    send_batch_max_size: 2048
 
-  # --------------------------------------------------------------------------
-  # Resource：注入/修改资源属性（如 service.name, environment）
-  # --------------------------------------------------------------------------
+  # 资源属性注入
   resource:
     attributes:
       - key: environment
@@ -44,85 +56,149 @@ processors:
       - key: project
         value: agenthive
         action: upsert
+      - key: deployment.environment
+        value: local
+        action: upsert
 
-  # --------------------------------------------------------------------------
-  # Attributes：过滤敏感字段（生产环境必配）
-  # --------------------------------------------------------------------------
+  # 资源检测（容器/K8s 信息）
+  resourcedetection:
+    detectors: [env, docker, system]
+    timeout: 5s
+    override: false
+
+  # 敏感信息过滤
   attributes/filter:
     actions:
       - key: http.request.header.authorization
+        action: delete
+      - key: http.request.header.cookie
         action: delete
       - key: password
         action: delete
       - key: token
         action: delete
+      - key: jwt
+        action: delete
+      - key: api_key
+        action: delete
+      - key: llm.api_key
+        action: delete
+
+  # 日志解析：从 body 中提取 trace_id
+  transform/logs:
+    log_statements:
+      - context: log
+        statements:
+          - set(attributes["trace_id"], body["trace_id"]) where body["trace_id"] != nil
+          - set(attributes["span_id"], body["span_id"]) where body["span_id"] != nil
+          - set(attributes["service.name"], resource.attributes["service.name"])
 
 exporters:
-  # --------------------------------------------------------------------------
-  # Jaeger：Traces 后端
-  # --------------------------------------------------------------------------
+  # Traces → Tempo (OTLP)
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 30s
+    sending_queue:
+      enabled: true
+      num_consumers: 10
+      queue_size: 1000
+
+  # Traces → Jaeger (兼容保留)
   otlp/jaeger:
     endpoint: jaeger:4317
     tls:
       insecure: true
 
-  # --------------------------------------------------------------------------
-  # Prometheus Remote Write：Metrics 后端
-  # --------------------------------------------------------------------------
+  # Metrics → Prometheus Remote Write
   prometheusremotewrite:
-    endpoint: http://prometheus-otel:9090/api/v1/write
+    endpoint: http://prometheus:9090/api/v1/write
     tls:
       insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 30s
 
-  # --------------------------------------------------------------------------
-  # Prometheus Exporter：在 8889 端口暴露聚合后的 Metrics
-  # 供现有 Prometheus 实例 scrape
-  # --------------------------------------------------------------------------
+  # Metrics → Prometheus Exporter (供现有 Prometheus scrape)
   prometheus:
     endpoint: 0.0.0.0:8889
     namespace: otel
+    const_labels:
+      source: otel-collector
 
-  # --------------------------------------------------------------------------
-  # Logging：开发调试，打印到 stdout
-  # --------------------------------------------------------------------------
+  # Logs → Loki (OTLP/HTTP)
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+      initial_interval: 1s
+      max_interval: 10s
+      max_elapsed_time: 30s
+    sending_queue:
+      enabled: true
+      num_consumers: 5
+      queue_size: 500
+
+  # Logs → stdout (开发调试)
   logging:
     verbosity: detailed
 
-  # --------------------------------------------------------------------------
-  # OTLP/HTTP → ELK（Logs）
-  # 取消注释并修改 endpoint 即可接入现有 ELK 栈
-  # --------------------------------------------------------------------------
-  # otlphttp/elk:
-  #   endpoint: http://logstash:5044/otel
-  #   tls:
-  #     insecure: true
+  # 健康检查端点
+  otlp/health:
+    endpoint: localhost:4317
+    tls:
+      insecure: true
 
-# ============================================================================
-# Service：Pipeline 定义（接收 → 处理 → 导出）
-# ============================================================================
+extensions:
+  # 健康检查
+  health_check:
+    endpoint: 0.0.0.0:13133
+    path: /health
+
+  # pprof 性能分析
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+  # zpages 调试
+  zpages:
+    endpoint: 0.0.0.0:55679
+
 service:
+  extensions: [health_check, pprof, zpages]
+
   pipelines:
     # Metrics 管道
     metrics:
       receivers: [otlp, prometheus]
-      processors: [resource, batch]
-      exporters: [prometheus, logging]
+      processors: [memory_limiter, resourcedetection, resource, batch]
+      exporters: [prometheus, prometheusremotewrite, logging]
 
-    # Traces 管道
+    # Traces 管道（开发环境同时输出 Tempo + Jaeger）
     traces:
       receivers: [otlp]
-      processors: [resource, attributes/filter, batch]
-      exporters: [otlp/jaeger, logging]
+      processors: [memory_limiter, resourcedetection, resource, attributes/filter, batch]
+      exporters: [otlp/tempo, otlp/jaeger, logging]
 
-    # Logs 管道（开发环境先打到 stdout，生产接 ELK）
+    # Logs 管道 → Loki
     logs:
       receivers: [otlp]
-      processors: [resource, attributes/filter, batch]
-      exporters: [logging]
-      # 生产环境：exporters: [otlphttp/elk]
+      processors: [memory_limiter, resourcedetection, resource, attributes/filter, transform/logs, batch]
+      exporters: [otlphttp/loki, logging]
 
   # Collector 自监控
   telemetry:
     metrics:
       level: detailed
       address: 0.0.0.0:8888
+    logs:
+      level: info
+      output_paths: [stderr]

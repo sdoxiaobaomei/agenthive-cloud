@@ -1,5 +1,7 @@
 // Task Executor V3 - 基于 QueryLoop 和 LLM 服务的完整 AI 任务执行器
 import { EventEmitter } from 'events'
+import { trace, SpanStatusCode } from '@opentelemetry/api'
+import { AI_ATTRIBUTES, AI_SPAN_NAMES } from '@agenthive/observability'
 import type { Task, ExecutionContext, ExecutionResult } from '../types/index.js'
 import { Logger } from '../utils/logger.js'
 import { ToolExecutor, ToolRegistry, ToolContext } from '../tools/Tool.js'
@@ -90,6 +92,15 @@ export class TaskExecutorManagerV3 extends EventEmitter {
 
   // 执行任务
   async execute(task: Task, context: ExecutionContext): Promise<ExecutionResult> {
+    const tracer = trace.getTracer('agenthive-task-executor')
+    const span = tracer.startSpan(AI_SPAN_NAMES.TASK_EXECUTE, {
+      attributes: {
+        [AI_ATTRIBUTES.TASK_ID]: task.id,
+        [AI_ATTRIBUTES.TASK_TYPE]: task.type,
+        [AI_ATTRIBUTES.AGENT_ID]: context.agentId,
+      },
+    })
+
     this.logger.info(`Executing task with AI`, { taskId: task.id, type: task.type })
 
     this.currentExecution = new AbortController()
@@ -116,14 +127,25 @@ export class TaskExecutorManagerV3 extends EventEmitter {
 
     try {
       const result = await this.executeWithAI(task, toolContext, conversationContext)
+      span.setAttributes({
+        [AI_ATTRIBUTES.TASK_STATUS]: result.success ? 'completed' : 'failed',
+        'task.iterations': result.output?.iterations ?? 0,
+        'task.duration_ms': result.output?.duration ?? 0,
+      })
+      span.setStatus({ code: SpanStatusCode.OK })
       return result
     } catch (error) {
       if (signal.aborted) {
+        span.setStatus({ code: SpanStatusCode.ERROR, message: 'Task was cancelled' })
+        span.end()
         return { success: false, error: 'Task was cancelled', logs: [] }
       }
       const message = error instanceof Error ? error.message : 'Unknown error'
+      span.recordException(error as Error)
+      span.setStatus({ code: SpanStatusCode.ERROR, message })
       return { success: false, error: message, logs: [] }
     } finally {
+      span.end()
       this.currentExecution = null
     }
   }
@@ -134,6 +156,14 @@ export class TaskExecutorManagerV3 extends EventEmitter {
     toolContext: ToolContext,
     conversationContext: ConversationContextV2
   ): Promise<ExecutionResult> {
+    const tracer = trace.getTracer('agenthive-task-executor')
+    const span = tracer.startSpan(AI_SPAN_NAMES.QUERY_LOOP_EXECUTE, {
+      attributes: {
+        [AI_ATTRIBUTES.TASK_ID]: task.id,
+        [AI_ATTRIBUTES.TASK_TYPE]: task.type,
+      },
+    })
+
     const systemPrompt = this.buildSystemPrompt(task)
     const userInput = this.buildUserInput(task)
 
@@ -155,12 +185,23 @@ export class TaskExecutorManagerV3 extends EventEmitter {
         usage: result.usage
       }
 
+      span.setAttributes({
+        [AI_ATTRIBUTES.QUERY_LOOP_TOTAL_ITERATIONS]: result.iterations,
+        [AI_ATTRIBUTES.LLM_TOKENS_TOTAL]: result.usage?.totalTokens ?? 0,
+        [AI_ATTRIBUTES.LLM_TOKENS_INPUT]: result.usage?.promptTokens ?? 0,
+        [AI_ATTRIBUTES.LLM_TOKENS_OUTPUT]: result.usage?.completionTokens ?? 0,
+      })
+      span.setStatus({ code: SpanStatusCode.OK })
       toolContext.sendLog(`Execution completed in ${duration}ms`)
 
       return { success: result.success, output, logs: [] }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error'
+      span.recordException(error as Error)
+      span.setStatus({ code: SpanStatusCode.ERROR, message })
       return { success: false, error: message, logs: [] }
+    } finally {
+      span.end()
     }
   }
 

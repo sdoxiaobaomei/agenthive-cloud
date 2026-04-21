@@ -289,6 +289,7 @@ export const AGENT_RUNTIME_VERSION = VERSION
 // ============================================================================
 
 import { Logger } from './utils/loggerEnhanced.js'
+import { initializeTelemetry } from './telemetry.js'
 
 export interface AgentRuntimeConfig {
   logLevel?: 'debug' | 'info' | 'warn' | 'error'
@@ -304,6 +305,13 @@ export async function initialize(config: AgentRuntimeConfig = {}): Promise<{
   permissionManager: PermissionManager
   logger: Logger
 }> {
+  // Initialize OpenTelemetry
+  initializeTelemetry({
+    enabled: process.env.OTEL_SDK_DISABLED !== 'true',
+    serviceName: process.env.OTEL_SERVICE_NAME || 'agenthive-agent-runtime',
+    logLevel: config.logLevel,
+  })
+
   // Configure logger
   if (config.logLevel) {
     configureLogger({ minLevel: config.logLevel })

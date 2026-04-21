@@ -8,6 +8,8 @@
 
 import { EventEmitter } from 'events'
 import { createHash } from 'crypto'
+import { trace, SpanStatusCode } from '@opentelemetry/api'
+import { AI_ATTRIBUTES, AI_SPAN_NAMES } from '@agenthive/observability'
 import { ILLMProvider, LLMMessage, LLMCompletionOptions, LLMCompletionResult, LLMStreamChunk, LLMProviderConfig, LLMToolDefinition } from './types.js'
 import { AnthropicProvider } from './providers/anthropic.js'
 import { OpenAIProvider } from './providers/openai.js'
@@ -343,6 +345,7 @@ export class LLMServiceEnhanced extends EventEmitter {
     messages: LLMMessage[],
     options?: LLMCompletionOptions & { provider?: string; skipCache?: boolean }
   ): Promise<LLMCompletionResult> {
+    const tracer = trace.getTracer('agenthive-llm')
     const providerName = options?.provider || this.defaultProvider
     const cacheKey = this.generateCacheKey(messages, options)
 
@@ -361,6 +364,18 @@ export class LLMServiceEnhanced extends EventEmitter {
     let retryCount = 0
 
     while (retryCount <= this.retryConfig.maxRetries) {
+      const span = tracer.startSpan(AI_SPAN_NAMES.LLM_COMPLETION, {
+        attributes: {
+          [AI_ATTRIBUTES.LLM_PROVIDER]: providerName,
+          [AI_ATTRIBUTES.LLM_MODEL]: options?.model || 'unknown',
+          [AI_ATTRIBUTES.LLM_CACHE_HIT]: false,
+          [AI_ATTRIBUTES.LLM_STREAMING]: false,
+          [AI_ATTRIBUTES.LLM_MAX_TOKENS]: options?.maxTokens ?? -1,
+          [AI_ATTRIBUTES.LLM_TEMPERATURE]: options?.temperature ?? -1,
+          'llm.retry_attempt': retryCount,
+        },
+      })
+
       try {
         const provider = this.getProvider(providerName)
         this.emit('completion:start', { provider: providerName, messages, attempt: retryCount + 1 })
@@ -369,6 +384,15 @@ export class LLMServiceEnhanced extends EventEmitter {
         const result = await provider.complete(messages, options)
         const duration = Date.now() - startTime
         this.metrics.totalLatency += duration
+
+        span.setAttributes({
+          [AI_ATTRIBUTES.LLM_TOKENS_INPUT]: result.usage?.promptTokens ?? 0,
+          [AI_ATTRIBUTES.LLM_TOKENS_OUTPUT]: result.usage?.completionTokens ?? 0,
+          [AI_ATTRIBUTES.LLM_TOKENS_TOTAL]: result.usage?.totalTokens ?? 0,
+          [AI_ATTRIBUTES.LLM_LATENCY_MS]: duration,
+          [AI_ATTRIBUTES.LLM_REQUEST_ID]: result.id || 'unknown',
+        })
+        span.setStatus({ code: SpanStatusCode.OK })
 
         this.emit('completion:end', {
           provider: providerName,
@@ -382,6 +406,7 @@ export class LLMServiceEnhanced extends EventEmitter {
           this.setCache(cacheKey, result)
         }
 
+        span.end()
         return result
 
       } catch (error) {
@@ -389,6 +414,14 @@ export class LLMServiceEnhanced extends EventEmitter {
         const classifiedError = this.classifyError(error as Error)
         lastError = classifiedError.originalError
         this.metrics.errors++
+
+        span.recordException(classifiedError.originalError)
+        span.setAttributes({
+          [AI_ATTRIBUTES.LLM_ERROR_TYPE]: classifiedError.type,
+          'llm.retryable': classifiedError.retryable,
+        })
+        span.setStatus({ code: SpanStatusCode.ERROR, message: classifiedError.message })
+        span.end()
 
         this.logger.error('Completion failed', { 
           error: classifiedError.message, 

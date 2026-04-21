@@ -14,7 +14,16 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@agenthive/types": "workspace:*",
+    "@agenthive/observability": "1.0.0",
+    "@agenthive/types": "1.0.0",
+    "@opentelemetry/api": "^1.8.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.47.0",
+    "@opentelemetry/exporter-metrics-otlp-grpc": "^0.51.0",
+    "@opentelemetry/exporter-trace-otlp-grpc": "^0.51.0",
+    "@opentelemetry/resources": "^1.24.0",
+    "@opentelemetry/sdk-metrics": "^1.24.0",
+    "@opentelemetry/sdk-node": "^0.51.0",
+    "@opentelemetry/semantic-conventions": "^1.24.0",
     "@element-plus/icons-vue": "^2.3.2",
     "@nuxtjs/tailwindcss": "^6.12.0",
     "@pinia/nuxt": "^0.11.3",

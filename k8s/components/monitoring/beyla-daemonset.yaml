@@ -1,0 +1,157 @@
+# ============================================================================
+# Grafana Beyla DaemonSet
+# 无侵入 eBPF 可观测 - 每节点部署一个实例
+# 需要 privileged 或 CAP_SYS_ADMIN + CAP_BPF + CAP_PERFMON
+# ============================================================================
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: beyla
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: beyla
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "nodes", "services", "endpoints"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets", "daemonsets", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: beyla
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: beyla
+subjects:
+  - kind: ServiceAccount
+    name: beyla
+    namespace: monitoring
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: beyla
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: beyla
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: beyla
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: beyla
+    spec:
+      serviceAccountName: beyla
+      hostNetwork: true
+      hostPID: true
+      containers:
+        - name: beyla
+          image: grafana/beyla:1.7.0
+          securityContext:
+            privileged: true
+            # 如果不能 privileged，使用 capabilities:
+            # capabilities:
+            #   add:
+            #     - SYS_ADMIN
+            #     - BPF
+            #     - PERFMON
+            #     - NET_RAW
+            #     - SYS_PTRACE
+          env:
+            - name: BEYLA_CONFIG_PATH
+              value: /config/beyla.yml
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector-gateway.monitoring:4317
+            - name: OTEL_SERVICE_NAME
+              value: beyla
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: varrun
+              mountPath: /var/run
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: config
+          configMap:
+            name: beyla-config
+        - name: varrun
+          hostPath:
+            path: /var/run
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: beyla-config
+  namespace: monitoring
+data:
+  beyla.yml: |
+    network:
+      enable: true
+    discovery:
+      services:
+        - name: agenthive-api
+          namespace: agenthive
+          open_ports: 3001
+        - name: agenthive-landing
+          namespace: agenthive
+          open_ports: 3000
+        - name: agenthive-agent-runtime
+          namespace: agenthive
+          open_ports: 8080
+        - name: agenthive-redis
+          namespace: agenthive
+          open_ports: 6379
+        - name: agenthive-postgres
+          namespace: agenthive
+          open_ports: 5432
+    protocols:
+      - http
+      - grpc
+      - redis
+    metrics:
+      features:
+        - application
+        - network
+      application:
+        http:
+          routes:
+            patterns:
+              - /api/agents/:id
+              - /api/tasks/:id
+              - /api/tasks/:id/execute
+              - /api/code/workspace/files/:path
+              - /api/code/files/:path
+          request_timeout: 30s
+    traces:
+      enabled: true
+      sampling_ratio: 1.0
+    otel_metrics_export:
+      enabled: true
+      endpoint: http://otel-collector-gateway.monitoring:4317
+      export_interval: 30s
+    otel_traces_export:
+      enabled: true
+      endpoint: http://otel-collector-gateway.monitoring:4317
+      max_queue_size: 2048
+      max_export_batch_size: 512
+    log_level: INFO

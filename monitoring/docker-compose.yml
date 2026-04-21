@@ -1,88 +1,251 @@
-# AgentHive 监控系统 - Docker Compose 配置
-# 用于本地测试开发
+# ============================================================================
+# AgentHive Cloud - 统一可观测性栈 (Grafana LGTM + Beyla)
+# 
+# 一键启动：docker compose -f monitoring/docker-compose.yml up -d
+# 包含：Prometheus + Grafana + Tempo + Loki + MinIO + OTel Collector + Beyla
+# ============================================================================
 
-version: '3.8'
+version: "3.8"
 
 services:
+  # --------------------------------------------------------------------------
+  # MinIO - S3 兼容对象存储（Tempo + Loki 共享）
+  # --------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: agenthive-minio
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: tempo
+      MINIO_ROOT_PASSWORD: supersecret
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - agenthive-monitoring
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 tempo supersecret;
+      mc mb local/tempo --ignore-existing;
+      mc mb local/loki --ignore-existing;
+      mc anonymous set download local/tempo;
+      exit 0;
+      "
+    networks:
+      - agenthive-monitoring
+
+  # --------------------------------------------------------------------------
+  # Grafana Tempo - 分布式追踪
+  # --------------------------------------------------------------------------
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: agenthive-tempo
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo.yml:ro
+      - tempo_data:/tmp/tempo
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      minio-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3200/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - agenthive-monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+
+  # --------------------------------------------------------------------------
+  # Grafana Loki - 日志存储
+  # --------------------------------------------------------------------------
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: agenthive-loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./loki/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    depends_on:
+      - minio
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - agenthive-monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  # --------------------------------------------------------------------------
+  # Prometheus - 指标
+  # --------------------------------------------------------------------------
   prometheus:
-    build:
-      context: ./prometheus
-      dockerfile: Dockerfile
+    build: ./prometheus
     container_name: agenthive-prometheus
-    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
-    volumes:
-      - prometheus_data:/prometheus
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
+    networks:
+      - agenthive-monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
 
+  # --------------------------------------------------------------------------
+  # Grafana - 统一可视化
+  # --------------------------------------------------------------------------
   grafana:
-    build:
-      context: .
-      dockerfile: ./grafana/Dockerfile
+    build: ./grafana
     container_name: agenthive-grafana
-    restart: unless-stopped
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
     environment:
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
+      - GF_FEATURE_TOGGLES_ENABLE=traceqlEditor
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3001:3000"
     depends_on:
       - prometheus
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      - tempo
+      - loki
+    networks:
+      - agenthive-monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
 
+  # --------------------------------------------------------------------------
+  # Node Exporter - 主机指标
+  # --------------------------------------------------------------------------
   node-exporter:
-    build:
-      context: ./node-exporter
-      dockerfile: Dockerfile
+    build: ./node-exporter
     container_name: agenthive-node-exporter
-    restart: unless-stopped
-    ports:
-      - "9100:9100"
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    networks:
+      - agenthive-monitoring
+
+  # --------------------------------------------------------------------------
+  # OpenTelemetry Collector
+  # --------------------------------------------------------------------------
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: agenthive-otel-collector
+    command: ["--config=/etc/otel-collector.yml"]
+    volumes:
+      - ./opentelemetry/otel-collector/otel-collector.yml:/etc/otel-collector.yml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8888:8888"   # Collector metrics
+      - "8889:8889"   # Prometheus exporter
+      - "13133:13133" # Health check
+      - "1777:1777"   # pprof
+      - "55679:55679" # zpages
+    depends_on:
+      - prometheus
+      - tempo
+      - loki
+    networks:
+      - agenthive-monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+
+  # --------------------------------------------------------------------------
+  # Grafana Beyla (eBPF) - 可选，需要 privileged
+  # --------------------------------------------------------------------------
+  beyla:
+    image: grafana/beyla:1.7.0
+    container_name: agenthive-beyla
     pid: host
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+    network_mode: host
+    privileged: true
+    volumes:
+      - ./beyla/beyla.yml:/config/beyla.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      BEYLA_CONFIG_PATH: /config/beyla.yml
+      OTEL_SERVICE_NAME: beyla
+    command: ["--config=/config/beyla.yml"]
+    depends_on:
+      - otel-collector
+    profiles:
+      - beyla
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
 volumes:
+  minio_data:
+  tempo_data:
+  loki_data:
   prometheus_data:
-    driver: local
   grafana_data:
-    driver: local
 
 networks:
-  default:
+  agenthive-monitoring:
     name: agenthive-monitoring
+    driver: bridge

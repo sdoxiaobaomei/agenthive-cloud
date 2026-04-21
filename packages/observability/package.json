@@ -1,0 +1,25 @@
+{
+  "name": "@agenthive/observability",
+  "version": "1.0.0",
+  "description": "AgentHive shared observability utilities and AI semantic conventions",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.8.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
