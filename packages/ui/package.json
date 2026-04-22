@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "files": ["dist"],
   "scripts": {
-    "build": "vite build && vue-tsc",
+    "build": "vite build",
     "dev": "vite build --watch"
   },
   "peerDependencies": {

@@ -148,7 +148,7 @@ import {
 } from '@element-plus/icons-vue'
 import CodeEditor from '../molecules/CodeEditor.vue'
 import CodeDiffViewer from '../molecules/CodeDiffViewer.vue'
-import { useWebSocketStore } from '../stores/websocket'
+import { useWebSocketStore } from '../../stores/websocket'
 import { ElMessage } from 'element-plus'
 // 本地实现工具函数
 function formatDateTime(date: string | Date): string {

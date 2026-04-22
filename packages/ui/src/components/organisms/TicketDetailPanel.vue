@@ -206,7 +206,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, nextTick } from 'vue'
 import type { ExecutionTicket, WorkerRole, QAResult, LogLevel } from '@agenthive/types'
-import { useExecutionStore, roleToName, getDefaultChecklist } from '@agenthive/ui'
+import { useExecutionStore, roleToName, getDefaultChecklist } from '../../stores/execution'
 import AgentAvatar from '../atoms/AgentAvatar.vue'
 import { QuestionFilled, Document } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'

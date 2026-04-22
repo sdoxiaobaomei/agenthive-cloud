@@ -36,8 +36,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useAgentStore } from '../stores/agent'
-import { useWebSocketStore } from '../stores/websocket'
+import { useAgentStore } from '../../stores/agent'
+import { useWebSocketStore } from '../../stores/websocket'
 import Terminal from '../organisms/Terminal.vue'
 
 const props = withDefaults(defineProps<{
