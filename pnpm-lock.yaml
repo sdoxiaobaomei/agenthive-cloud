@@ -266,6 +266,9 @@ importers:
       typescript:
         specifier: ^5.4.5
         version: 5.9.3
+      vue-tsc:
+        specifier: ^2.2.0
+        version: 2.2.12(typescript@5.9.3)
 
   packages/cli: {}
 
