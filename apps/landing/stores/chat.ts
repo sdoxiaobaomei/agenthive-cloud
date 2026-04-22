@@ -29,6 +29,8 @@ export interface ChatMessage {
     tokens?: number
     processingTime?: number
     files?: string[]
+    intent?: string
+    tasks?: any[]
   }
 }
 
@@ -208,25 +210,49 @@ export const useChatStore = defineStore('chat', {
      * @param projectId 关联项目ID
      * @param agentId 关联Agent ID
      */
-    createConversation(
+    async createConversation(
       title: string = '新会话',
       projectId?: string,
       agentId?: string
-    ): Conversation {
-      const conversation: Conversation = {
-        id: `conv-${Date.now()}`,
-        title,
-        projectId,
-        agentId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        messageCount: 0,
-        isPinned: false,
-      }
+    ): Promise<Conversation> {
+      try {
+        const { chat } = useApi()
+        const result = await chat.createSession({ title, projectId })
+        
+        if (!result.success) {
+          throw new Error(result.message || '创建会话失败')
+        }
 
-      this.conversations.unshift(conversation)
-      this.currentConversation = conversation
-      return conversation
+        const conversation: Conversation = {
+          id: result.data!.id,
+          title: result.data!.title,
+          projectId: result.data!.projectId,
+          agentId,
+          createdAt: result.data!.createdAt,
+          updatedAt: result.data!.createdAt,
+          messageCount: 0,
+          isPinned: false,
+        }
+
+        this.conversations.unshift(conversation)
+        this.currentConversation = conversation
+        return conversation
+      } catch (err: any) {
+        // 离线模式：创建本地会话
+        const conversation: Conversation = {
+          id: `conv-${Date.now()}`,
+          title,
+          projectId,
+          agentId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          messageCount: 0,
+          isPinned: false,
+        }
+        this.conversations.unshift(conversation)
+        this.currentConversation = conversation
+        return conversation
+      }
     },
 
     /**
@@ -239,7 +265,7 @@ export const useChatStore = defineStore('chat', {
       role: MessageRole = 'user'
     ): Promise<ChatMessage> {
       if (!this.currentConversation) {
-        this.createConversation()
+        await this.createConversation()
       }
 
       const conversationId = this.currentConversation!.id
@@ -268,44 +294,52 @@ export const useChatStore = defineStore('chat', {
     },
 
     /**
-     * 发送用户消息并获取AI回复（流式）
+     * 发送用户消息并获取AI回复
      * @param content 用户消息内容
      */
     async sendMessageWithResponse(content: string): Promise<void> {
       // 添加用户消息
       await this.sendMessage(content, 'user')
 
-      // 模拟流式响应
-      this.isStreaming = true
+      this.isLoading = true
       
       try {
         const conversationId = this.currentConversation!.id
+        const { chat } = useApi()
+        
+        const result = await chat.sendMessage(conversationId, { content })
+        
+        if (!result.success) {
+          throw new Error(result.message || '发送消息失败')
+        }
+
         const assistantMessage: ChatMessage = {
-          id: `msg-${Date.now()}-ai`,
+          id: result.data?.message?.id || `msg-${Date.now()}-ai`,
           role: 'assistant',
-          content: '',
-          timestamp: new Date().toISOString(),
+          content: result.data?.message?.content || '处理完成',
+          timestamp: result.data?.message?.timestamp || new Date().toISOString(),
           conversationId,
           metadata: {
-            model: 'gpt-4',
+            model: 'agenthive-ai',
+            intent: result.data?.intent,
+            tasks: result.data?.tasks,
           },
         }
 
         this.messages.push(assistantMessage)
 
-        // 模拟流式输出
-        const response = '我是 AgentHive AI 助手，很高兴为您服务！\n\n我可以帮助您：\n1. 编写和审查代码\n2. 分析项目结构\n3. 解答技术问题\n4. 协助调试问题'
-        
-        for (let i = 0; i < response.length; i++) {
-          await new Promise(resolve => setTimeout(resolve, 20))
-          assistantMessage.content += response[i]
-        }
-
-        assistantMessage.metadata!.tokens = response.length
-        assistantMessage.metadata!.processingTime = 1500
-
+      } catch (err: any) {
+        this.error = err.message || '获取回复失败'
+        // 添加错误提示消息
+        this.messages.push({
+          id: `msg-${Date.now()}-error`,
+          role: 'system',
+          content: `错误: ${this.error}`,
+          timestamp: new Date().toISOString(),
+          conversationId: this.currentConversation!.id,
+        })
       } finally {
-        this.isStreaming = false
+        this.isLoading = false
       }
     },
 
@@ -318,47 +352,35 @@ export const useChatStore = defineStore('chat', {
       this.error = null
 
       try {
-        // Mock 数据，实际项目中应该调用 API
-        await new Promise(resolve => setTimeout(resolve, 300))
+        const { chat } = useApi()
+        const result = await chat.listSessions()
+        
+        if (!result.success) {
+          throw new Error(result.message || '加载会话列表失败')
+        }
 
-        const mockConversations: Conversation[] = [
-          {
-            id: 'conv-001',
-            title: '项目架构讨论',
-            projectId: 'proj-001',
-            createdAt: '2024-04-05T10:00:00Z',
-            updatedAt: '2024-04-06T14:30:00Z',
-            messageCount: 15,
-            isPinned: true,
-          },
-          {
-            id: 'conv-002',
-            title: '代码审查 - API 模块',
-            projectId: 'proj-001',
-            createdAt: '2024-04-04T09:00:00Z',
-            updatedAt: '2024-04-06T11:20:00Z',
-            messageCount: 8,
-            isPinned: false,
-          },
-          {
-            id: 'conv-003',
-            title: 'Bug 修复讨论',
-            projectId: 'proj-002',
-            createdAt: '2024-04-03T16:00:00Z',
-            updatedAt: '2024-04-05T18:45:00Z',
-            messageCount: 23,
-            isPinned: false,
-          },
-        ]
+        const conversations: Conversation[] = (result.data?.items || []).map(item => ({
+          id: item.id,
+          title: item.title,
+          projectId: item.projectId,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+          messageCount: 0,
+          isPinned: false,
+        }))
 
         this.conversations = projectId
-          ? mockConversations.filter(c => c.projectId === projectId)
-          : mockConversations
+          ? conversations.filter(c => c.projectId === projectId)
+          : conversations
 
         return this.conversations
       } catch (err: any) {
         this.error = err.message || '加载会话列表失败'
-        throw err
+        // 使用本地数据
+        if (this.conversations.length === 0) {
+          this.conversations = []
+        }
+        return this.conversations
       } finally {
         this.isLoading = false
       }
@@ -373,47 +395,31 @@ export const useChatStore = defineStore('chat', {
       this.error = null
 
       try {
-        // Mock 数据
-        await new Promise(resolve => setTimeout(resolve, 300))
+        const { chat } = useApi()
+        const result = await chat.getMessages(conversationId)
+        
+        if (!result.success) {
+          throw new Error(result.message || '加载消息失败')
+        }
 
-        const mockMessages: ChatMessage[] = [
-          {
-            id: 'msg-001',
-            role: 'system',
-            content: '欢迎使用 AgentHive AI 助手！',
-            timestamp: '2024-04-05T10:00:00Z',
-            conversationId,
-          },
-          {
-            id: 'msg-002',
-            role: 'user',
-            content: '请帮我分析一下这个项目的架构',
-            timestamp: '2024-04-05T10:05:00Z',
-            conversationId,
-          },
-          {
-            id: 'msg-003',
-            role: 'assistant',
-            content: '好的，我来为您分析项目架构...',
-            timestamp: '2024-04-05T10:05:30Z',
-            conversationId,
-            metadata: {
-              model: 'gpt-4',
-              tokens: 256,
-              processingTime: 1200,
-            },
-          },
-        ]
+        const messages: ChatMessage[] = (result.data?.messages || []).map(msg => ({
+          id: msg.id,
+          role: msg.role as MessageRole,
+          content: msg.content,
+          timestamp: msg.timestamp,
+          conversationId,
+          metadata: msg.metadata,
+        }))
 
         // 合并新消息，避免重复
         const existingIds = new Set(this.messages.map(m => m.id))
-        const newMessages = mockMessages.filter(m => !existingIds.has(m.id))
+        const newMessages = messages.filter(m => !existingIds.has(m.id))
         this.messages.push(...newMessages)
 
-        return mockMessages
+        return messages
       } catch (err: any) {
         this.error = err.message || '加载消息失败'
-        throw err
+        return []
       } finally {
         this.isLoading = false
       }

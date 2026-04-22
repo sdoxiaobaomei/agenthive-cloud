@@ -61,7 +61,7 @@ export default defineNuxtConfig({
   
   // 构建配置
   build: {
-    transpile: ['@element-plus/icons-vue'],
+    transpile: ['@element-plus/icons-vue', 'element-plus', '@popperjs/core'],
   },
   
   // Vite 配置
@@ -98,7 +98,8 @@ export default defineNuxtConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        // @ts-ignore rewrite is supported by http-proxy but not in types
+        rewrite: (path: string) => path.replace(/^\/api/, ''),
       },
     },
   },

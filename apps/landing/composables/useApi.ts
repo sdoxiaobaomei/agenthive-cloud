@@ -47,12 +47,14 @@ export interface PaginatedResponse<T> {
 
 // ============ 实体类型定义 ============
 
-/** 用户信息 */
+/** 用户信息 (与 @agenthive/types 对齐) */
 export interface User {
   id: string
+  username: string
   name: string
-  phone: string
   email?: string
+  phone?: string
+  role: string
   avatar?: string
   createdAt: string
   updatedAt: string
@@ -197,6 +199,38 @@ export interface UpdateFileParams {
   content: string
   encoding?: string
   message?: string
+}
+
+/** Chat 会话 */
+export interface ChatSession {
+  id: string
+  userId: string
+  projectId?: string
+  title?: string
+  status: string
+  createdAt: string
+  updatedAt: string
+}
+
+/** Chat 消息 */
+export interface ChatMessage {
+  id: string
+  sessionId: string
+  role: 'user' | 'assistant' | 'system' | 'agent'
+  content: string
+  metadata?: Record<string, any>
+  createdAt: string
+}
+
+/** 创建会话参数 */
+export interface CreateChatSessionParams {
+  projectId?: string
+  title?: string
+}
+
+/** 发送消息参数 */
+export interface SendChatMessageParams {
+  content: string
 }
 
 // ============ API 错误类 ============
@@ -553,6 +587,51 @@ export function useApi() {
       del<void>(`/api/tasks/${id}`),
   }
 
+  // ============ 聊天相关 API ============
+
+  const chat = {
+    /** 创建会话 */
+    createSession: (data: { projectId?: string; title?: string }) =>
+      post<{ id: string; title: string; projectId?: string; createdAt: string }>('/api/chat/sessions', data),
+
+    /** 获取会话列表 */
+    listSessions: () =>
+      get<{ items: Array<{ id: string; title: string; projectId?: string; createdAt: string; updatedAt: string }>; total: number }>('/api/chat/sessions'),
+
+    /** 获取会话详情 */
+    getSession: (id: string) =>
+      get<{ id: string; title: string; projectId?: string; createdAt: string; updatedAt: string }>(`/api/chat/sessions/${id}`),
+
+    /** 发送消息 */
+    sendMessage: (sessionId: string, data: { content: string }) =>
+      post<{
+        message: { id: string; role: string; content: string; timestamp: string };
+        intent: string;
+        tasks: Array<{ ticketId: string; workerRole: string; status: string }>;
+      }>(`/api/chat/sessions/${sessionId}/messages`, data),
+
+    /** 获取消息列表 */
+    getMessages: (sessionId: string, page?: number, pageSize?: number) =>
+      get<{
+        messages: Array<{ id: string; role: string; content: string; timestamp: string; metadata?: any }>;
+        total: number;
+        page: number;
+        pageSize: number;
+      }>(`/api/chat/sessions/${sessionId}/messages?page=${page || 1}&pageSize=${pageSize || 50}`),
+
+    /** 执行任务 */
+    executeTask: (sessionId: string, data: { content: string }) =>
+      post<{ intent: string; tasks: Array<{ ticketId: string; workerRole: string; status: string }> }>(`/api/chat/sessions/${sessionId}/execute`, data),
+
+    /** 获取任务列表 */
+    getTasks: (sessionId: string) =>
+      get<{ tasks: Array<any>; total: number }>(`/api/chat/sessions/${sessionId}/tasks`),
+
+    /** 获取进度 */
+    getProgress: (sessionId: string) =>
+      get<any>(`/api/chat/sessions/${sessionId}/progress`),
+  }
+
   // ============ 代码相关 API ============
 
   const code = {
@@ -597,6 +676,7 @@ export function useApi() {
     agents,
     tasks,
     code,
+    chat,
 
     // 配置
     baseUrl,

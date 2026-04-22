@@ -1,4 +1,7 @@
-import type { AgentStatus, TaskStatus, WorkerRole, TicketStatus } from '@agenthive/types'
+import type { AgentStatus, TaskStatus } from '@agenthive/types'
+
+type WorkerRole = string
+type TicketStatus = string
 
 export function formatStatus(status: AgentStatus | TaskStatus | TicketStatus | string): string {
   const statusMap: Record<string, string> = {

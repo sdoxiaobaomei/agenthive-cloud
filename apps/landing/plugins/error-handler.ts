@@ -142,8 +142,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       wasOffline = true
       
       // 显示网络断开提示
-      showWarningMessage({
-        message: '网络已断开，请检查网络连接',
+      showWarningMessage('网络已断开，请检查网络连接', {
         duration: 0, // 不自动关闭
         showClose: true,
       })

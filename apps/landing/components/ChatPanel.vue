@@ -4,20 +4,20 @@
     <div class="panel-header">
       <div class="agent-info">
         <div class="agent-avatar-wrapper">
-          <img src="/avatars/shiba_be.png" class="agent-avatar" alt="Alex" />
-          <span class="status-dot"></span>
+          <img src="/avatars/shiba_tl.png" class="agent-avatar" alt="Agent" />
+          <span class="status-dot" :class="wsConnected ? 'online' : 'offline'"></span>
         </div>
         <div v-if="!isCollapsed" class="agent-details">
-          <span class="agent-name">Alex</span>
-          <span class="agent-status">Engineer · Online</span>
+          <span class="agent-name">AgentHive Team</span>
+          <span class="agent-status">{{ wsConnected ? 'Online' : 'Connecting...' }}</span>
         </div>
       </div>
       <div v-if="!isCollapsed" class="header-actions">
         <button class="header-btn" title="Clear chat" @click="clearChat">
           <el-icon><Delete /></el-icon>
         </button>
-        <button class="header-btn" title="Expand" @click="toggleExpand">
-          <el-icon><FullScreen /></el-icon>
+        <button class="header-btn" title="New session" @click="createNewSession">
+          <el-icon><ChatDotRound /></el-icon>
         </button>
       </div>
     </div>
@@ -27,13 +27,14 @@
       <!-- Empty State -->
       <div v-if="messages.length === 0" class="empty-state">
         <div class="empty-avatar">
-          <img src="/avatars/shiba_be.png" alt="Alex" />
+          <img src="/avatars/shiba_tl.png" alt="Agent" />
         </div>
         <div class="empty-welcome">
-          <p class="empty-title">Alex is ready to help</p>
-          <p class="empty-desc">Ask the team to bring your idea to life</p>
+          <p class="empty-title">AI Team is ready</p>
+          <p class="empty-desc">Describe your idea and we'll build it together</p>
         </div>
       </div>
+
       <!-- Message List -->
       <div v-else class="message-list">
         <div
@@ -42,70 +43,78 @@
           class="message-wrapper"
           :class="msg.role"
         >
-          <!-- Date Divider -->
-          <div v-if="showDateDivider(index)" class="date-divider">
-            <span>{{ formatDate(msg.timestamp) }}</span>
-          </div>
-
           <div class="message">
-            <img 
-              v-if="msg.role === 'assistant'"
-              src="/avatars/shiba_be.png" 
+            <img
+              v-if="msg.role === 'assistant' || msg.role === 'agent'"
+              src="/avatars/shiba_be.png"
               class="message-avatar"
-              alt="Alex"
+              alt="Agent"
             />
-            <img 
+            <img
+              v-else-if="msg.role === 'system'"
+              src="/avatars/shiba_qa.png"
+              class="message-avatar"
+              alt="System"
+            />
+            <img
               v-else
-              :src="user?.avatar || '/avatars/shiba_tl.png'" 
+              :src="user?.avatar || '/avatars/shiba_tl.png'"
               class="message-avatar"
               alt="User"
             />
 
             <div class="message-content">
               <div class="message-header">
-                <span class="message-author">{{ msg.role === 'assistant' ? 'Alex' : 'You' }}</span>
-                <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
+                <span class="message-author">{{ authorName(msg.role) }}</span>
+                <span class="message-time">{{ formatTime(msg.createdAt || msg.timestamp || '') }}</span>
               </div>
 
               <div class="message-bubble" :class="msg.role">
-                <!-- Loading State -->
                 <div v-if="msg.isLoading" class="typing-indicator">
                   <span></span>
                   <span></span>
                   <span></span>
                 </div>
-                <!-- Message Content with Markdown -->
                 <div v-else class="message-body" v-html="renderMarkdown(msg.content)"></div>
               </div>
 
-              <!-- Message Actions (hover only) -->
-              <div v-if="msg.role === 'assistant' && !msg.isLoading" class="message-actions">
-                <button class="action-btn" title="Copy" @click="copyMessage(msg.content)">
-                  <el-icon><CopyDocument /></el-icon>
-                </button>
-                <button class="action-btn" :class="{ active: msg.liked }" title="Good response" @click="likeMessage(msg)">
-                  <el-icon><CircleCheck /></el-icon>
-                </button>
-                <button class="action-btn" :class="{ active: msg.disliked }" title="Bad response" @click="dislikeMessage(msg)">
-                  <el-icon><CircleClose /></el-icon>
-                </button>
-                <button class="action-btn" title="More options">
-                  <el-icon><MoreFilled /></el-icon>
-                </button>
-              </div>
-
-              <!-- Regenerate Button for AI messages -->
-              <div v-if="msg.role === 'assistant' && index === messages.length - 1 && !isLoading" class="regenerate-wrapper">
-                <button class="regenerate-btn" @click="regenerateMessage">
-                  <el-icon><Refresh /></el-icon>
-                  <span>Regenerate</span>
-                </button>
+              <!-- Agent Progress Cards -->
+              <div v-if="msg.metadata?.tasks?.length" class="task-cards">
+                <div
+                  v-for="task in msg.metadata.tasks"
+                  :key="task.id"
+                  class="task-card"
+                  :class="task.status"
+                >
+                  <el-icon v-if="task.status === 'completed'"><CircleCheck /></el-icon>
+                  <el-icon v-else-if="task.status === 'failed'"><CircleClose /></el-icon>
+                  <el-icon v-else-if="task.status === 'running'"><Loading class="is-loading" /></el-icon>
+                  <el-icon v-else><Timer /></el-icon>
+                  <span class="task-name">{{ task.role }}: {{ task.id }}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
- 
+
+      <!-- Real-time Progress Panel -->
+      <div v-if="agentLogs.length > 0" class="progress-panel">
+        <div class="progress-header">
+          <el-icon><VideoPlay /></el-icon>
+          <span>Agent Progress</span>
+          <el-tag size="small" :type="agentStatus === 'completed' ? 'success' : agentStatus === 'failed' ? 'danger' : 'primary'">
+            {{ agentStatus }}
+          </el-tag>
+        </div>
+        <div class="progress-logs">
+          <div v-for="(log, i) in agentLogs" :key="i" class="log-line">
+            <span class="log-time">{{ formatTime(new Date()) }}</span>
+            <span class="log-text">{{ log }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Scroll to bottom button -->
       <button v-if="showScrollBtn" class="scroll-btn" @click="scrollToBottom">
         <el-icon><ArrowDown /></el-icon>
@@ -119,7 +128,7 @@
           <textarea
             v-model="inputText"
             :disabled="isLoading"
-            placeholder="Ask the team to bring your idea to life..."
+            placeholder="Describe what you want to build..."
             class="message-input"
             rows="1"
             @keydown.enter.prevent="handleEnter"
@@ -129,9 +138,6 @@
             ref="inputRef"
           />
           <div class="input-actions">
-            <button class="attach-btn" title="Attach file">
-              <el-icon><Paperclip /></el-icon>
-            </button>
             <button
               class="send-btn"
               :class="{ active: inputText.trim() && !isLoading }"
@@ -145,80 +151,45 @@
         </div>
         <p class="input-hint">Press Enter to send, Shift + Enter for new line</p>
       </div>
-
-      <!-- Credits Info -->
-      <div class="credits-bar">
-        <div class="credits-left">
-          <el-icon><Coin /></el-icon>
-          <span class="credits-text">{{ credits }} credits remaining</span>
-        </div>
-        <button class="upgrade-btn" @click="showUpgradeDialog = true">
-          <el-icon><Star /></el-icon>
-          <span>Upgrade</span>
-        </button>
-      </div>
     </div>
 
     <!-- Collapsed View -->
     <div v-else class="collapsed-view">
       <button class="collapsed-btn" @click="$emit('expand')">
-        <img src="/avatars/shiba_be.png" class="collapsed-avatar" alt="Alex" />
+        <img src="/avatars/shiba_tl.png" class="collapsed-avatar" alt="Agent" />
         <span class="collapsed-badge">AI</span>
       </button>
     </div>
-
-    <!-- Upgrade Dialog -->
-    <el-dialog
-      v-model="showUpgradeDialog"
-      title="Upgrade Your Plan"
-      width="420px"
-      :close-on-click-modal="true"
-      class="upgrade-dialog"
-    >
-      <div class="upgrade-content">
-        <div class="plan-card">
-          <h3>Pro</h3>
-          <p class="plan-price">$20<span>/month</span></p>
-          <ul class="plan-features">
-            <li><el-icon><Check /></el-icon> Unlimited credits</li>
-            <li><el-icon><Check /></el-icon> Priority support</li>
-            <li><el-icon><Check /></el-icon> Advanced AI models</li>
-          </ul>
-          <button class="plan-btn primary">Upgrade to Pro</button>
-        </div>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
-import { 
-  FullScreen,
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import {
   Delete,
-  CircleCheck,
-  CircleClose,
-  MoreFilled,
+  ChatDotRound,
   Loading,
   Promotion,
-  CopyDocument,
-  Refresh,
   ArrowDown,
-  Paperclip,
-  Coin,
-  Star,
-  Check
+  CircleCheck,
+  CircleClose,
+  Timer,
+  VideoPlay,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { io, Socket } from 'socket.io-client'
 
 interface ChatMessage {
   id: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system' | 'agent'
   content: string
-  timestamp: Date
+  createdAt?: string
+  timestamp?: string
   isLoading?: boolean
-  liked?: boolean
-  disliked?: boolean
+  metadata?: {
+    intent?: string
+    tasks?: Array<{ id: string; role: string; status: string }>
+  }
 }
 
 interface Project {
@@ -230,6 +201,7 @@ interface Project {
 const props = defineProps<{
   isCollapsed?: boolean
   currentProject?: Project | null
+  embedded?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -237,38 +209,36 @@ const emit = defineEmits<{
 }>()
 
 const { user } = useAuth()
+const { chat: chatApi, baseUrl } = useApi()
 
 const messagesContainer = ref<HTMLDivElement>()
 const inputRef = ref<HTMLTextAreaElement>()
 const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
 const isLoading = ref(false)
-const credits = ref(50)
-const isExpanded = ref(false)
 const isInputFocused = ref(false)
 const showScrollBtn = ref(false)
-const showUpgradeDialog = ref(false)
+const sessionId = ref<string | null>(null)
+const wsConnected = ref(false)
+const agentStatus = ref('idle')
+const agentLogs = ref<string[]>([])
 
-const toggleExpand = () => {
-  isExpanded.value = !isExpanded.value
+let socket: Socket | null = null
+
+const authorName = (role: string) => {
+  switch (role) {
+    case 'assistant': return 'AI Team'
+    case 'system': return 'System'
+    case 'agent': return 'Agent'
+    default: return 'You'
+  }
 }
 
-const clearChat = () => {
-  messages.value = []
-  ElMessage.success('Chat cleared')
-}
-
-// Simple markdown renderer
 const renderMarkdown = (content: string): string => {
-  // Code blocks
   content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
-  // Inline code
   content = content.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-  // Bold
   content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  // Italic
   content = content.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-  // Line breaks
   content = content.replace(/\n/g, '<br>')
   return content
 }
@@ -297,145 +267,204 @@ const checkScroll = () => {
   showScrollBtn.value = scrollHeight - scrollTop - clientHeight > 100
 }
 
-onMounted(() => {
-  if (messagesContainer.value) {
-    messagesContainer.value.addEventListener('scroll', checkScroll)
-  }
-})
-
-const formatTime = (date: Date): string => {
+const formatTime = (date: string | Date): string => {
+  const d = typeof date === 'string' ? new Date(date) : date
   return new Intl.DateTimeFormat('en-US', {
     hour: 'numeric',
     minute: '2-digit',
-    hour12: true
-  }).format(date)
+    hour12: true,
+  }).format(d)
 }
 
-const formatDate = (date: Date): string => {
-  const today = new Date()
-  const msgDate = new Date(date)
-  
-  if (today.toDateString() === msgDate.toDateString()) {
-    return 'Today'
-  }
-  
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-  if (yesterday.toDateString() === msgDate.toDateString()) {
-    return 'Yesterday'
-  }
-  
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric'
-  }).format(date)
-}
-
-const showDateDivider = (index: number): boolean => {
-  if (index === 0) return true
-  const curr = new Date(messages.value[index].timestamp)
-  const prev = new Date(messages.value[index - 1].timestamp)
-  return curr.toDateString() !== prev.toDateString()
-}
-
-const copyMessage = (content: string) => {
-  navigator.clipboard.writeText(content)
-  ElMessage.success('Copied to clipboard')
-}
-
-const likeMessage = (msg: ChatMessage) => {
-  msg.liked = !msg.liked
-  if (msg.liked) msg.disliked = false
-}
-
-const dislikeMessage = (msg: ChatMessage) => {
-  msg.disliked = !msg.disliked
-  if (msg.disliked) msg.liked = false
-}
-
-const regenerateMessage = async () => {
-  // Remove last AI message and regenerate
-  const lastUserMsg = messages.value.filter(m => m.role === 'user').pop()
-  if (!lastUserMsg) return
-  
-  messages.value = messages.value.filter(m => m !== messages.value[messages.value.length - 1])
-  
-  isLoading.value = true
-  
+const createNewSession = async () => {
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    const aiMsg: ChatMessage = {
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: `Here's an alternative approach for ${props.currentProject?.name || 'your project'}:\n\n**Key Features:**\n- Feature 1\n- Feature 2\n- Feature 3\n\nLet me know if you'd like me to elaborate on any of these points.`,
-      timestamp: new Date()
+    const res = await chatApi.createSession({
+      projectId: props.currentProject?.id,
+      title: props.currentProject?.name || 'New Chat',
+    })
+    if (res.success && res.data) {
+      sessionId.value = res.data.id
+      messages.value = []
+      agentLogs.value = []
+      agentStatus.value = 'idle'
+      connectWebSocket(res.data.id)
+      ElMessage.success('New session created')
     }
-    messages.value.push(aiMsg)
-    nextTick(() => scrollToBottom())
-  } finally {
-    isLoading.value = false
+  } catch (err: any) {
+    ElMessage.error(err.message || 'Failed to create session')
   }
+}
+
+const connectWebSocket = (sid: string) => {
+  if (socket) {
+    socket.disconnect()
+  }
+
+  const wsUrl = baseUrl.replace(/^http/, 'ws')
+  socket = io(`${wsUrl}/chat`, {
+    auth: { token: localStorage.getItem('agenthive:auth-token') || '' },
+    transports: ['websocket'],
+  })
+
+  socket.on('connect', () => {
+    wsConnected.value = true
+    socket?.emit('session:join', sid)
+  })
+
+  socket.on('disconnect', () => {
+    wsConnected.value = false
+  })
+
+  socket.on('session:state', (data: any) => {
+    agentStatus.value = data.status || 'idle'
+    if (data.logs?.length) {
+      agentLogs.value = data.logs.slice(-20)
+    }
+  })
+
+  socket.on('session:update', (data: any) => {
+    agentStatus.value = data.status || agentStatus.value
+    if (data.log) {
+      agentLogs.value.push(data.log)
+      if (agentLogs.value.length > 50) agentLogs.value.shift()
+    }
+  })
+
+  socket.on('session:logs', (data: any) => {
+    if (data.logs?.length) {
+      agentLogs.value = data.logs.slice(-50)
+    }
+  })
 }
 
 const sendMessage = async () => {
   const text = inputText.value.trim()
   if (!text || isLoading.value) return
 
+  // Ensure session exists
+  if (!sessionId.value) {
+    await createNewSession()
+    if (!sessionId.value) return
+  }
+
   // Add user message
   const userMsg: ChatMessage = {
-    id: Date.now().toString(),
+    id: `msg-${Date.now()}`,
     role: 'user',
     content: text,
-    timestamp: new Date()
+    createdAt: new Date().toISOString(),
   }
   messages.value.push(userMsg)
   inputText.value = ''
-
-  if (inputRef.value) {
-    inputRef.value.style.height = 'auto'
-  }
+  if (inputRef.value) inputRef.value.style.height = 'auto'
+  nextTick(() => scrollToBottom())
 
   // Add loading message
   const loadingMsg: ChatMessage = {
-    id: (Date.now() + 1).toString(),
+    id: `msg-${Date.now() + 1}`,
     role: 'assistant',
     content: '',
-    timestamp: new Date(),
-    isLoading: true
+    createdAt: new Date().toISOString(),
+    isLoading: true,
   }
   messages.value.push(loadingMsg)
   isLoading.value = true
-  
-  nextTick(() => {
-    scrollToBottom()
-  })
+  nextTick(() => scrollToBottom())
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    const res = await chatApi.sendMessage(sessionId.value, { content: text })
 
-    // Remove loading message and add real response
-    messages.value = messages.value.filter(m => m.id !== loadingMsg.id)
-    
-    const aiMsg: ChatMessage = {
-      id: (Date.now() + 2).toString(),
-      role: 'assistant',
-      content: `I'll help you with **${props.currentProject?.name || 'your project'}**.\n\nHere's my analysis:\n\n1. **Understanding your requirements** - You want to build a modern web application\n2. **Tech stack recommendation** - Vue 3 + TypeScript + Tailwind CSS\n3. **Architecture** - Component-based with proper state management\n\nWould you like me to start implementing any specific feature?`,
-      timestamp: new Date()
+    // Remove loading message
+    messages.value = messages.value.filter((m) => m.id !== loadingMsg.id)
+
+    if (res.success && res.data) {
+      const assistantMsg: ChatMessage = {
+        id: res.data.message?.id || `msg-${Date.now() + 2}`,
+        role: 'assistant',
+        content: res.data.message?.content || 'Processing your request...',
+        createdAt: new Date().toISOString(),
+        metadata: {
+          intent: res.data.intent,
+          tasks: res.data.tasks as any,
+        },
+      }
+      messages.value.push(assistantMsg)
+
+      // If tasks were created, start polling progress
+      if (res.data.tasks?.length) {
+        agentStatus.value = 'running'
+        pollProgress(sessionId.value)
+      }
+    } else {
+      messages.value.push({
+        id: `msg-${Date.now() + 2}`,
+        role: 'assistant',
+        content: 'Sorry, something went wrong. Please try again.',
+        createdAt: new Date().toISOString(),
+      })
     }
-    messages.value.push(aiMsg)
-    
-    // Deduct credits
-    credits.value = Math.max(0, credits.value - 1)
-    
-    nextTick(() => scrollToBottom())
-  } catch (error) {
-    messages.value = messages.value.filter(m => m.id !== loadingMsg.id)
-    ElMessage.error('Failed to get response')
+  } catch (error: any) {
+    messages.value = messages.value.filter((m) => m.id !== loadingMsg.id)
+    messages.value.push({
+      id: `msg-${Date.now() + 2}`,
+      role: 'assistant',
+      content: `Error: ${error.message || 'Failed to get response'}`,
+      createdAt: new Date().toISOString(),
+    })
   } finally {
     isLoading.value = false
+    nextTick(() => scrollToBottom())
   }
 }
+
+let pollInterval: ReturnType<typeof setInterval> | null = null
+
+const pollProgress = (sid: string) => {
+  if (pollInterval) clearInterval(pollInterval)
+  pollInterval = setInterval(async () => {
+    try {
+      const res = await chatApi.getProgress(sid)
+      if (res.success && res.data) {
+        agentStatus.value = res.data.status
+        if (res.data.logs?.length) {
+          agentLogs.value = res.data.logs.slice(-50)
+        }
+        if (res.data.status === 'completed' || res.data.status === 'failed') {
+          if (pollInterval) clearInterval(pollInterval)
+        }
+      }
+    } catch {
+      // ignore polling errors
+    }
+  }, 3000)
+}
+
+const clearChat = () => {
+  messages.value = []
+  agentLogs.value = []
+  agentStatus.value = 'idle'
+  sessionId.value = null
+  if (socket) {
+    socket.disconnect()
+    socket = null
+  }
+  if (pollInterval) clearInterval(pollInterval)
+  ElMessage.success('Chat cleared')
+}
+
+onMounted(() => {
+  if (messagesContainer.value) {
+    messagesContainer.value.addEventListener('scroll', checkScroll)
+  }
+})
+
+onUnmounted(() => {
+  if (socket) socket.disconnect()
+  if (pollInterval) clearInterval(pollInterval)
+  if (messagesContainer.value) {
+    messagesContainer.value.removeEventListener('scroll', checkScroll)
+  }
+})
 </script>
 
 <style scoped>
@@ -487,9 +516,16 @@ const sendMessage = async () => {
   right: 0;
   width: 10px;
   height: 10px;
-  background: #22c55e;
   border-radius: 50%;
   border: 2px solid #ffffff;
+}
+
+.status-dot.online {
+  background: #22c55e;
+}
+
+.status-dot.offline {
+  background: #9ca3af;
 }
 
 .agent-details {
@@ -554,24 +590,11 @@ const sendMessage = async () => {
   gap: 16px;
 }
 
-.empty-avatar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
 .empty-avatar img {
   width: 56px;
   height: 56px;
   border-radius: 50%;
   border: 3px solid #e5e7eb;
-}
-
-.empty-welcome {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
 .empty-title {
@@ -599,23 +622,6 @@ const sendMessage = async () => {
   flex-direction: column;
 }
 
-/* Date Divider */
-.date-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 16px 0 12px;
-}
-
-.date-divider span {
-  font-size: 11px;
-  color: #9ca3af;
-  background: #f9fafb;
-  padding: 2px 10px;
-  border-radius: 10px;
-}
-
-/* Message */
 .message {
   display: flex;
   gap: 10px;
@@ -677,41 +683,89 @@ const sendMessage = async () => {
   border-bottom-left-radius: 4px;
 }
 
-/* Markdown Styles */
-:deep(.message-body strong) {
-  font-weight: 600;
-  color: inherit;
-}
-
-:deep(.message-body em) {
-  font-style: italic;
-}
-
-:deep(.message-body code.inline-code) {
-  background: rgba(0, 0, 0, 0.05);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'Fira Code', monospace;
+.message-bubble.system {
+  background: #fef3c7;
+  color: #92400e;
+  border-bottom-left-radius: 4px;
   font-size: 12px;
 }
 
-:deep(.message-bubble.user code.inline-code) {
-  background: rgba(255, 255, 255, 0.2);
+/* Task Cards */
+.task-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
 }
 
-:deep(.message-body pre.code-block) {
-  background: #1e1e1e;
-  padding: 12px;
+.task-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
   border-radius: 8px;
-  overflow-x: auto;
-  margin: 8px 0;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  font-size: 12px;
+  color: #374151;
 }
 
-:deep(.message-body pre.code-block code) {
-  color: #d4d4d4;
-  font-family: 'Fira Code', monospace;
-  font-size: 12px;
+.task-card.running {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.task-card.completed {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.task-card.failed {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+/* Progress Panel */
+.progress-panel {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.progress-logs {
+  max-height: 160px;
+  overflow-y: auto;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 11px;
   line-height: 1.5;
+}
+
+.log-line {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+}
+
+.log-time {
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.log-text {
+  color: #4b5563;
+  word-break: break-word;
 }
 
 /* Typing Indicator */
@@ -747,68 +801,6 @@ const sendMessage = async () => {
     transform: scale(1);
     opacity: 1;
   }
-}
-
-/* Message Actions */
-.message-actions {
-  display: flex;
-  gap: 2px;
-  margin-top: 6px;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.message:hover .message-actions {
-  opacity: 1;
-}
-
-.action-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: #9ca3af;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-
-.action-btn:hover {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
-.action-btn.active {
-  color: #4f46e5;
-  background: #eef2ff;
-}
-
-/* Regenerate Button */
-.regenerate-wrapper {
-  margin-top: 8px;
-}
-
-.regenerate-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #6b7280;
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.regenerate-btn:hover {
-  background: #f9fafb;
-  border-color: #d1d5db;
-  color: #374151;
 }
 
 /* Scroll Button */
@@ -887,25 +879,6 @@ const sendMessage = async () => {
   gap: 6px;
 }
 
-.attach-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: #9ca3af;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-
-.attach-btn:hover {
-  background: #f3f4f6;
-  color: #6b7280;
-}
-
 .send-btn {
   width: 28px;
   height: 28px;
@@ -941,47 +914,6 @@ const sendMessage = async () => {
   margin: 8px 0 0;
 }
 
-/* Credits Bar */
-.credits-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  background: #f9fafb;
-  border-top: 1px solid #f3f4f6;
-}
-
-.credits-left {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.credits-text {
-  font-weight: 500;
-}
-
-.upgrade-btn {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 12px;
-  background: #4f46e5;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.upgrade-btn:hover {
-  background: #4338ca;
-}
-
 /* Collapsed View */
 .collapsed-view {
   display: flex;
@@ -1000,127 +932,61 @@ const sendMessage = async () => {
   background: #f3f4f6;
   cursor: pointer;
   padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-}
-
-.collapsed-btn:hover {
-  background: #e5e7eb;
 }
 
 .collapsed-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   object-fit: cover;
 }
 
 .collapsed-badge {
   position: absolute;
-  bottom: -2px;
-  right: -2px;
+  top: -4px;
+  right: -4px;
+  background: #4f46e5;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
   padding: 2px 6px;
-  background: #4f46e5;
-  color: white;
-  font-size: 9px;
-  font-weight: 600;
   border-radius: 10px;
-  border: 2px solid #ffffff;
 }
 
-/* Upgrade Dialog */
-:deep(.upgrade-dialog) {
-  border-radius: 16px;
-}
-
-:deep(.upgrade-dialog .el-dialog__header) {
-  padding: 20px 20px 0;
-  border: none;
-}
-
-:deep(.upgrade-dialog .el-dialog__title) {
-  font-size: 18px;
+/* Markdown Styles */
+:deep(.message-body strong) {
   font-weight: 600;
-  color: #111827;
+  color: inherit;
 }
 
-:deep(.upgrade-dialog .el-dialog__body) {
-  padding: 20px;
+:deep(.message-body em) {
+  font-style: italic;
 }
 
-.upgrade-content {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+:deep(.message-body code.inline-code) {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
 }
 
-.plan-card {
-  background: #f9fafb;
-  border-radius: 12px;
-  padding: 20px;
-  border: 2px solid #4f46e5;
+:deep(.message-bubble.user code.inline-code) {
+  background: rgba(255, 255, 255, 0.2);
 }
 
-.plan-card h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-  margin: 0 0 8px;
-}
-
-.plan-price {
-  font-size: 28px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 16px;
-}
-
-.plan-price span {
-  font-size: 14px;
-  font-weight: 400;
-  color: #6b7280;
-}
-
-.plan-features {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.plan-features li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #374151;
-}
-
-.plan-features li .el-icon {
-  color: #22c55e;
-}
-
-.plan-btn {
-  width: 100%;
-  padding: 10px;
+:deep(.message-body pre.code-block) {
+  background: #1e1e1e;
+  padding: 12px;
   border-radius: 8px;
-  border: none;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  overflow-x: auto;
+  margin: 8px 0;
 }
 
-.plan-btn.primary {
-  background: #4f46e5;
-  color: white;
-}
-
-.plan-btn.primary:hover {
-  background: #4338ca;
+:deep(.message-body pre.code-block code) {
+  color: #d4d4d4;
+  font-family: 'Fira Code', monospace;
+  font-size: 12px;
+  line-height: 1.5;
 }
 </style>
