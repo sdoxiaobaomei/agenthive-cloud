@@ -23,24 +23,23 @@
 #   - 在阿里云控制台搜索集群
 #   - 其他 Terraform 模块引用此集群
 #   - 脚本中执行 kubectl config use-context 等操作
-# [TEST-OIDC] 以下资源已注释，对应 output 暂时注释
-# output "cluster_id" {
-#   description = "ACK 集群的唯一 ID（如 c123456789abcdef0）"
-#   value       = alicloud_cs_managed_kubernetes.demo.id
-# }
-# output "cluster_name" {
-#   description = "ACK 集群的显示名称"
-#   value       = alicloud_cs_managed_kubernetes.demo.name
-# }
-# output "vswitch_id" {
-#   description = "VSwitch 的唯一 ID"
-#   value       = alicloud_vswitch.demo.id
-# }
-# output "kubeconfig_raw" {
-#   description = "kubeconfig 完整内容（供 kubectl 使用）"
-#   value       = data.alicloud_cs_cluster_credential.demo.kube_config
-#   sensitive   = true
-# }
+output "cluster_id" {
+  description = "ACK 集群的唯一 ID（如 c123456789abcdef0）"
+  value       = alicloud_cs_managed_kubernetes.demo.id
+}
+output "cluster_name" {
+  description = "ACK 集群的显示名称"
+  value       = alicloud_cs_managed_kubernetes.demo.name
+}
+output "vswitch_id" {
+  description = "VSwitch 的唯一 ID"
+  value       = alicloud_vswitch.demo.id
+}
+output "kubeconfig_raw" {
+  description = "kubeconfig 完整内容（供 kubectl 使用）"
+  value       = data.alicloud_cs_cluster_credential.demo.kube_config
+  sensitive   = true
+}
 
 # ----------------------------------------------------------------------------
 # output "vpc_id": VPC 网络 ID
