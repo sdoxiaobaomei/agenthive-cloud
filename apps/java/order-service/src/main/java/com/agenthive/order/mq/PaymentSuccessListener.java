@@ -2,7 +2,6 @@ package com.agenthive.order.mq;
 
 import com.agenthive.order.domain.entity.Order;
 import com.agenthive.order.domain.enums.OrderStatus;
-import com.agenthive.order.internal.common.BusinessException;
 import com.agenthive.order.mapper.OrderMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

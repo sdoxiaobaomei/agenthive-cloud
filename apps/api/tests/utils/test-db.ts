@@ -1,4 +1,5 @@
 // 测试数据库工具
+import bcrypt from 'bcrypt'
 import { agentDb, taskDb, userDb, codeDb, smsDb } from '../../src/utils/database.js'
 
 // 清理所有数据
@@ -34,12 +35,14 @@ export async function initTestData() {
     description: 'A test agent'
   })
   
-  // 创建默认测试用户
+  // 创建默认测试用户（带 bcrypt 密码哈希）
+  const passwordHash = await bcrypt.hash('password', 10)
   await userDb.create({
     id: 'user-001',
     username: 'admin',
     phone: '13800138000',
-    role: 'admin'
+    role: 'admin',
+    password_hash: passwordHash,
   })
   
   // 创建默认测试任务

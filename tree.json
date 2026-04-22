@@ -1,0 +1,77 @@
+{
+    "base_tree":  "0dad2ab0ddaa1ca0f19e650fed2a981c1ebf7d45",
+    "tree":  [
+                 {
+                     "path":  ".github/workflows/ci-cd.yml",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  "adb684f91c84d1dc9aed387c079c3c612088c29e"
+                 },
+                 {
+                     "path":  ".github/workflows/deploy-alicloud.yml",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  "8c7b785f3957b8508dc85f59c6b52c3cb1886e74"
+                 },
+                 {
+                     "path":  ".github/workflows/security-scan.yml",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  "7f7e7ba16d9402d727401aee0d21c4f862694a81"
+                 },
+                 {
+                     "path":  "apps/api/package.json",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  "4c5140a5975798ee5ee356595e93c6315209bc47"
+                 },
+                 {
+                     "path":  "apps/landing/package.json",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  "21ba644d5854a6493b78e0336554651808a85216"
+                 },
+                 {
+                     "path":  "apps/agent-runtime/package.json",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  "46e0e410dcdf6d234a207baa42082a76e101ec64"
+                 },
+                 {
+                     "path":  "apps/landing/nuxt.config.ts",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  "4121f902f74b29c00ab5f4c03f5be7b532c87e5c"
+                 },
+                 {
+                     "path":  "package.json",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  "1382413724416d4f3404e8433a557ac426f917ab"
+                 },
+                 {
+                     "path":  "pnpm-workspace.yaml",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  "31c7cf45ac4080d2162dd408567d429443e2aa84"
+                 },
+                 {
+                     "path":  "apps/package.json",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  "a68ab3a26a85e4805dc21d0adba445ac52ad18fa"
+                 },
+                 {
+                     "path":  "apps/pnpm-workspace.yaml",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  null
+                 },
+                 {
+                     "path":  "apps/pnpm-lock.yaml",
+                     "type":  "blob",
+                     "mode":  "100644",
+                     "sha":  null
+                 }
+             ]
+}

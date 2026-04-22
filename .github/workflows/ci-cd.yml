@@ -47,7 +47,7 @@ jobs:
       - name: 📦 Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 9
+          version: 10
           run_install: false
 
       - name: 📂 Get pnpm store directory
@@ -71,10 +71,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: 🔍 Type Check
-        run: pnpm run typecheck || echo "Type check failed but continuing..."
+        run: pnpm run typecheck
 
       - name: 🎨 Lint Check
-        run: pnpm run lint || echo "Lint failed but continuing..."
+        run: pnpm run lint
 
       - name: 📝 Commitlint (PR only)
         if: github.event_name == 'pull_request'
@@ -110,6 +110,9 @@ jobs:
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: 🔨 Build workspace packages
+        run: pnpm --filter './packages/*' run build
 
       - name: 🔨 Build API
         run: |

@@ -33,8 +33,8 @@ export const userDb = {
 
   create: async (data: Partial<User>): Promise<User> => {
     const result = await pool.query(
-      `INSERT INTO users (username, phone, email, role, avatar) 
-       VALUES ($1, $2, $3, $4, $5) 
+      `INSERT INTO users (username, phone, email, role, avatar, password_hash) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
       [
         data.username || `user_${Math.random().toString(36).substring(2, 8)}`,
@@ -42,6 +42,7 @@ export const userDb = {
         data.email,
         data.role || 'user',
         data.avatar,
+        data.password_hash,
       ]
     )
     return result.rows[0]
@@ -262,6 +263,13 @@ export const taskDb = {
   },
 }
 
+function escapeLikePattern(query: string): string {
+  return query
+    .replace(/\\/g, '\\\\')
+    .replace(/%/g, '\\%')
+    .replace(/_/g, '\\_')
+}
+
 // ============ Code Files ============
 export const codeDb = {
   findByPath: async (path: string): Promise<CodeFile | undefined> => {
@@ -307,11 +315,12 @@ export const codeDb = {
   },
 
   search: async (query: string): Promise<CodeFile[]> => {
+    const escapedQuery = escapeLikePattern(query)
     const result = await pool.query(
       `SELECT * FROM code_files 
-       WHERE name ILIKE $1 OR content ILIKE $1 
+       WHERE name ILIKE $1 ESCAPE '\\' OR content ILIKE $1 ESCAPE '\\' 
        ORDER BY path`,
-      [`%${query}%`]
+      [`%${escapedQuery}%`]
     )
     return result.rows
   },

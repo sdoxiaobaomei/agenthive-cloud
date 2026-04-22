@@ -15,6 +15,7 @@ import type { LLMService } from '../services/llm/LLMService.js'
 import type { LLMMessage, LLMToolDefinition, LLMCompletionResult } from '../services/llm/types.js'
 import { ConversationContextV2 } from '../context/ConversationContextV2.js'
 import type { ToolV2, ToolUseContext, ToolResult, CanUseToolFn } from '../tools/ToolV2.js'
+import type { PermissionManager } from '../permissions/PermissionManager.js'
 import type { ToolRegistryV2 } from '../tools/registry/ToolRegistryV2.js'
 import { Logger } from '../utils/loggerEnhanced.js'
 import type { CompactionEngine, CompactionResult } from '../context/compact/CompactionEngine.js'
@@ -26,6 +27,7 @@ import type { CompactionEngine, CompactionResult } from '../context/compact/Comp
 export interface QueryLoopV2Config {
   llmService: LLMService
   toolRegistry: ToolRegistryV2
+  permissionManager?: PermissionManager
   compactionEngine?: CompactionEngine
   maxIterations?: number
   maxTokens?: number
@@ -99,6 +101,7 @@ export class QueryLoopV2 extends EventEmitter {
       enableCompaction: true,
       onProgress: () => {},
       compactionEngine: undefined as any,
+      permissionManager: undefined as any,
       ...config
     }
 
@@ -335,13 +338,12 @@ export class QueryLoopV2 extends EventEmitter {
   }
 
   private applyCompactionResult(context: ConversationContextV2, result: CompactionResult): void {
-    // 注意：这里简化处理，实际应该重建上下文
-    // 目前 ConversationContextV2 没有提供直接替换消息的方法
-    // 实际实现可能需要添加一个 replaceMessages 方法
-    this.logger.debug('Applying compaction result', {
+    context.replaceMessages(result.messages)
+    this.logger.info('Compaction result applied', {
       originalCount: result.originalMessages,
       compressedCount: result.messages.length,
-      strategy: result.strategy
+      strategy: result.strategy,
+      tokensSaved: result.tokensSaved
     })
   }
 
@@ -442,7 +444,16 @@ export class QueryLoopV2 extends EventEmitter {
 
     // 创建权限检查函数
     const canUseTool: CanUseToolFn = async (name, toolInput) => {
-      // 这里可以集成 PermissionManager
+      if (this.config.permissionManager) {
+        const isDestructive = tool.isDestructive?.(toolInput) ?? false
+        const isReadOnly = tool.isReadOnly(toolInput)
+        return this.config.permissionManager.checkPermission(name, toolInput, {
+          agentId: `query-loop-${iteration}`,
+          workspacePath: process.cwd(),
+          isDestructive,
+          isReadOnly
+        })
+      }
       return { behavior: 'allow' }
     }
 

@@ -6,6 +6,11 @@ spring:
     name: auth-service
   profiles:
     active: dev
+  cloud:
+    nacos:
+      config:
+        import-check:
+          enabled: false
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:auth_db}
     username: ${DB_USER:agenthive}
@@ -48,6 +53,16 @@ spring:
   config:
     activate:
       on-profile: dev
+
+aliyun:
+  sms:
+    access-key-id: ${ALIYUN_SMS_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIYUN_SMS_ACCESS_KEY_SECRET:}
+    region-id: ${ALIYUN_SMS_REGION_ID:cn-hangzhou}
+    default-sign-name: ${ALIYUN_SMS_DEFAULT_SIGN_NAME:云渚科技验证平台}
+    code-expire-minutes: ${ALIYUN_SMS_CODE_EXPIRE_MINUTES:5}
+    daily-limit: ${ALIYUN_SMS_DAILY_LIMIT:10}
+    interval-seconds: ${ALIYUN_SMS_INTERVAL_SECONDS:60}
 
 jwt:
   secret: ${JWT_SECRET:agenthive-default-secret-key-2024-change-in-production}

@@ -45,7 +45,7 @@ export function initWebSocket(server: HttpServer): SocketIOServer {
       }
       
       // 验证 Token
-      const payload = jwt.verify(token)
+      const payload = await jwt.verify(token)
       if (!payload) {
         return next(new Error('Invalid token'))
       }

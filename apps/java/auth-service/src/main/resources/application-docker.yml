@@ -1,0 +1,30 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+  data:
+    redis:
+      host: agenthive-redis
+      port: 6379
+  cloud:
+    nacos:
+      config:
+        import-check:
+          enabled: false
+
+aliyun:
+  sms:
+    access-key-id: ${ALIYUN_SMS_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIYUN_SMS_ACCESS_KEY_SECRET:}
+    region-id: ${ALIYUN_SMS_REGION_ID:cn-hangzhou}
+    default-sign-name: ${ALIYUN_SMS_DEFAULT_SIGN_NAME:云渚科技验证平台}
+    code-expire-minutes: ${ALIYUN_SMS_CODE_EXPIRE_MINUTES:5}
+    daily-limit: ${ALIYUN_SMS_DAILY_LIMIT:10}
+    interval-seconds: ${ALIYUN_SMS_INTERVAL_SECONDS:60}
+
+jwt:
+  secret: ${JWT_SECRET:agenthive-default-secret-key-2024-change-in-production}
+  access-token-expiration: 86400000
+  refresh-token-expiration: 604800000

@@ -8,7 +8,7 @@ import { ToolExecutor, ToolRegistry, ToolContext } from '../tools/Tool.js'
 import { globalToolRegistry } from '../tools/index.js'
 import { PermissionManager } from '../permissions/PermissionManager.js'
 import { ConversationContextV2 } from '../context/ConversationContextV2.js'
-import { QueryLoop } from '../agent/QueryLoop.js'
+import { createQueryLoop, type IQueryLoop } from '../agent/QueryLoopFactory.js'
 import { LLMService, initializeLLMService } from './llm/LLMService.js'
 import { SubAgentManager, registerBuiltInAgents } from '../agent/SubAgent.js'
 import { initializeSkillSystem } from '../skills/SkillSystem.js'
@@ -32,7 +32,7 @@ export class TaskExecutorManagerV3 extends EventEmitter {
   private toolExecutor: ToolExecutor
   private permissionManager: PermissionManager
   private llmService: LLMService
-  private queryLoop: QueryLoop
+  private queryLoop: IQueryLoop
   private subAgentManager: SubAgentManager
   private skillSystem: ReturnType<typeof initializeSkillSystem>
   private config: TaskExecutorV3Config
@@ -62,12 +62,13 @@ export class TaskExecutorManagerV3 extends EventEmitter {
     }
 
     // 初始化 QueryLoop
-    this.queryLoop = new QueryLoop({
+    this.queryLoop = createQueryLoop({
       llmService: this.llmService,
       toolRegistry: this.toolRegistry,
       toolExecutor: this.toolExecutor,
       maxIterations: 20,
       enableStreaming: config.enableStreaming ?? true,
+      permissionManager: this.permissionManager,
       onProgress: (data) => {
         this.emit('query_progress', data)
       }

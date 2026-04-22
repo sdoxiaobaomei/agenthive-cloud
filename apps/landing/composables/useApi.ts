@@ -256,9 +256,11 @@ export function useApi() {
   const { token } = useAuth()
   const { startLoading, stopLoading } = useLoading()
   // 配置 API Base URL
-  // - 开发环境: 使用相对路径，通过 nitro.devProxy 代理到后端 (3001)
-  // - 生产环境: 使用环境变量配置
-  const baseUrl = config.public.apiBase || 'http://localhost:3001'
+  // - 客户端: 直接访问本地 API 端口
+  // - SSR 服务端: 访问容器内 API 服务
+  const baseUrl = import.meta.client
+    ? 'http://localhost:3001'
+    : 'http://api:3001'
 
   // 默认超时时间（毫秒）
   const DEFAULT_TIMEOUT = 30000
@@ -275,7 +277,23 @@ export function useApi() {
 
     // 自动注入 JWT Token（除非 skipAuth 为 true）
     if (!options?.skipAuth) {
-      const currentToken = token?.value || (typeof window !== 'undefined' ? localStorage.getItem('agenthive:auth-token') : null)
+      // 优先从 useAuth composable 读取，其次从 Pinia store 读取（与登录逻辑保持一致）
+      let currentToken: string | null = token?.value || null
+      
+      if (!currentToken) {
+        try {
+          const authStore = useAuthStore()
+          currentToken = authStore.token || null
+        } catch {
+          currentToken = null
+        }
+      }
+      
+      // fallback：从 localStorage 读取（页面刷新后 Pinia 尚未恢复时）
+      if (!currentToken && typeof window !== 'undefined') {
+        currentToken = localStorage.getItem('agenthive:auth-token')
+      }
+      
       if (currentToken) {
         headers['Authorization'] = `Bearer ${currentToken}`
       }
@@ -334,6 +352,7 @@ export function useApi() {
     const fetchOptions: RequestInit = {
       method: method.toUpperCase(),
       headers,
+      credentials: 'include',
     }
 
     // 添加请求体（非 GET 请求）

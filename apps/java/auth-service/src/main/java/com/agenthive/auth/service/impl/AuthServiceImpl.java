@@ -136,6 +136,12 @@ public class AuthServiceImpl implements AuthService {
         return toUserVO(user);
     }
 
+    @Override
+    public List<String> getUserRoles(Long userId) {
+        List<SysRole> roles = roleMapper.selectRolesByUserId(userId);
+        return roles.stream().map(SysRole::getRoleCode).toList();
+    }
+
     private TokenResponse generateTokens(SysUser user) {
         TokenResponse response = new TokenResponse();
         String accessToken = jwtUtils.generateAccessToken(String.valueOf(user.getId()),

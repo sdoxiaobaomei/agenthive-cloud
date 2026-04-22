@@ -84,15 +84,45 @@ describe('Auth Controller', () => {
   })
 
   describe('POST /api/auth/login', () => {
-    it('应该使用用户名密码登录', async () => {
+    it('正确密码应该能登录', async () => {
+      // 先注册
+      await request(app)
+        .post('/api/auth/register')
+        .send({ username: 'logintest', password: 'correctpass' })
+
+      // 再登录
       const response = await request(app)
         .post('/api/auth/login')
-        .send({ username: 'admin', password: 'password' })
+        .send({ username: 'logintest', password: 'correctpass' })
 
       expect(response.status).toBe(200)
       expect(response.body.success).toBe(true)
       expect(response.body.data.token).toBeDefined()
-      expect(response.body.data.user.username).toBe('admin')
+      expect(response.body.data.user.username).toBe('logintest')
+    })
+
+    it('错误密码应该返回 401', async () => {
+      // 先注册
+      await request(app)
+        .post('/api/auth/register')
+        .send({ username: 'wrongpass', password: 'realpass' })
+
+      // 错误密码登录
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'wrongpass', password: 'badpass' })
+
+      expect(response.status).toBe(401)
+      expect(response.body.success).toBe(false)
+    })
+
+    it('不存在的用户应该返回 401', async () => {
+      const response = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'notexist', password: 'anypass' })
+
+      expect(response.status).toBe(401)
+      expect(response.body.success).toBe(false)
     })
 
     it('应该验证必填字段', async () => {
@@ -119,6 +149,37 @@ describe('Auth Controller', () => {
       expect(response.body.success).toBe(true)
       expect(response.body.data.token).toBeDefined()
       expect(response.body.data.user.username).toBe('newuser')
+    })
+
+    it('注册后相同用户名+密码登录能成功（验证 bcrypt 工作正常）', async () => {
+      const registerRes = await request(app)
+        .post('/api/auth/register')
+        .send({ username: 'bcryptuser', password: 'mypassword' })
+
+      expect(registerRes.status).toBe(200)
+      expect(registerRes.body.success).toBe(true)
+
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'bcryptuser', password: 'mypassword' })
+
+      expect(loginRes.status).toBe(200)
+      expect(loginRes.body.success).toBe(true)
+      expect(loginRes.body.data.token).toBeDefined()
+      expect(loginRes.body.data.user.username).toBe('bcryptuser')
+    })
+
+    it('注册后错误密码登录失败', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({ username: 'bcryptuser2', password: 'mypassword' })
+
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ username: 'bcryptuser2', password: 'wrongpassword' })
+
+      expect(loginRes.status).toBe(401)
+      expect(loginRes.body.success).toBe(false)
     })
 
     it('应该验证用户名必填', async () => {
@@ -176,10 +237,14 @@ describe('Auth Controller', () => {
 
   describe('POST /api/auth/refresh', () => {
     it('应该刷新 token', async () => {
-      // 先登录获取 token
+      // 先注册并登录获取 token
+      await request(app)
+        .post('/api/auth/register')
+        .send({ username: 'refreshtest', password: 'pass123' })
+
       const loginRes = await request(app)
         .post('/api/auth/login')
-        .send({ username: 'admin', password: 'password' })
+        .send({ username: 'refreshtest', password: 'pass123' })
 
       const token = loginRes.body.data.token
 
@@ -214,10 +279,14 @@ describe('Auth Controller', () => {
 
   describe('GET /api/auth/me', () => {
     it('应该获取当前用户信息', async () => {
-      // 先登录
+      // 先注册并登录
+      await request(app)
+        .post('/api/auth/register')
+        .send({ username: 'metest', password: 'pass123' })
+
       const loginRes = await request(app)
         .post('/api/auth/login')
-        .send({ username: 'admin', password: 'password' })
+        .send({ username: 'metest', password: 'pass123' })
 
       const token = loginRes.body.data.token
 
@@ -227,7 +296,7 @@ describe('Auth Controller', () => {
 
       expect(response.status).toBe(200)
       expect(response.body.success).toBe(true)
-      expect(response.body.data.username).toBe('admin')
+      expect(response.body.data.username).toBe('metest')
     })
 
     it('应该拒绝无效的 token', async () => {

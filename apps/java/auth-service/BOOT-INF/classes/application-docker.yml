@@ -1,0 +1,19 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service
+  redis:
+    host: agenthive-redis
+    port: 6379
+  cloud:
+    nacos:
+      config:
+        import-check:
+          enabled: false
+
+jwt:
+  secret: ${JWT_SECRET:agenthive-default-secret-key-2024-change-in-production}
+  access-token-expiration: 86400000
+  refresh-token-expiration: 604800000

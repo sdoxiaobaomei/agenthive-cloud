@@ -15,10 +15,11 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy pre-built Nuxt output (.output-new contains client + server)
 COPY --chown=appuser:nodejs apps/landing/.output-new /app/.output
 
-# Fix symlinks: reinstall dependencies in container (optimized for CI)
+# Reinstall dependencies in container (avoids Windows junction/symlink issues)
+# The node_modules from Windows host contain reparse points that break in Linux.
 RUN cd /app/.output/server && \
     rm -rf node_modules && \
-    npm install --omit=dev --prefer-offline --no-audit --no-fund --progress=false
+    npm install --omit=dev --no-audit --no-fund --progress=false
 
 # Labels for traceability
 ARG VERSION=unknown

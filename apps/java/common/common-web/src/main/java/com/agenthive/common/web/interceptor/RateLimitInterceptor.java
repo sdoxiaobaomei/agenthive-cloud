@@ -21,20 +21,20 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private final StringRedisTemplate stringRedisTemplate;
 
     private static final String LUA_SCRIPT =
-            "local key = KEYS[1];" +
-            "local limit = tonumber(ARGV[1]);" +
-            "local window = tonumber(ARGV[2]);" +
-            "local current = redis.call('GET', key);" +
-            "if current == false then" +
-            "  redis.call('SET', key, 1, 'EX', window);" +
-            "  return 1;" +
-            "end" +
-            "local count = tonumber(current);" +
-            "if count >= limit then" +
-            "  return 0;" +
-            "else" +
-            "  redis.call('INCR', key);" +
-            "  return 1;" +
+            "local key = KEYS[1]; " +
+            "local limit = tonumber(ARGV[1]); " +
+            "local window = tonumber(ARGV[2]); " +
+            "local current = redis.call('GET', key); " +
+            "if current == false then " +
+            "  redis.call('SET', key, 1, 'EX', window); " +
+            "  return 1; " +
+            "end " +
+            "local count = tonumber(current); " +
+            "if count >= limit then " +
+            "  return 0; " +
+            "else " +
+            "  redis.call('INCR', key); " +
+            "  return 1; " +
             "end";
 
     private static final DefaultRedisScript<Long> RATE_LIMIT_SCRIPT = new DefaultRedisScript<>();
