@@ -1,8 +1,10 @@
 // Code 控制器
 import type { Request, Response } from 'express'
+import { z } from 'zod'
 import { codeDb, delay } from '../utils/database.js'
 import { readFile, writeFile, readdir, stat, mkdir, rm } from 'fs/promises'
 import { join, dirname, relative, resolve } from 'path'
+import logger from '../utils/logger.js'
 
 // 工作区基础路径
 const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/data/workspaces'
@@ -28,25 +30,14 @@ function isPathSafe(workspacePath: string, targetPath: string): boolean {
 export const getFileList = async (req: Request, res: Response) => {
   try {
     await delay(300)
-    
-    const { path = '/' } = req.query
-    
     const files = await codeDb.findAll()
-    
     res.json({
       success: true,
-      data: {
-        files,
-        total: files.length,
-        path: path as string,
-      },
+      data: { files, total: files.length, path: (req.query.path as string) || '/' },
     })
   } catch (error) {
-    console.error('Get file list error:', error)
-    res.status(500).json({
-      success: false,
-      error: '获取文件列表失败',
-    })
+    logger.error('Get file list error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '获取文件列表失败' })
   }
 }
 
@@ -57,18 +48,11 @@ export const getFileList = async (req: Request, res: Response) => {
 export const getFileContent = async (req: Request, res: Response) => {
   try {
     await delay(300)
-    
     const filePath = '/' + req.params[0]
-    
     const file = await codeDb.findByPath(filePath)
-    
     if (!file) {
-      return res.status(404).json({
-        success: false,
-        error: '文件不存在',
-      })
+      return res.status(404).json({ success: false, error: '文件不存在' })
     }
-    
     res.json({
       success: true,
       data: {
@@ -79,13 +63,14 @@ export const getFileContent = async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Get file content error:', error)
-    res.status(500).json({
-      success: false,
-      error: '获取文件内容失败',
-    })
+    logger.error('Get file content error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '获取文件内容失败' })
   }
 }
+
+const updateFileSchema = z.object({
+  content: z.string(),
+})
 
 /**
  * 更新文件
@@ -94,35 +79,29 @@ export const getFileContent = async (req: Request, res: Response) => {
 export const updateFile = async (req: Request, res: Response) => {
   try {
     await delay(300)
-    
     const filePath = '/' + req.params[0]
-    const { content } = req.body
-    
-    if (content === undefined) {
+    const parseResult = updateFileSchema.safeParse(req.body)
+    if (!parseResult.success) {
       return res.status(400).json({
         success: false,
-        error: '文件内容不能为空',
+        error: '参数校验失败',
+        details: parseResult.error.format(),
       })
     }
-    
-    // 检查文件是否存在
     const existingFile = await codeDb.findByPath(filePath)
-    
     let file
     if (existingFile) {
-      file = await codeDb.update(filePath, content)
+      file = await codeDb.update(filePath, parseResult.data.content)
     } else {
-      // 创建新文件
       const fileName = filePath.split('/').pop() || 'untitled'
       const language = getLanguageFromFilename(fileName)
       file = await codeDb.create({
         path: filePath,
         name: fileName,
-        content,
+        content: parseResult.data.content,
         language,
       })
     }
-    
     res.json({
       success: true,
       data: {
@@ -133,11 +112,8 @@ export const updateFile = async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Update file error:', error)
-    res.status(500).json({
-      success: false,
-      error: '更新文件失败',
-    })
+    logger.error('Update file error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '更新文件失败' })
   }
 }
 
@@ -148,29 +124,16 @@ export const updateFile = async (req: Request, res: Response) => {
 export const deleteFile = async (req: Request, res: Response) => {
   try {
     await delay(300)
-    
     const filePath = '/' + req.params[0]
-    
     const file = await codeDb.findByPath(filePath)
     if (!file) {
-      return res.status(404).json({
-        success: false,
-        error: '文件不存在',
-      })
+      return res.status(404).json({ success: false, error: '文件不存在' })
     }
-    
     await codeDb.delete(filePath)
-    
-    res.json({
-      success: true,
-      message: '文件已删除',
-    })
+    res.json({ success: true, message: '文件已删除' })
   } catch (error) {
-    console.error('Delete file error:', error)
-    res.status(500).json({
-      success: false,
-      error: '删除文件失败',
-    })
+    logger.error('Delete file error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '删除文件失败' })
   }
 }
 
@@ -180,33 +143,19 @@ export const deleteFile = async (req: Request, res: Response) => {
  */
 export const searchFiles = async (req: Request, res: Response) => {
   try {
-    await delay(500) // 搜索稍微慢一点
-    
+    await delay(500)
     const { query } = req.query
-    
     if (!query) {
-      return res.status(400).json({
-        success: false,
-        error: '搜索关键词不能为空',
-      })
+      return res.status(400).json({ success: false, error: '搜索关键词不能为空' })
     }
-    
     const files = await codeDb.search(query as string)
-    
     res.json({
       success: true,
-      data: {
-        files,
-        total: files.length,
-        query: query as string,
-      },
+      data: { files, total: files.length, query: query as string },
     })
   } catch (error) {
-    console.error('Search files error:', error)
-    res.status(500).json({
-      success: false,
-      error: '搜索文件失败',
-    })
+    logger.error('Search files error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '搜索文件失败' })
   }
 }
 
@@ -217,24 +166,15 @@ export const searchFiles = async (req: Request, res: Response) => {
 export const getRecentFiles = async (req: Request, res: Response) => {
   try {
     await delay(300)
-    
     const limit = parseInt(req.query.limit as string) || 10
-    
     const files = await codeDb.getRecent(limit)
-    
     res.json({
       success: true,
-      data: {
-        files,
-        total: files.length,
-      },
+      data: { files, total: files.length },
     })
   } catch (error) {
-    console.error('Get recent files error:', error)
-    res.status(500).json({
-      success: false,
-      error: '获取最近文件失败',
-    })
+    logger.error('Get recent files error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '获取最近文件失败' })
   }
 }
 
@@ -246,27 +186,20 @@ export const getWorkspaceFiles = async (req: Request, res: Response) => {
   try {
     const { projectId, path = '' } = req.query
     const userId = (req as any).userId || 'anonymous'
-    
     const workspacePath = getUserWorkspace(userId, projectId as string)
     const targetPath = join(workspacePath, path as string)
-    
-    // 安全检查
     if (!isPathSafe(workspacePath, targetPath)) {
       return res.status(403).json({
         success: false,
         error: '访问被拒绝：路径超出工作区范围',
       })
     }
-    
-    // 读取目录
     const entries = await readdir(targetPath, { withFileTypes: true })
-    
     const files = await Promise.all(
       entries.map(async (entry) => {
         const fullPath = join(targetPath, entry.name)
         const relativePath = relative(workspacePath, fullPath)
         const stats = await stat(fullPath)
-        
         return {
           name: entry.name,
           path: relativePath,
@@ -276,21 +209,13 @@ export const getWorkspaceFiles = async (req: Request, res: Response) => {
         }
       })
     )
-    
     res.json({
       success: true,
-      data: {
-        files,
-        path: path as string,
-        workspace: workspacePath,
-      },
+      data: { files, path: path as string, workspace: workspacePath },
     })
   } catch (error) {
-    console.error('Get workspace files error:', error)
-    res.status(500).json({
-      success: false,
-      error: '获取工作区文件失败',
-    })
+    logger.error('Get workspace files error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '获取工作区文件失败' })
   }
 }
 
@@ -302,33 +227,21 @@ export const getWorkspaceFileContent = async (req: Request, res: Response) => {
   try {
     const { projectId, filePath } = req.query
     const userId = (req as any).userId || 'anonymous'
-    
     if (!filePath) {
-      return res.status(400).json({
-        success: false,
-        error: '文件路径不能为空',
-      })
+      return res.status(400).json({ success: false, error: '文件路径不能为空' })
     }
-    
     const workspacePath = getUserWorkspace(userId, projectId as string)
     const targetPath = join(workspacePath, filePath as string)
-    
-    // 安全检查
     if (!isPathSafe(workspacePath, targetPath)) {
       return res.status(403).json({
         success: false,
         error: '访问被拒绝：路径超出工作区范围',
       })
     }
-    
-    // 读取文件
     const content = await readFile(targetPath, 'utf-8')
     const stats = await stat(targetPath)
-    
-    // 获取文件语言
     const fileName = (filePath as string).split('/').pop() || ''
     const language = getLanguageFromFilename(fileName)
-    
     res.json({
       success: true,
       data: {
@@ -341,18 +254,18 @@ export const getWorkspaceFileContent = async (req: Request, res: Response) => {
     })
   } catch (error: any) {
     if (error.code === 'ENOENT') {
-      return res.status(404).json({
-        success: false,
-        error: '文件不存在',
-      })
+      return res.status(404).json({ success: false, error: '文件不存在' })
     }
-    console.error('Get workspace file content error:', error)
-    res.status(500).json({
-      success: false,
-      error: '获取文件内容失败',
-    })
+    logger.error('Get workspace file content error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '获取文件内容失败' })
   }
 }
+
+const saveWorkspaceFileSchema = z.object({
+  projectId: z.string().optional(),
+  filePath: z.string().min(1),
+  content: z.string(),
+})
 
 /**
  * 保存工作区文件
@@ -360,36 +273,28 @@ export const getWorkspaceFileContent = async (req: Request, res: Response) => {
  */
 export const saveWorkspaceFile = async (req: Request, res: Response) => {
   try {
-    const { projectId, filePath, content } = req.body
-    const userId = (req as any).userId || 'anonymous'
-    
-    if (!filePath || content === undefined) {
+    const parseResult = saveWorkspaceFileSchema.safeParse(req.body)
+    if (!parseResult.success) {
       return res.status(400).json({
         success: false,
-        error: '文件路径和内容不能为空',
+        error: '参数校验失败',
+        details: parseResult.error.format(),
       })
     }
-    
-    const workspacePath = getUserWorkspace(userId, projectId as string)
+    const { projectId, filePath, content } = parseResult.data
+    const userId = (req as any).userId || 'anonymous'
+    const workspacePath = getUserWorkspace(userId, projectId)
     const targetPath = join(workspacePath, filePath)
-    
-    // 安全检查
     if (!isPathSafe(workspacePath, targetPath)) {
       return res.status(403).json({
         success: false,
         error: '访问被拒绝：路径超出工作区范围',
       })
     }
-    
-    // 确保目录存在
     await mkdir(dirname(targetPath), { recursive: true })
-    
-    // 写入文件
     await writeFile(targetPath, content, 'utf-8')
-    
     const stats = await stat(targetPath)
     const fileName = filePath.split('/').pop() || ''
-    
     res.json({
       success: true,
       data: {
@@ -400,11 +305,8 @@ export const saveWorkspaceFile = async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Save workspace file error:', error)
-    res.status(500).json({
-      success: false,
-      error: '保存文件失败',
-    })
+    logger.error('Save workspace file error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '保存文件失败' })
   }
 }
 
@@ -416,87 +318,66 @@ export const deleteWorkspaceFile = async (req: Request, res: Response) => {
   try {
     const { projectId, filePath } = req.query
     const userId = (req as any).userId || 'anonymous'
-    
     if (!filePath) {
-      return res.status(400).json({
-        success: false,
-        error: '文件路径不能为空',
-      })
+      return res.status(400).json({ success: false, error: '文件路径不能为空' })
     }
-    
     const workspacePath = getUserWorkspace(userId, projectId as string)
     const targetPath = join(workspacePath, filePath as string)
-    
-    // 安全检查
     if (!isPathSafe(workspacePath, targetPath)) {
       return res.status(403).json({
         success: false,
         error: '访问被拒绝：路径超出工作区范围',
       })
     }
-    
-    // 删除文件或目录
     await rm(targetPath, { recursive: true, force: true })
-    
-    res.json({
-      success: true,
-      message: '文件已删除',
-    })
+    res.json({ success: true, message: '文件已删除' })
   } catch (error: any) {
     if (error.code === 'ENOENT') {
-      return res.status(404).json({
-        success: false,
-        error: '文件不存在',
-      })
+      return res.status(404).json({ success: false, error: '文件不存在' })
     }
-    console.error('Delete workspace file error:', error)
-    res.status(500).json({
-      success: false,
-      error: '删除文件失败',
-    })
+    logger.error('Delete workspace file error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '删除文件失败' })
   }
 }
 
 // 辅助函数：根据文件名获取语言
 function getLanguageFromFilename(filename: string): string {
   const ext = filename.split('.').pop()?.toLowerCase()
-  
   const languageMap: Record<string, string> = {
-    'js': 'javascript',
-    'ts': 'typescript',
-    'jsx': 'javascript',
-    'tsx': 'typescript',
-    'vue': 'vue',
-    'go': 'go',
-    'py': 'python',
-    'java': 'java',
-    'rb': 'ruby',
-    'php': 'php',
-    'rs': 'rust',
-    'cpp': 'cpp',
-    'c': 'c',
-    'h': 'c',
-    'hpp': 'cpp',
-    'cs': 'csharp',
-    'swift': 'swift',
-    'kt': 'kotlin',
-    'scala': 'scala',
-    'html': 'html',
-    'css': 'css',
-    'scss': 'scss',
-    'less': 'less',
-    'json': 'json',
-    'yaml': 'yaml',
-    'yml': 'yaml',
-    'xml': 'xml',
-    'md': 'markdown',
-    'sql': 'sql',
-    'sh': 'bash',
-    'bash': 'bash',
-    'zsh': 'bash',
-    'dockerfile': 'dockerfile',
-    'makefile': 'makefile',
+    js: 'javascript',
+    ts: 'typescript',
+    jsx: 'javascript',
+    tsx: 'typescript',
+    vue: 'vue',
+    go: 'go',
+    py: 'python',
+    java: 'java',
+    rb: 'ruby',
+    php: 'php',
+    rs: 'rust',
+    cpp: 'cpp',
+    c: 'c',
+    h: 'c',
+    hpp: 'cpp',
+    cs: 'csharp',
+    swift: 'swift',
+    kt: 'kotlin',
+    scala: 'scala',
+    html: 'html',
+    css: 'css',
+    scss: 'scss',
+    less: 'less',
+    json: 'json',
+    yaml: 'yaml',
+    yml: 'yaml',
+    xml: 'xml',
+    md: 'markdown',
+    sql: 'sql',
+    sh: 'bash',
+    bash: 'bash',
+    zsh: 'bash',
+    dockerfile: 'dockerfile',
+    makefile: 'makefile',
   }
-  
   return languageMap[ext || ''] || 'text'
 }

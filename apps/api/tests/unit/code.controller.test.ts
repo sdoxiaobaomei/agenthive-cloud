@@ -4,8 +4,8 @@ import app from '../../src/app.js'
 import { resetData } from '../utils/test-db.js'
 
 describe('Code Controller', () => {
-  beforeEach(() => {
-    resetData()
+  beforeEach(async () => {
+    await resetData()
   })
 
   describe('GET /api/code/files', () => {

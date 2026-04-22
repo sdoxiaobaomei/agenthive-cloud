@@ -1,56 +1,46 @@
-# API Dockerfile - Production Optimized
+# API Dockerfile - Production Optimized (npm workspaces)
+# Build pre-requisites:
+#   cd apps/api && npm run build
+# Build command:
+#   docker build -f apps/api/Dockerfile -t agenthive/api:<tag> .
 
-# ============================================
-# Stage 1: Dependencies
-# ============================================
-FROM node:20-alpine AS deps
-WORKDIR /app
-
-# Install pnpm
-RUN npm install -g pnpm@8
-
-# Copy only package files for better caching
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY packages/types/package.json ./packages/types/
-COPY apps/agent-runtime/package.json ./apps/agent-runtime/
-COPY apps/api/package.json ./apps/api/
-
-# Install dependencies
-RUN pnpm install
-
-# ============================================
-# Stage 2: Builder
-# ============================================
-FROM deps AS builder
-WORKDIR /app
-
-# Copy source code (包括预构建的 dist)
-COPY . .
-
-# 确保 workspace 依赖的 dist 存在
-RUN test -d apps/agent-runtime/dist || (echo "Error: agent-runtime/dist not found" && exit 1)
-
-# 使用预构建的 dist（项目有 TS 错误，避免在容器中重新编译）
-RUN cd packages/types && pnpm build
-RUN echo "Using pre-built dist from host"
-
-# ============================================
-# Stage 3: Production
-# ============================================
 FROM node:20-alpine AS production
+
 WORKDIR /app
 
-# Install dumb-init
+# Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S appuser -u 1001 -G nodejs
 
-# Copy built application
-COPY --from=builder --chown=appuser:nodejs /app/apps/api/dist ./dist
-COPY --from=builder --chown=appuser:nodejs /app/apps/api/package.json ./
-COPY --from=builder --chown=appuser:nodejs /app/node_modules ./node_modules
+# Copy workspace node_modules (includes @agenthive/* packages)
+COPY --chown=appuser:nodejs node_modules ./node_modules
+COPY --chown=appuser:nodejs package.json ./
+
+# Dereference @agenthive workspace symlinks (Windows symlinks break in Linux containers)
+RUN rm -rf ./node_modules/@agenthive/* && \
+    mkdir -p ./node_modules/@agenthive/observability ./node_modules/@agenthive/agent-runtime
+
+COPY --chown=appuser:nodejs packages/observability/package.json ./node_modules/@agenthive/observability/
+COPY --chown=appuser:nodejs packages/observability/dist ./node_modules/@agenthive/observability/dist
+
+COPY --chown=appuser:nodejs apps/agent-runtime/package.json ./node_modules/@agenthive/agent-runtime/
+COPY --chown=appuser:nodejs apps/agent-runtime/dist ./node_modules/@agenthive/agent-runtime/dist
+
+# Copy API application
+COPY --chown=appuser:nodejs apps/api/dist ./dist
+COPY --chown=appuser:nodejs apps/api/package.json ./
+
+# Labels for traceability
+ARG VERSION=unknown
+ARG GIT_COMMIT=unknown
+ARG BUILD_TIME=unknown
+LABEL org.opencontainers.image.title="AgentHive API"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.revision="${GIT_COMMIT}"
+LABEL org.opencontainers.image.created="${BUILD_TIME}"
 
 # Switch to non-root user
 USER appuser

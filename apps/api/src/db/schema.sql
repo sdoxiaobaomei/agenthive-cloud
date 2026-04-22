@@ -1,11 +1,10 @@
 -- AgentHive Cloud 数据库表结构
 
--- 启用 UUID 扩展
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- 使用 gen_random_uuid() (PostgreSQL 13+ 内置，无需扩展)
 
 -- 用户表
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE,
     phone VARCHAR(20) UNIQUE,
@@ -16,9 +15,56 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 项目表
+CREATE TABLE IF NOT EXISTS projects (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(128) NOT NULL,
+    description TEXT,
+    repo_url VARCHAR(500),
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Chat 会话表
+CREATE TABLE IF NOT EXISTS chat_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+    title VARCHAR(200),
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Chat 消息表
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL,
+    content TEXT NOT NULL,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Agent 任务表
+CREATE TABLE IF NOT EXISTS agent_tasks (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    ticket_id VARCHAR(32) NOT NULL,
+    worker_role VARCHAR(32) NOT NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    workspace_path VARCHAR(500),
+    result JSONB DEFAULT '{}',
+    started_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Agent 表
 CREATE TABLE IF NOT EXISTS agents (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     role VARCHAR(50) NOT NULL,
     status VARCHAR(20) DEFAULT 'idle',
@@ -34,7 +80,7 @@ CREATE TABLE IF NOT EXISTS agents (
 
 -- 任务表
 CREATE TABLE IF NOT EXISTS tasks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title VARCHAR(200) NOT NULL,
     description TEXT,
     type VARCHAR(50) NOT NULL,
@@ -52,7 +98,7 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 -- 代码文件表
 CREATE TABLE IF NOT EXISTS code_files (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     path VARCHAR(500) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
     content TEXT DEFAULT '',
@@ -63,7 +109,7 @@ CREATE TABLE IF NOT EXISTS code_files (
 
 -- Agent 日志表
 CREATE TABLE IF NOT EXISTS agent_logs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
     message TEXT NOT NULL,
     level VARCHAR(20) DEFAULT 'info',
@@ -72,7 +118,7 @@ CREATE TABLE IF NOT EXISTS agent_logs (
 
 -- 短信验证码表
 CREATE TABLE IF NOT EXISTS sms_codes (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     phone VARCHAR(20) NOT NULL,
     code VARCHAR(10) NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -83,6 +129,14 @@ CREATE TABLE IF NOT EXISTS sms_codes (
 -- 创建索引
 CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_projects_owner_id ON projects(owner_id);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_project_id ON chat_sessions(project_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_agent_tasks_session_id ON agent_tasks(session_id);
+CREATE INDEX IF NOT EXISTS idx_agent_tasks_status ON agent_tasks(status);
 CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
 CREATE INDEX IF NOT EXISTS idx_agents_role ON agents(role);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
@@ -112,5 +166,17 @@ CREATE TRIGGER update_users_updated_at
 DROP TRIGGER IF EXISTS update_agents_updated_at ON agents;
 CREATE TRIGGER update_agents_updated_at
     BEFORE UPDATE ON agents
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_projects_updated_at ON projects;
+CREATE TRIGGER update_projects_updated_at
+    BEFORE UPDATE ON projects
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_chat_sessions_updated_at ON chat_sessions;
+CREATE TRIGGER update_chat_sessions_updated_at
+    BEFORE UPDATE ON chat_sessions
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();

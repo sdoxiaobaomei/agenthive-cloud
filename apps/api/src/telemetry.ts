@@ -43,6 +43,7 @@ const sdk = new NodeSDK({
     // gRPC 不设置 tls 时默认为 insecure
     ...(otlpEndpoint.startsWith('https') ? {} : {}),
   }),
+  // @ts-ignore version mismatch between sdk-node and sdk-metrics
   metricReader: new PeriodicExportingMetricReader({
     exporter: new OTLPMetricExporter({
       url: otlpEndpoint,
@@ -57,7 +58,7 @@ const sdk = new NodeSDK({
       '@opentelemetry/instrumentation-socket.io': { enabled: true },
       '@opentelemetry/instrumentation-ioredis': { enabled: true },
       '@opentelemetry/instrumentation-pg': { enabled: true },
-      '@opentelemetry/instrumentation-ws': { enabled: true },
+      // '@opentelemetry/instrumentation-ws': { enabled: true }, // ws instrumentation not available in current version
       // 禁用：文件系统（噪声极大）
       '@opentelemetry/instrumentation-fs': { enabled: false },
       // 网络层由 Beyla 覆盖，减少重复

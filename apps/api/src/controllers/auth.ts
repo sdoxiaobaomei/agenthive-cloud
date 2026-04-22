@@ -1,8 +1,32 @@
 // 认证控制器
 import type { Request, Response } from 'express'
+import { z } from 'zod'
 import { userDb, delay } from '../utils/database.js'
 import { jwt } from '../utils/jwt.js'
 import { smsService } from '../services/sms.js'
+import logger from '../utils/logger.js'
+
+const sendSmsSchema = z.object({
+  phone: z.string().regex(/^1[3-9]\d{9}$/),
+})
+
+const loginBySmsSchema = z.object({
+  phone: z.string().regex(/^1[3-9]\d{9}$/),
+  code: z.string().min(4).max(8),
+})
+
+const loginSchema = z.object({
+  username: z.string().min(1),
+  password: z.string().min(1),
+})
+
+const registerSchema = z.object({
+  username: z.string().min(1).max(50),
+  email: z.string().email().optional().or(z.literal('')),
+  password: z.string().min(1),
+  phone: z.string().regex(/^1[3-9]\d{9}$/).optional().or(z.literal('')),
+  code: z.string().optional(),
+})
 
 /**
  * 发送短信验证码
@@ -10,46 +34,24 @@ import { smsService } from '../services/sms.js'
  */
 export const sendSmsCode = async (req: Request, res: Response) => {
   try {
-    const { phone } = req.body
-    
-    if (!phone) {
-      return res.status(400).json({
-        success: false,
-        error: '手机号不能为空',
-      })
+    const parseResult = sendSmsSchema.safeParse(req.body)
+    if (!parseResult.success) {
+      return res.status(400).json({ success: false, error: '手机号格式不正确' })
     }
-    
-    // 手机号格式验证
-    const phoneRegex = /^1[3-9]\d{9}$/
-    if (!phoneRegex.test(phone)) {
-      return res.status(400).json({
-        success: false,
-        error: '手机号格式不正确',
-      })
-    }
-    
+    const { phone } = parseResult.data
     const result = await smsService.sendCode(phone, 'SMS_LOGIN')
-    
     if (!result.success) {
-      return res.status(429).json({
-        success: false,
-        error: result.message,
-      })
+      return res.status(429).json({ success: false, error: result.message })
     }
-    
     res.json({
       success: true,
       message: '验证码发送成功',
       requestId: result.requestId,
-      // 开发环境返回验证码
       ...(result.devCode && { devCode: result.devCode }),
     })
   } catch (error) {
-    console.error('Send SMS error:', error)
-    res.status(500).json({
-      success: false,
-      error: '发送验证码失败',
-    })
+    logger.error('Send SMS error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '发送验证码失败' })
   }
 }
 
@@ -60,45 +62,28 @@ export const sendSmsCode = async (req: Request, res: Response) => {
 export const loginBySms = async (req: Request, res: Response) => {
   try {
     await delay(500)
-    
-    const { phone, code } = req.body
-    
-    if (!phone || !code) {
-      return res.status(400).json({
-        success: false,
-        error: '手机号和验证码不能为空',
-      })
+    const parseResult = loginBySmsSchema.safeParse(req.body)
+    if (!parseResult.success) {
+      return res.status(400).json({ success: false, error: '手机号和验证码不能为空' })
     }
-    
-    // 验证短信验证码
+    const { phone, code } = parseResult.data
     const verifyResult = await smsService.verifyCode(phone, code)
-    
     if (!verifyResult.success) {
-      return res.status(401).json({
-        success: false,
-        error: verifyResult.message,
-      })
+      return res.status(401).json({ success: false, error: verifyResult.message })
     }
-    
-    // 查找或创建用户
     let user = await userDb.findByPhone(phone)
-    
     if (!user) {
-      // 新用户注册
       user = await userDb.create({
         phone,
         username: `user_${phone.slice(-4)}`,
         role: 'user',
       })
     }
-    
-    // 生成 JWT
     const token = jwt.sign({
       userId: user.id,
       username: user.username,
       role: user.role,
     })
-    
     res.json({
       success: true,
       data: {
@@ -114,11 +99,8 @@ export const loginBySms = async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Login error:', error)
-    res.status(500).json({
-      success: false,
-      error: '登录失败',
-    })
+    logger.error('Login by SMS error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '登录失败' })
   }
 }
 
@@ -129,33 +111,21 @@ export const loginBySms = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     await delay(500)
-    
-    const { username, password } = req.body
-    
-    if (!username || !password) {
-      return res.status(400).json({
-        success: false,
-        error: '用户名和密码不能为空',
-      })
+    const parseResult = loginSchema.safeParse(req.body)
+    if (!parseResult.success) {
+      return res.status(400).json({ success: false, error: '用户名和密码不能为空' })
     }
-    
-    // Mock 验证 - 任何用户名密码都接受
+    const { username } = parseResult.data
     const allUsers = await userDb.getAll()
-    let user = allUsers.find(u => u.username === username)
-    
+    let user = allUsers.find((u: any) => u.username === username)
     if (!user) {
-      user = await userDb.create({
-        username,
-        role: 'user',
-      })
+      user = await userDb.create({ username, role: 'user' })
     }
-    
     const token = jwt.sign({
       userId: user.id,
       username: user.username,
       role: user.role,
     })
-    
     res.json({
       success: true,
       data: {
@@ -169,11 +139,8 @@ export const login = async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Login error:', error)
-    res.status(500).json({
-      success: false,
-      error: '登录失败',
-    })
+    logger.error('Login error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '登录失败' })
   }
 }
 
@@ -184,51 +151,32 @@ export const login = async (req: Request, res: Response) => {
 export const register = async (req: Request, res: Response) => {
   try {
     await delay(500)
-    
-    const { username, email, password, phone, code } = req.body
-    
-    // 如果提供了手机号和验证码，先验证
+    const parseResult = registerSchema.safeParse(req.body)
+    if (!parseResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: '参数校验失败',
+        details: parseResult.error.format(),
+      })
+    }
+    const { username, email, phone, code } = parseResult.data
     if (phone && code) {
       const verifyResult = await smsService.verifyCode(phone, code)
       if (!verifyResult.success) {
-        return res.status(401).json({
-          success: false,
-          error: verifyResult.message,
-        })
+        return res.status(401).json({ success: false, error: verifyResult.message })
       }
     }
-    
-    if (!username) {
-      return res.status(400).json({
-        success: false,
-        error: '用户名不能为空',
-      })
-    }
-    
-    // 检查用户名是否已存在
     const allUsers = await userDb.getAll()
-    const existingUser = allUsers.find(u => u.username === username)
+    const existingUser = allUsers.find((u: any) => u.username === username)
     if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        error: '用户名已存在',
-      })
+      return res.status(409).json({ success: false, error: '用户名已存在' })
     }
-    
-    // 创建新用户
-    const user = await userDb.create({
-      username,
-      email,
-      phone,
-      role: 'user',
-    })
-    
+    const user = await userDb.create({ username, email, phone, role: 'user' })
     const token = jwt.sign({
       userId: user.id,
       username: user.username,
       role: user.role,
     })
-    
     res.json({
       success: true,
       data: {
@@ -243,11 +191,8 @@ export const register = async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Register error:', error)
-    res.status(500).json({
-      success: false,
-      error: '注册失败',
-    })
+    logger.error('Register error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '注册失败' })
   }
 }
 
@@ -255,21 +200,13 @@ export const register = async (req: Request, res: Response) => {
  * 用户登出
  * POST /api/auth/logout
  */
-export const logout = async (req: Request, res: Response) => {
+export const logout = async (_req: Request, res: Response) => {
   try {
     await delay(200)
-    
-    // 客户端删除 Token 即可
-    res.json({
-      success: true,
-      message: '登出成功',
-    })
+    res.json({ success: true, message: '登出成功' })
   } catch (error) {
-    console.error('Logout error:', error)
-    res.status(500).json({
-      success: false,
-      error: '登出失败',
-    })
+    logger.error('Logout error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '登出失败' })
   }
 }
 
@@ -280,39 +217,24 @@ export const logout = async (req: Request, res: Response) => {
 export const refreshToken = async (req: Request, res: Response) => {
   try {
     await delay(200)
-    
     const authHeader = req.headers.authorization
     if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        error: '未提供 Token',
-      })
+      return res.status(401).json({ success: false, error: '未提供 Token' })
     }
-    
     const token = authHeader.slice(7)
     const payload = jwt.verify(token)
-    
     if (!payload) {
-      return res.status(401).json({
-        success: false,
-        error: 'Token 无效或已过期',
-      })
+      return res.status(401).json({ success: false, error: 'Token 无效或已过期' })
     }
-    
     const user = await userDb.findById(payload.userId)
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: '用户不存在',
-      })
+      return res.status(404).json({ success: false, error: '用户不存在' })
     }
-    
     const newToken = jwt.sign({
       userId: user.id,
       username: user.username,
       role: user.role,
     })
-    
     res.json({
       success: true,
       data: {
@@ -327,11 +249,8 @@ export const refreshToken = async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Refresh token error:', error)
-    res.status(500).json({
-      success: false,
-      error: '刷新 Token 失败',
-    })
+    logger.error('Refresh token error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '刷新 Token 失败' })
   }
 }
 
@@ -342,33 +261,19 @@ export const refreshToken = async (req: Request, res: Response) => {
 export const getCurrentUser = async (req: Request, res: Response) => {
   try {
     await delay(200)
-    
     const authHeader = req.headers.authorization
     if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        error: '未提供 Token',
-      })
+      return res.status(401).json({ success: false, error: '未提供 Token' })
     }
-    
     const token = authHeader.slice(7)
     const payload = jwt.verify(token)
-    
     if (!payload) {
-      return res.status(401).json({
-        success: false,
-        error: 'Token 无效或已过期',
-      })
+      return res.status(401).json({ success: false, error: 'Token 无效或已过期' })
     }
-    
     const user = await userDb.findById(payload.userId)
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: '用户不存在',
-      })
+      return res.status(404).json({ success: false, error: '用户不存在' })
     }
-    
     res.json({
       success: true,
       data: {
@@ -381,10 +286,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       },
     })
   } catch (error) {
-    console.error('Get current user error:', error)
-    res.status(500).json({
-      success: false,
-      error: '获取用户信息失败',
-    })
+    logger.error('Get current user error', error instanceof Error ? error : undefined)
+    res.status(500).json({ success: false, error: '获取用户信息失败' })
   }
 }

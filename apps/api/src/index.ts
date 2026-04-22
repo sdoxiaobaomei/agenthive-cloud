@@ -1,4 +1,6 @@
 // API 服务器入口
+import dotenv from 'dotenv'
+dotenv.config({ path: '.env' })
 import './telemetry.js' // OpenTelemetry 必须在其他 import 之前初始化
 import { createServer } from 'http'
 import { mkdir } from 'fs/promises'
@@ -129,16 +131,36 @@ Available endpoints:
   - GET  /api/demo/visitor-status 访客状态
   
   - GET  /api/health             健康检查
+  
+  - GET  /api/projects            项目列表
+  - POST /api/projects            创建项目
+  - GET  /api/projects/:id        项目详情
+  - PATCH /api/projects/:id       更新项目
+  - DELETE /api/projects/:id      删除项目
+  
+  - GET  /api/chat/sessions       会话列表
+  - POST /api/chat/sessions       创建会话
+  - GET  /api/chat/sessions/:id   会话详情
+  - POST /api/chat/sessions/:id/messages 发送消息
+  - GET  /api/chat/sessions/:id/messages 获取消息
+  - POST /api/chat/sessions/:id/execute  执行 Agent 任务
+  - GET  /api/chat/sessions/:id/tasks    获取任务列表
+  - GET  /api/chat/sessions/:id/progress 获取进度
 
 WebSocket Events:
-  - agent:subscribe <agentId>    订阅 Agent 状态
-  - agent:unsubscribe <agentId>  取消订阅
-  - agent:command                发送命令给 Agent
-  - task:subscribe <taskId>      订阅任务进度
-  - task:progress                更新任务进度
-  - task:log                     任务日志
-  - terminal:subscribe <agentId> 订阅终端输出
-  - terminal:input               发送终端命令
+  - /chat namespace
+    - session:join <sessionId>     加入会话房间
+    - session:leave <sessionId>    离开会话房间
+    - session:logs <sessionId>     获取实时日志
+  - / namespace
+    - agent:subscribe <agentId>    订阅 Agent 状态
+    - agent:unsubscribe <agentId>  取消订阅
+    - agent:command                发送命令给 Agent
+    - task:subscribe <taskId>      订阅任务进度
+    - task:progress                更新任务进度
+    - task:log                     任务日志
+    - terminal:subscribe <agentId> 订阅终端输出
+    - terminal:input               发送终端命令
   `)
   })
 

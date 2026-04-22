@@ -4,8 +4,8 @@ import app from '../../src/app.js'
 import { resetData } from '../utils/test-db.js'
 
 describe('API Workflow Integration Tests', () => {
-  beforeEach(() => {
-    resetData()
+  beforeEach(async () => {
+    await resetData()
   })
 
   describe('完整用户工作流程', () => {

@@ -6,10 +6,19 @@ import type { Agent, Task, User, CodeFile, SmsCode } from '../types/index.js'
 export const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms))
 
 // ============ Users ============
+function isInvalidUUID(err: any): boolean {
+  return err?.code === '22P02'
+}
+
 export const userDb = {
   findById: async (id: string): Promise<User | undefined> => {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id])
-    return result.rows[0] || undefined
+    try {
+      const result = await pool.query('SELECT * FROM users WHERE id = $1', [id])
+      return result.rows[0] || undefined
+    } catch (err) {
+      if (isInvalidUUID(err)) return undefined
+      throw err
+    }
   },
 
   findByPhone: async (phone: string): Promise<User | undefined> => {
@@ -67,8 +76,13 @@ export const userDb = {
 // ============ Agents ============
 export const agentDb = {
   findById: async (id: string): Promise<Agent | undefined> => {
-    const result = await pool.query('SELECT * FROM agents WHERE id = $1', [id])
-    return result.rows[0] || undefined
+    try {
+      const result = await pool.query('SELECT * FROM agents WHERE id = $1', [id])
+      return result.rows[0] || undefined
+    } catch (err) {
+      if (isInvalidUUID(err)) return undefined
+      throw err
+    }
   },
 
   findAll: async (): Promise<Agent[]> => {
@@ -129,11 +143,33 @@ export const agentDb = {
   },
 }
 
+function mapTaskRow(row: any): Task {
+  if (!row) return row
+  return {
+    ...row,
+    assignedTo: row.assigned_to,
+    parentId: row.parent_id,
+    createdAt: row.created_at,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+  }
+}
+
+function isValidUUID(value: string | undefined): boolean {
+  if (!value) return false
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+}
+
 // ============ Tasks ============
 export const taskDb = {
   findById: async (id: string): Promise<Task | undefined> => {
-    const result = await pool.query('SELECT * FROM tasks WHERE id = $1', [id])
-    return result.rows[0] || undefined
+    try {
+      const result = await pool.query('SELECT * FROM tasks WHERE id = $1', [id])
+      return mapTaskRow(result.rows[0]) || undefined
+    } catch (err) {
+      if (isInvalidUUID(err)) return undefined
+      throw err
+    }
   },
 
   findAll: async (filters?: { status?: string; assignedTo?: string }): Promise<Task[]> => {
@@ -146,14 +182,18 @@ export const taskDb = {
       params.push(filters.status)
     }
     if (filters?.assignedTo) {
-      query += ` AND assigned_to = $${paramIndex++}`
-      params.push(filters.assignedTo)
+      if (isValidUUID(filters.assignedTo)) {
+        query += ` AND assigned_to = $${paramIndex++}`
+        params.push(filters.assignedTo)
+      } else {
+        return []
+      }
     }
 
     query += ' ORDER BY created_at DESC'
 
     const result = await pool.query(query, params)
-    return result.rows
+    return result.rows.map(mapTaskRow)
   },
 
   create: async (data: Partial<Task>): Promise<Task> => {
@@ -168,13 +208,13 @@ export const taskDb = {
         data.status || 'pending',
         data.priority || 'medium',
         data.progress || 0,
-        data.assignedTo,
-        data.parentId,
+        isValidUUID(data.assignedTo) ? data.assignedTo : null,
+        isValidUUID(data.parentId) ? data.parentId : null,
         JSON.stringify(data.input || {}),
         data.output ? JSON.stringify(data.output) : null,
       ]
     )
-    return result.rows[0]
+    return mapTaskRow(result.rows[0])
   },
 
   update: async (id: string, data: Partial<Task>): Promise<Task | undefined> => {
@@ -199,13 +239,13 @@ export const taskDb = {
         data.status,
         data.priority,
         data.progress,
-        data.assignedTo,
+        isValidUUID(data.assignedTo) ? data.assignedTo : undefined,
         data.input ? JSON.stringify(data.input) : undefined,
         data.output ? JSON.stringify(data.output) : undefined,
         id,
       ]
     )
-    return result.rows[0] || undefined
+    return mapTaskRow(result.rows[0]) || undefined
   },
 
   delete: async (id: string): Promise<boolean> => {
@@ -218,7 +258,7 @@ export const taskDb = {
       'SELECT * FROM tasks WHERE parent_id = $1 ORDER BY created_at DESC',
       [parentId]
     )
-    return result.rows
+    return result.rows.map(mapTaskRow)
   },
 }
 
@@ -317,6 +357,180 @@ export const smsDb = {
 
   cleanExpired: async (): Promise<void> => {
     await pool.query('DELETE FROM sms_codes WHERE expires_at < CURRENT_TIMESTAMP')
+  },
+}
+
+// ============ Projects ============
+export const projectDb = {
+  findById: async (id: string): Promise<any | undefined> => {
+    try {
+      const result = await pool.query('SELECT * FROM projects WHERE id = $1', [id])
+      return result.rows[0] || undefined
+    } catch (err) {
+      if (isInvalidUUID(err)) return undefined
+      throw err
+    }
+  },
+
+  findAll: async (userId?: string): Promise<any[]> => {
+    let query = 'SELECT * FROM projects WHERE status != $1'
+    const params: any[] = ['deleted']
+    if (userId) {
+      query += ' AND owner_id = $2'
+      params.push(userId)
+    }
+    query += ' ORDER BY updated_at DESC'
+    const result = await pool.query(query, params)
+    return result.rows
+  },
+
+  create: async (data: any): Promise<any> => {
+    const result = await pool.query(
+      `INSERT INTO projects (name, description, repo_url, owner_id, status)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [data.name, data.description || null, data.repo_url || null, data.owner_id, 'active']
+    )
+    return result.rows[0]
+  },
+
+  update: async (id: string, data: any): Promise<any | undefined> => {
+    const result = await pool.query(
+      `UPDATE projects
+       SET name = COALESCE($1, name),
+           description = COALESCE($2, description),
+           repo_url = COALESCE($3, repo_url),
+           status = COALESCE($4, status),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $5
+       RETURNING *`,
+      [data.name, data.description, data.repo_url, data.status, id]
+    )
+    return result.rows[0] || undefined
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    const result = await pool.query('DELETE FROM projects WHERE id = $1', [id])
+    return result.rowCount ? result.rowCount > 0 : false
+  },
+}
+
+// ============ Chat Sessions ============
+export const chatSessionDb = {
+  findById: async (id: string): Promise<any | undefined> => {
+    try {
+      const result = await pool.query('SELECT * FROM chat_sessions WHERE id = $1', [id])
+      return result.rows[0] || undefined
+    } catch (err) {
+      if (isInvalidUUID(err)) return undefined
+      throw err
+    }
+  },
+
+  findAllByUser: async (userId: string): Promise<any[]> => {
+    const result = await pool.query(
+      'SELECT * FROM chat_sessions WHERE user_id = $1 AND status = $2 ORDER BY updated_at DESC',
+      [userId, 'active']
+    )
+    return result.rows
+  },
+
+  create: async (data: any): Promise<any> => {
+    const result = await pool.query(
+      `INSERT INTO chat_sessions (user_id, project_id, title, status)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [data.userId, data.projectId || null, data.title || '新会话', 'active']
+    )
+    return result.rows[0]
+  },
+
+  update: async (id: string, data: any): Promise<any | undefined> => {
+    const result = await pool.query(
+      `UPDATE chat_sessions
+       SET title = COALESCE($1, title),
+           project_id = COALESCE($2, project_id),
+           status = COALESCE($3, status),
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4
+       RETURNING *`,
+      [data.title, data.projectId, data.status, id]
+    )
+    return result.rows[0] || undefined
+  },
+
+  delete: async (id: string): Promise<boolean> => {
+    const result = await pool.query('DELETE FROM chat_sessions WHERE id = $1', [id])
+    return result.rowCount ? result.rowCount > 0 : false
+  },
+}
+
+// ============ Chat Messages ============
+export const chatMessageDb = {
+  findBySession: async (sessionId: string, limit: number = 50, offset: number = 0): Promise<any[]> => {
+    const result = await pool.query(
+      `SELECT * FROM chat_messages
+       WHERE session_id = $1
+       ORDER BY created_at DESC
+       LIMIT $2 OFFSET $3`,
+      [sessionId, limit, offset]
+    )
+    return result.rows.reverse()
+  },
+
+  create: async (data: any): Promise<any> => {
+    const result = await pool.query(
+      `INSERT INTO chat_messages (session_id, role, content, metadata)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [data.sessionId, data.role, data.content, JSON.stringify(data.metadata || {})]
+    )
+    return result.rows[0]
+  },
+}
+
+// ============ Agent Tasks ============
+export const agentTaskDb = {
+  findBySession: async (sessionId: string): Promise<any[]> => {
+    const result = await pool.query(
+      'SELECT * FROM agent_tasks WHERE session_id = $1 ORDER BY created_at DESC',
+      [sessionId]
+    )
+    return result.rows
+  },
+
+  findById: async (id: string): Promise<any | undefined> => {
+    try {
+      const result = await pool.query('SELECT * FROM agent_tasks WHERE id = $1', [id])
+      return result.rows[0] || undefined
+    } catch (err) {
+      if (isInvalidUUID(err)) return undefined
+      throw err
+    }
+  },
+
+  create: async (data: any): Promise<any> => {
+    const result = await pool.query(
+      `INSERT INTO agent_tasks (session_id, ticket_id, worker_role, status, workspace_path, result)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [data.sessionId, data.ticketId, data.workerRole, data.status || 'pending', data.workspacePath, JSON.stringify(data.result || {})]
+    )
+    return result.rows[0]
+  },
+
+  update: async (id: string, data: any): Promise<any | undefined> => {
+    const result = await pool.query(
+      `UPDATE agent_tasks
+       SET status = COALESCE($1, status),
+           result = COALESCE($2, result),
+           started_at = COALESCE($3, started_at),
+           completed_at = COALESCE($4, completed_at)
+       WHERE id = $5
+       RETURNING *`,
+      [data.status, data.result ? JSON.stringify(data.result) : undefined, data.startedAt, data.completedAt, id]
+    )
+    return result.rows[0] || undefined
   },
 }
 
