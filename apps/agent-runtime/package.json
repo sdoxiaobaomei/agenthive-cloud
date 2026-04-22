@@ -7,7 +7,7 @@
     "types":  "dist/index.d.ts",
     "scripts":  {
                     "dev":  "tsx watch src/index.ts",
-                    "build":  "tsc --noEmitOnError false || echo \u0027Build completed with type errors\u0027",
+                    "build":  "tsc --noEmitOnError false",
                     "start":  "node dist/index.js",
                     "test":  "vitest run",
                     "test:watch":  "vitest",
