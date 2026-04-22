@@ -1,0 +1,316 @@
+# ============================================================================
+# AgentHive Cloud - Java Microservices Stack
+# 一键启动所有 Java 微服务 + Nacos + RabbitMQ
+# ============================================================================
+
+version: '3.8'
+
+services:
+  # Nacos - 注册中心 + 配置中心
+  nacos:
+    image: nacos/nacos-server:v2.3.0
+    container_name: agenthive-nacos
+    environment:
+      MODE: standalone
+      SPRING_DATASOURCE_PLATFORM: postgresql
+      NACOS_AUTH_ENABLE: "true"
+      NACOS_AUTH_TOKEN: <NACOS_AUTH_TOKEN>
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    volumes:
+      - nacos_data:/home/nacos/data
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    networks:
+      - agenthive-java
+
+  # RabbitMQ - 消息队列
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: agenthive-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: agenthive
+      RABBITMQ_DEFAULT_PASS: agenthive-secret
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - agenthive-java
+
+  # PostgreSQL for Java services
+  postgres-java:
+    image: postgres:16-alpine
+    container_name: agenthive-postgres-java
+    environment:
+      POSTGRES_USER: agenthive
+      POSTGRES_PASSWORD: java-secret
+      POSTGRES_MULTIPLE_DATABASES: auth_db,user_db,payment_db,order_db,cart_db,logistics_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_java_data:/var/lib/postgresql/data
+      - ./apps/java/scripts/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    networks:
+      - agenthive-java
+
+  # Redis for Java services
+  redis-java:
+    image: redis:7-alpine
+    container_name: agenthive-redis-java
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_java_data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    networks:
+      - agenthive-java
+
+  # Gateway Service
+  gateway-service:
+    build:
+      context: ./apps/java/gateway-service
+      dockerfile: Dockerfile
+    container_name: agenthive-gateway
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8080:8080"
+    depends_on:
+      - nacos
+    networks:
+      - agenthive-java
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./apps/java/auth-service
+      dockerfile: Dockerfile
+    container_name: agenthive-auth
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres-java
+      DB_PORT: 5432
+      DB_NAME: auth_db
+      DB_USER: agenthive
+      DB_PASSWORD: java-secret
+      REDIS_HOST: redis-java
+      REDIS_PORT: 6379
+    depends_on:
+      - nacos
+      - postgres-java
+      - redis-java
+    networks:
+      - agenthive-java
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # User Service
+  user-service:
+    build:
+      context: ./apps/java/user-service
+      dockerfile: Dockerfile
+    container_name: agenthive-user
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres-java
+      DB_PORT: 5432
+      DB_NAME: user_db
+      DB_USER: agenthive
+      DB_PASSWORD: java-secret
+      REDIS_HOST: redis-java
+      REDIS_PORT: 6379
+    depends_on:
+      - nacos
+      - postgres-java
+      - redis-java
+    networks:
+      - agenthive-java
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Payment Service
+  payment-service:
+    build:
+      context: ./apps/java/payment-service
+      dockerfile: Dockerfile
+    container_name: agenthive-payment
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres-java
+      DB_PORT: 5432
+      DB_NAME: payment_db
+      DB_USER: agenthive
+      DB_PASSWORD: java-secret
+      REDIS_HOST: redis-java
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: agenthive
+      RABBITMQ_PASS: agenthive-secret
+    depends_on:
+      - nacos
+      - postgres-java
+      - redis-java
+      - rabbitmq
+    networks:
+      - agenthive-java
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Order Service
+  order-service:
+    build:
+      context: ./apps/java/order-service
+      dockerfile: Dockerfile
+    container_name: agenthive-order
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres-java
+      DB_PORT: 5432
+      DB_NAME: order_db
+      DB_USER: agenthive
+      DB_PASSWORD: java-secret
+      REDIS_HOST: redis-java
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: agenthive
+      RABBITMQ_PASS: agenthive-secret
+    depends_on:
+      - nacos
+      - postgres-java
+      - redis-java
+      - rabbitmq
+    networks:
+      - agenthive-java
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Cart Service
+  cart-service:
+    build:
+      context: ./apps/java/cart-service
+      dockerfile: Dockerfile
+    container_name: agenthive-cart
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres-java
+      DB_PORT: 5432
+      DB_NAME: cart_db
+      DB_USER: agenthive
+      DB_PASSWORD: java-secret
+      REDIS_HOST: redis-java
+      REDIS_PORT: 6379
+    depends_on:
+      - nacos
+      - postgres-java
+      - redis-java
+    networks:
+      - agenthive-java
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # Logistics Service
+  logistics-service:
+    build:
+      context: ./apps/java/logistics-service
+      dockerfile: Dockerfile
+    container_name: agenthive-logistics
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres-java
+      DB_PORT: 5432
+      DB_NAME: logistics_db
+      DB_USER: agenthive
+      DB_PASSWORD: java-secret
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: agenthive
+      RABBITMQ_PASS: agenthive-secret
+    depends_on:
+      - nacos
+      - postgres-java
+      - rabbitmq
+    networks:
+      - agenthive-java
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+volumes:
+  nacos_data:
+  rabbitmq_data:
+  postgres_java_data:
+  redis_java_data:
+
+networks:
+  agenthive-java:
+    driver: bridge

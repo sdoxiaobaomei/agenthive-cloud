@@ -14,12 +14,16 @@ resources:
   - 07-hpa.yaml
   - 08-configmap.yaml
   - 09-ingress.yaml
+  - 10-java-services.yaml
 
 # 通用标签
-commonLabels:
-  app.kubernetes.io/part-of: agenthive
-  app.kubernetes.io/managed-by: kustomize
-  app.kubernetes.io/version: "1.0.0"
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: agenthive
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/version: "1.0.0"
+    includeSelectors: true
+    includeTemplates: true
 
 # 注释
 commonAnnotations:

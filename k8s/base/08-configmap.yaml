@@ -43,5 +43,4 @@ data:
   OTEL_SDK_DISABLED: "false"
 
   # Logging
-  LOG_LEVEL: "info"
   STRUCTURED_LOGGING: "true"

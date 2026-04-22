@@ -179,7 +179,7 @@ services:
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_FEATURE_TOGGLES_ENABLE: traceqlEditor
     ports:
-      - "3001:3000"
+      - "3002:3000"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro

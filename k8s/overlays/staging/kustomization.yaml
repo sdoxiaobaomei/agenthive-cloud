@@ -5,7 +5,6 @@ namespace: agenthive-staging
 
 resources:
   - ../../base
-  - ingress.yaml
 
 # 镜像配置
 images:
@@ -23,8 +22,50 @@ replicas:
   - name: landing
     count: 2
 
-# 资源限制调整（测试环境）
+# 资源限制和 Ingress 覆盖
 patches:
+  - target:
+      kind: Ingress
+      name: agenthive-ingress
+    patch: |-
+      - op: replace
+        path: /metadata
+        value:
+          name: agenthive-ingress
+          annotations:
+            nginx.ingress.kubernetes.io/rewrite-target: "/"
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            cert-manager.io/cluster-issuer: "letsencrypt-staging"
+      - op: replace
+        path: /spec
+        value:
+          ingressClassName: nginx
+          tls:
+            - hosts:
+                - staging.agenthive.cloud
+                - api-staging.agenthive.cloud
+              secretName: staging-tls-secret
+          rules:
+            - host: staging.agenthive.cloud
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: staging-landing
+                        port:
+                          number: 3000
+            - host: api-staging.agenthive.cloud
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: staging-api
+                        port:
+                          number: 3001
   - target:
       kind: Deployment
       name: api
@@ -46,7 +87,10 @@ patches:
         path: /spec/template/spec/containers/0/resources/limits/cpu
         value: "250m"
 
-commonLabels:
-  environment: staging
+labels:
+  - pairs:
+      environment: staging
+    includeSelectors: true
+    includeTemplates: true
 
 namePrefix: staging-

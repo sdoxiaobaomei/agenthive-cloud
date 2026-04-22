@@ -46,7 +46,10 @@ patches:
         path: /spec/replicas
         value: 1
 
-commonLabels:
-  environment: local
+labels:
+  - pairs:
+      environment: local
+    includeSelectors: true
+    includeTemplates: true
 
 namePrefix: local-
