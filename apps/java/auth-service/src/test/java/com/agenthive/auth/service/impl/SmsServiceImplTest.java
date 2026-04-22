@@ -48,6 +48,7 @@ class SmsServiceImplTest {
         when(smsProperties.getDailyLimit()).thenReturn(10);
         when(smsProperties.getIntervalSeconds()).thenReturn(60);
         when(smsProperties.getDefaultSignName()).thenReturn("云渚科技验证平台");
+        when(smsProperties.isOidcEnabled()).thenReturn(false);
     }
 
     @Test
