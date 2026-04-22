@@ -24,6 +24,7 @@ import type {
   CreateSessionInput,
   IntentClassificationResult,
 } from './types.js'
+import type { LLMMessage } from '../services/llm.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ORCHESTRATOR_PATH = path.resolve(__dirname, '../../../../AGENTS/orchestrator.ts')
@@ -257,9 +258,99 @@ export const chatService = {
     ])
     return { status: status || 'unknown', logs: logs.reverse() }
   },
+
+  // ========== LLM Reply Generation ==========
+
+  async generateReply(
+    sessionId: string,
+    intent: ChatIntent,
+    content: string,
+    tasks: AgentTask[]
+  ): Promise<string> {
+    const llmService = getLLMService()
+
+    // Build conversation context from recent messages
+    const { messages } = await this.getSessionMessages(sessionId, 1, 20)
+    const conversationMessages: LLMMessage[] = messages.map((m) => ({
+      role: m.role === 'agent' ? 'assistant' : m.role,
+      content: m.content,
+    }))
+
+    const systemPrompt = buildReplySystemPrompt(intent, tasks)
+
+    const llmMessages: LLMMessage[] = [
+      { role: 'system', content: systemPrompt },
+      ...conversationMessages,
+      { role: 'user', content },
+    ]
+
+    try {
+      const result = await llmService.complete(llmMessages, {
+        temperature: 0.7,
+        maxTokens: 2048,
+      })
+      return result.content.trim()
+    } catch (error) {
+      logger.error('LLM reply generation failed', error instanceof Error ? error : undefined, { sessionId, intent })
+      // Fallback to static response
+      return buildStaticResponse(intent, tasks)
+    }
+  },
 }
 
 // ========== Helpers ==========
+
+function buildReplySystemPrompt(intent: ChatIntent, tasks: AgentTask[]): string {
+  const roleNames: Record<string, string> = {
+    frontend: '小花 (前端开发)',
+    backend: '阿铁 (后端开发)',
+    qa: '阿镜 (QA 工程师)',
+  }
+
+  const taskList = tasks.length > 0
+    ? tasks.map((t) => `- ${roleNames[t.workerRole] || t.workerRole}: ${t.ticketId}`).join('\n')
+    : '无'
+
+  return `你是 AgentHive AI 助手，一个多 Agent 协作的 AI 数字孪生平台的智能助手。
+
+你的职责：
+- 理解用户的软件开发需求
+- 调用 Multi-Agent 团队（阿铁-后端、小花-前端、阿镜-QA）并行执行任务
+- 用简洁、专业、友好的中文回复用户
+
+当前意图：${intent}
+已创建任务：
+${taskList}
+
+回复要求：
+- 如果用户只是闲聊，自然友好地回应
+- 如果涉及开发任务，确认收到请求并简要说明后续步骤
+- 如有任务已创建，列出任务清单和负责人
+- 语气专业但亲切，像一位经验丰富的 Tech Lead`
+}
+
+function buildStaticResponse(intent: ChatIntent, tasks: AgentTask[]): string {
+  if (tasks.length === 0) {
+    switch (intent) {
+      case 'explain':
+        return '我来为您解释这个问题...'
+      case 'chat':
+        return '好的，请继续说。'
+      default:
+        return '已收到您的请求，正在处理中...'
+    }
+  }
+
+  const roleNames: Record<string, string> = {
+    frontend: '小花 (前端开发)',
+    backend: '阿铁 (后端开发)',
+    qa: '阿镜 (QA 工程师)',
+  }
+
+  const taskList = tasks.map((t) => `- ${roleNames[t.workerRole] || t.workerRole}: ${t.ticketId}`).join('\n')
+
+  return `已为您创建以下任务:\n${taskList}\n\nAgent 团队正在并行执行，您可以通过 WebSocket 实时查看进度。`
+}
 
 function parseIntent(raw: string): ChatIntent {
   const validIntents: ChatIntent[] = [
