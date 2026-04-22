@@ -43,12 +43,12 @@ class OpenAIProvider implements LLMProvider {
       },
       body: JSON.stringify({
         model: this.config.model,
-        messages: messages.map(m => ({ 
-          role: m.role, 
-          content: m.content,
-          ...(m.tool_calls && { tool_calls: m.tool_calls }),
-          ...(m.tool_call_id && { tool_call_id: m.tool_call_id })
-        })),
+        messages: messages.map(m => {
+          const msg: Record<string, any> = { role: m.role, content: m.content }
+          if (m.toolCalls) msg.tool_calls = m.toolCalls
+          if (m.toolResults && m.toolResults.length > 0) msg.tool_call_id = m.toolResults[0].toolCallId
+          return msg
+        }),
         temperature: options.temperature ?? 0.7,
         max_tokens: options.maxTokens || 4096,
         stream: false
