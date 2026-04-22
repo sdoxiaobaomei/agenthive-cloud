@@ -114,15 +114,15 @@ jobs:
       - name: 🔨 Build API
         run: |
           cd apps/api
-          pnpm run build || echo "API build skipped (no build script)"
+          pnpm run build
 
       - name: 🔨 Build Landing
         run: |
           cd apps/landing
-          pnpm run build || echo "Landing build skipped (no build script)"
+          pnpm run build
 
-      - name: 🧪 Run Tests (if exists)
-        run: pnpm test || echo "No tests found, skipping..."
+      - name: 🧪 Run Tests
+        run: pnpm test
 
       - name: 📦 Build Artifacts
         uses: actions/upload-artifact@v4
