@@ -28,7 +28,8 @@
 </template>
 
 <script setup lang="ts">
-import { useExecutionStore, demoPlan } from '@agenthive/ui'
+import { useExecutionStore } from '../../stores/execution'
+import { demoPlan } from '../../utils/execution-demo'
 import { ElMessage } from 'element-plus'
 
 const props = defineProps<{
