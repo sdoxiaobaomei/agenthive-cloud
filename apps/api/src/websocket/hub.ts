@@ -5,6 +5,7 @@ import { trace, SpanStatusCode } from '@opentelemetry/api'
 import { AI_ATTRIBUTES, AI_SPAN_NAMES, extractTraceContextFromPayload } from '@agenthive/observability'
 import { redisCache } from '../services/redis-cache.js'
 import { jwt } from '../utils/jwt.js'
+import { initChatNamespace } from '../chat-controller/websocket.js'
 
 // 访客房间管理
 const visitorRooms = new Map<string, { joinedAt: number; socketId: string }>()
@@ -82,6 +83,9 @@ export function initWebSocket(server: HttpServer): SocketIOServer {
     // 通用事件处理
     setupCommonHandlers(socket)
   })
+
+  // Initialize Chat namespace
+  initChatNamespace(io)
 
   console.log('[WebSocket] Server initialized')
   return io

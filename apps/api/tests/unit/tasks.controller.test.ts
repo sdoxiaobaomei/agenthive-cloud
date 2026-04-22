@@ -4,8 +4,8 @@ import app from '../../src/app.js'
 import { resetData } from '../utils/test-db.js'
 
 describe('Tasks Controller', () => {
-  beforeEach(() => {
-    resetData()
+  beforeEach(async () => {
+    await resetData()
   })
 
   describe('GET /api/tasks', () => {
@@ -119,16 +119,20 @@ describe('Tasks Controller', () => {
     })
 
     it('应该支持分配 Agent', async () => {
+      // Get a valid agent ID from the database
+      const agentsRes = await request(app).get('/api/agents')
+      const agentId = agentsRes.body.data.agents[0].id
+
       const response = await request(app)
         .post('/api/tasks')
         .send({
           title: 'Assigned Task',
           type: 'feature',
-          assignedTo: 'agent-1',
+          assignedTo: agentId,
         })
 
       expect(response.status).toBe(201)
-      expect(response.body.data.assignedTo).toBe('agent-1')
+      expect(response.body.data.assignedTo).toBe(agentId)
     })
   })
 

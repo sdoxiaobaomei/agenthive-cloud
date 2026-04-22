@@ -12,6 +12,8 @@ import {
   resumeAgent,
   sendCommand,
   getAgentLogs,
+  getAgentStatus,
+  createAgentTask,
 } from '../controllers/agents.js'
 
 const router = Router()
@@ -28,6 +30,10 @@ router.post('/:id/start', startAgent)
 router.post('/:id/stop', stopAgent)
 router.post('/:id/pause', pauseAgent)
 router.post('/:id/resume', resumeAgent)
+
+// 实时状态与任务
+router.get('/:id/status', getAgentStatus)
+router.post('/:id/tasks', createAgentTask)
 
 // 命令和日志
 router.post('/:id/command', sendCommand)

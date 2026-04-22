@@ -5,8 +5,8 @@ import { resetData } from '../utils/test-db.js'
 import { smsService } from '../../src/services/sms.js'
 
 describe('Auth Controller', () => {
-  beforeEach(() => {
-    resetData()
+  beforeEach(async () => {
+    await resetData()
   })
 
   describe('POST /api/auth/sms/send', () => {
