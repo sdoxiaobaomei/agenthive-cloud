@@ -10,7 +10,7 @@
                     "preview":  "nuxt preview",
                     "typecheck":  "nuxt typecheck",
                     "postinstall":  "nuxt prepare",
-                    "test":  "vitest run",
+                    "test":  "vitest run --passWithNoTests",
                     "test:e2e":  "playwright test",
                     "lint":  "echo \u0027No linter configured for Landing yet\u0027"
                 },
