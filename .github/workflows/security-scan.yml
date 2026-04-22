@@ -32,6 +32,12 @@ jobs:
           sudo apt update
           sudo apt install -y trivy
 
+      - name: 📦 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔨 Build applications
+        run: pnpm run build
+
       - name: 🐳 Build Docker images for scanning
         run: |
           docker build -t agenthive-api:scan -f apps/api/Dockerfile .
