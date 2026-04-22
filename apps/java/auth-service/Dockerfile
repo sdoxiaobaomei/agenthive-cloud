@@ -6,7 +6,11 @@ COPY target/auth-service-*.jar app.jar
 
 EXPOSE 8081
 
+# JVM 内存参数（可通过环境变量覆盖）
 ENV JAVA_OPTS="-Xms256m -Xmx512m"
+
+# Spring Profile（Docker 环境自动激活 docker profile）
+ENV SPRING_PROFILES_ACTIVE=docker
 
 # Labels for traceability
 ARG VERSION=unknown
