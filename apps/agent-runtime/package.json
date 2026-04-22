@@ -4,7 +4,7 @@
     "description":  "AgentHive Agent Runtime - AI-powered agent execution environment with LLM integration",
     "type":  "module",
     "main":  "dist/index.js",
-    "types":  "dist/index.d.ts",
+    "types":  "src/index.ts",
     "scripts":  {
                     "dev":  "tsx watch src/index.ts",
                     "build":  "tsc --noEmitOnError false",
