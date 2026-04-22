@@ -1,5 +1,14 @@
 # AgentHive Cloud - DevOps 架构文档
 
+> 🚧 **目标架构，未完全实现** (最后检查: 2026-04-22)
+>
+> 本文档描述的是目标/理想状态的 DevOps 体系，实际落地情况如下：
+> - ✅ 已实现: GitHub Actions CI/CD (基础)、K8s 部署 (单环境)、ACR 镜像仓库
+> - ❌ 未实现: Prometheus/Grafana 监控、HPA 自动扩缩容、蓝绿部署、Network Policies、Loki/Tempo 日志链路
+>
+> ---
+>
+> **原标注**:
 > 📋 完整的 DevOps 体系架构说明
 
 ---

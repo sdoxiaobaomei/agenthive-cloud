@@ -47,6 +47,15 @@
 3. "今天偷的懒，明天双倍还。"
 4. "文档写得越多，解释得越少。"
 
+### K8s 部署踩坑 (2026-04-22)
+
+- **镜像缓存陷阱**: `latest` + `IfNotPresent` 导致节点永远使用旧镜像。必须设置 `imagePullPolicy: Always` 或使用显式版本标签。
+- **ConfigMap 漂移**: 新增 key 到 ConfigMap 后，如果 Deployment 是逐个 `configMapKeyRef` 引用的，新 key 不会自动映射到容器环境变量。
+- **Kustomize 数组合并**: Strategic Merge Patch 对同名数组元素会合并而非替换，导致 `Duplicate value` 错误。
+- **证书与 DNS 先行**: cert-manager 的 HTTP01 challenge 要求域名 DNS 先解析到 Ingress SLB，否则验证会循环失败。
+- **CORS 浏览器缓存**: 浏览器会缓存失败的 OPTIONS 预检响应，服务端修复后需强制刷新 (Ctrl+Shift+R)。
+- **Dist 构建遗忘**: Dockerfile 采用"预构建 dist"模式时，修改 src 后必须先本地 `npm run build`，否则 docker build 复制的是旧 dist。
+
 ---
 
-_最后更新: 2026-04-06_
+_最后更新: 2026-04-22_
