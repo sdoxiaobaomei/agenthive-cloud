@@ -33,6 +33,7 @@ const sdk = new NodeSDK({
   traceExporter: new OTLPTraceExporter({
     url: otlpEndpoint,
   }),
+  // @ts-ignore version mismatch between sdk-node and sdk-metrics
   metricReader: new PeriodicExportingMetricReader({
     exporter: new OTLPMetricExporter({
       url: otlpEndpoint,
