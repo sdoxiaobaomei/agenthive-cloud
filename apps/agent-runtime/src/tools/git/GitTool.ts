@@ -2,8 +2,8 @@
  * Git Tool - Git 操作工具
  */
 import { z } from 'zod'
-import { buildTool, type ToolContext, type PermissionDecision } from '../ToolClaudeCode.js'
-import simpleGit, { SimpleGit } from 'simple-git'
+import { buildTool, type ToolContext, type EnhancedPermissionDecision as PermissionDecision } from '../ToolClaudeCode.js'
+import { simpleGit, SimpleGit } from 'simple-git'
 import { resolve } from 'path'
 
 const inputSchema = z.object({
@@ -132,12 +132,12 @@ Available commands:
     // Only allow read-only commands
     if (!READONLY_COMMANDS.includes(input.command)) {
       return {
-        type: 'deny',
+        behavior: 'deny',
         message: `Git command '${input.command}' is not allowed. Only read-only commands are permitted.`
       }
     }
 
-    return { type: 'allow' }
+    return { behavior: 'allow' }
   },
 
   renderToolUseMessage(input) {

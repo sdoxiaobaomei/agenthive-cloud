@@ -4,7 +4,7 @@
  * 使用 DuckDuckGo 或 SerpAPI 进行搜索
  */
 import { z } from 'zod'
-import { buildTool, type ToolContext, type PermissionDecision } from '../ToolClaudeCode.js'
+import { buildTool, type ToolContext, type EnhancedPermissionDecision as PermissionDecision } from '../ToolClaudeCode.js'
 
 const inputSchema = z.object({
   query: z.string().describe('Search query'),
@@ -63,7 +63,7 @@ Use this when you need to:
       const html = await response.text()
       
       // Parse results (simple regex-based parsing)
-      const results = parseDuckDuckGoResults(html, input.limit)
+      const results = parseDuckDuckGoResults(html, input.limit!)
 
       return {
         results,
@@ -83,13 +83,13 @@ Use this when you need to:
     for (const term of blockedTerms) {
       if (input.query.toLowerCase().includes(term.toLowerCase())) {
         return {
-          type: 'deny',
+          behavior: 'deny',
           message: `Search query contains blocked term: ${term}`
         }
       }
     }
 
-    return { type: 'allow' }
+    return { behavior: 'allow' }
   },
 
   renderToolUseMessage(input) {

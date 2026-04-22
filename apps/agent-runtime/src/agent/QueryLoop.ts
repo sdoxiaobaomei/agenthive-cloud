@@ -1,7 +1,7 @@
 // Query Loop - 核心对话循环，参考 Claude Code 的设计
 import { EventEmitter } from 'events'
 import { LLMService } from '../services/llm/LLMService.js'
-import { LLMMessage, LLMToolDefinition, LLMCompletionResult } from '../services/llm/types.js'
+import { LLMMessage, LLMToolDefinition, LLMToolCall, LLMCompletionResult } from '../services/llm/types.js'
 import { ConversationContextV2 } from '../context/ConversationContextV2.js'
 import { ToolExecutor, ToolRegistry } from '../tools/Tool.js'
 import { Logger } from '../utils/logger.js'
@@ -316,7 +316,7 @@ export class QueryLoop extends EventEmitter {
       // 调用 LLM
       const messages = context.toLLMMessages()
       let accumulatedContent = ''
-      let pendingToolCalls: typeof availableTools = []
+      let pendingToolCalls: LLMToolCall[] = []
 
       for await (const chunk of this.config.llmService.stream(messages, {
         model: options?.model,

@@ -159,7 +159,7 @@ class LoggerInstance {
     message: string,
     meta?: {
       context?: Record<string, unknown>
-      error?: Error
+      error?: Error | Record<string, unknown>
       duration?: number
       metadata?: Record<string, unknown>
     }
@@ -178,10 +178,11 @@ class LoggerInstance {
     }
 
     if (meta?.error) {
+      const err = meta.error as any
       entry.error = {
-        message: meta.error.message,
-        stack: meta.error.stack,
-        code: (meta.error as any).code
+        message: err.message,
+        stack: err.stack,
+        code: err.code
       }
     }
 
@@ -201,11 +202,11 @@ class LoggerInstance {
     this.log('warn', category, prefix, message, { context })
   }
 
-  error(category: LogCategory, prefix: string, message: string, error?: Error, context?: Record<string, unknown>): void {
+  error(category: LogCategory, prefix: string, message: string, error?: Error | Record<string, unknown>, context?: Record<string, unknown>): void {
     this.log('error', category, prefix, message, { error, context })
   }
 
-  fatal(category: LogCategory, prefix: string, message: string, error?: Error, context?: Record<string, unknown>): void {
+  fatal(category: LogCategory, prefix: string, message: string, error?: Error | Record<string, unknown>, context?: Record<string, unknown>): void {
     this.log('fatal', category, prefix, message, { error, context })
   }
 
@@ -245,7 +246,7 @@ export class Logger {
     globalLogger.warn('system', this.prefix, message, context)
   }
 
-  error(message: string, error?: Error, context?: Record<string, unknown>): void {
+  error(message: string, error?: Error | Record<string, unknown>, context?: Record<string, unknown>): void {
     globalLogger.error('system', this.prefix, message, error, context)
   }
 

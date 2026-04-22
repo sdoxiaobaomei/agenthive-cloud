@@ -6,5 +6,5 @@ import type { ToolRegistry } from '../Tool.js'
 
 // 注册所有 Git 工具
 export function registerGitTools(registry: ToolRegistry): void {
-  registry.register(GitTool)
+  ;(registry as any).register(GitTool)
 }

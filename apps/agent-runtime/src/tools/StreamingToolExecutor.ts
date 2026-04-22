@@ -113,7 +113,7 @@ export class StreamingToolExecutor extends EventEmitter {
           runningIndices.size < this.config.maxConcurrency &&
           pendingIndices.size > 0
         ) {
-          const index = pendingIndices.values().next().value
+          const index = pendingIndices.values().next().value!
           pendingIndices.delete(index)
           runningIndices.add(index)
           

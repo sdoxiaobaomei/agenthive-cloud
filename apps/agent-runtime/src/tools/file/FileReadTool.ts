@@ -66,12 +66,12 @@ export const FileReadTool = buildTool({
     // 检查是否在工作空间内
     if (!isPathWithinWorkspace(fullPath, context.workspacePath)) {
       return {
-        type: 'deny',
+        behavior: 'deny',
         message: `Access denied: ${input.path} is outside workspace`
       }
     }
 
-    return { type: 'allow' }
+    return { behavior: 'allow' }
   },
 
   renderToolUseMessage(input) {

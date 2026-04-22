@@ -86,12 +86,12 @@ Use this for precise edits to existing files.`,
     
     if (!isPathWithinWorkspace(fullPath, context.workspacePath)) {
       return {
-        type: 'deny',
+        behavior: 'deny',
         message: `Access denied: ${input.path} is outside workspace`
       }
     }
 
-    return { type: 'allow' }
+    return { behavior: 'allow' }
   },
 
   renderToolUseMessage(input) {

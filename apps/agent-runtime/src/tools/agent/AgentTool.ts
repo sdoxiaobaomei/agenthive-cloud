@@ -118,7 +118,7 @@ Available agent types:
     inputSchema: AgentToolInput,
     outputSchema: AgentToolOutput,
 
-    async execute(input: AgentToolInput, context: ToolContext): Promise<AgentToolOutput> {
+    async execute(input, context) {
       const agentDef = BUILT_IN_AGENTS[input.agentType]
 
       context.sendLog(`Creating ${input.agentType} agent: ${agentDef.name}`)
@@ -158,7 +158,7 @@ Available agent types:
       }
     },
 
-    renderToolUseMessage(input: AgentToolInput): string {
+    renderToolUseMessage(input) {
       return `🤖 Starting ${input.agentType} agent: ${input.directive.slice(0, 60)}...`
     },
 

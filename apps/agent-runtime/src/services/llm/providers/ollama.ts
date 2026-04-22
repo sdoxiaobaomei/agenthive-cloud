@@ -72,7 +72,7 @@ export class OllamaProvider implements ILLMProvider {
         throw new Error(`Ollama API error: ${response.status} ${error}`)
       }
 
-      const data = await response.json()
+      const data = await response.json() as any
       
       return {
         content: data.message?.content || '',
@@ -190,7 +190,7 @@ export class OllamaProvider implements ILLMProvider {
         }
       }
 
-      const data = await response.json()
+      const data = await response.json() as any
       const models = data.models?.map((m: any) => m.name) || []
       
       return {

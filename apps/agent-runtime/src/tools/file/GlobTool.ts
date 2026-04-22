@@ -2,7 +2,7 @@
  * Glob Tool - 文件模式匹配工具
  */
 import { z } from 'zod'
-import { buildTool, type ToolContext, type PermissionDecision } from '../ToolClaudeCode.js'
+import { buildTool, type ToolContext, type EnhancedPermissionDecision as PermissionDecision } from '../ToolClaudeCode.js'
 import fastGlob from 'fast-glob'
 import { resolve, isAbsolute, relative } from 'path'
 
@@ -41,7 +41,7 @@ Examples:
   isReadOnly: () => true,
   isDestructive: () => false,
   
-  async execute(input, context: ToolContext) {
+  async execute(input, context) {
     const cwd = input.cwd 
       ? resolveFullPath(input.cwd, context.workspacePath)
       : context.workspacePath
@@ -49,12 +49,12 @@ Examples:
     const files = await fastGlob(input.pattern, {
       cwd,
       ignore: input.ignore || ['node_modules/**', '.git/**', 'dist/**', 'build/**'],
-      absolute: false,
-      limit: input.limit + 1 // Get one extra to check if truncated
+      absolute: false
     })
 
-    const truncated = files.length > input.limit
-    const results = files.slice(0, input.limit)
+    const limit = input.limit!
+    const truncated = files.length > limit
+    const results = files.slice(0, limit)
 
     // Convert to relative paths from workspace
     const relativeFiles = results.map(f => {
@@ -76,12 +76,12 @@ Examples:
 
     if (!isPathWithinWorkspace(cwd, context.workspacePath)) {
       return {
-        type: 'deny',
+        behavior: 'deny',
         message: `Access denied: cwd is outside workspace`
       }
     }
 
-    return { type: 'allow' }
+    return { behavior: 'allow' }
   },
 
   renderToolUseMessage(input) {

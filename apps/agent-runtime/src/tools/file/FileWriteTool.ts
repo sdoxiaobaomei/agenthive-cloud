@@ -64,17 +64,17 @@ export const FileWriteTool = buildTool({
     // 检查是否在工作空间内
     if (!isPathWithinWorkspace(fullPath, context.workspacePath)) {
       return {
-        type: 'deny',
+        behavior: 'deny',
         message: `Access denied: ${input.path} is outside workspace`
       }
     }
 
     // 覆盖操作需要额外确认
-    return { type: 'allow' }
+    return { behavior: 'allow' }
   },
 
   renderToolUseMessage(input) {
-    return `Writing file: ${input.path} (${Buffer.byteLength(input.content, 'utf-8')} bytes)${input.overwrite ? ' [overwrite]' : ''}`
+    return `Writing file: ${input.path} (${Buffer.byteLength(input.content!, 'utf-8')} bytes)${input.overwrite ? ' [overwrite]' : ''}`
   },
 
   renderToolResultMessage(result) {

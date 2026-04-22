@@ -10,7 +10,7 @@ import type { ToolRegistry } from '../Tool.js'
 
 // 注册所有 Web 工具
 export function registerWebTools(registry: ToolRegistry): void {
-  registry.register(WebSearchTool)
-  registry.register(WebFetchTool)
-  registry.register(HttpTool)
+  ;(registry as any).register(WebSearchTool)
+  ;(registry as any).register(WebFetchTool)
+  ;(registry as any).register(HttpTool)
 }

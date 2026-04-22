@@ -5,6 +5,7 @@
  */
 
 import type { Tool as LegacyTool, ToolContext as LegacyToolContext } from '../ToolClaudeCode.js'
+export type { LegacyTool, LegacyToolContext }
 import type {
   ToolV2,
   ToolUseContext,
@@ -196,7 +197,7 @@ export function adaptV2ToLegacy(modernTool: ToolV2): LegacyTool {
     
     // 权限方法
     checkPermissions: async (input, context) => {
-      const result = await modernTool.checkPermissions(input, context as ToolUseContext)
+      const result = await modernTool.checkPermissions(input, context as any)
       return adaptPermissionResultToLegacy(result)
     },
     
@@ -253,12 +254,12 @@ function adaptContextToLegacy(context: ToolUseContext): LegacyToolContext {
     workspacePath: context.workspacePath,
     sendLog: context.sendLog,
     signal: context.abortController.signal,
-    checkPermission: context.checkPermission,
-    llm: context.llm,
+    checkPermission: context.checkPermission as any,
+    llm: context.llm as any,
     fileState: undefined,
     queryTracking: context.queryTracking,
-    parentContext: context.parentContext
-  }
+    parentContext: context.parentContext as any
+  } as LegacyToolContext
 }
 
 function adaptContextToV2(
@@ -273,12 +274,12 @@ function adaptContextToV2(
     getAppState: () => ({}),
     setAppState: () => {},
     messages: [],
-    checkPermission: legacyContext.checkPermission || (async () => ({ behavior: 'allow' as const })),
-    llm: legacyContext.llm || {
+    checkPermission: legacyContext.checkPermission as any || (async () => ({ behavior: 'allow' as const })),
+    llm: legacyContext.llm as any || {
       complete: async (): Promise<LLMResult> => ({ content: '' }),
       stream: async function* (): AsyncGenerator<LLMStreamChunk> {}
     }
-  }
+  } as ToolUseContext
 }
 
 // ============================================================================

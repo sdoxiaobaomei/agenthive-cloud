@@ -49,7 +49,7 @@ export class ContextCollapse implements CompactionStrategy {
     // Identify collapsible ranges
     const collapsibleRange = this.findCollapsibleRange(messages)
     
-    if (!collapsibleRange || collapsibleRange.length < this.minCollapseSize) {
+    if (!collapsibleRange || (collapsibleRange.end - collapsibleRange.start) < this.minCollapseSize) {
       return {
         applied: false,
         originalTokens,

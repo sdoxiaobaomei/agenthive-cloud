@@ -9,7 +9,8 @@ import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
-import { PeriodicExportingMetricReader, Counter, Histogram, ObservableGauge } from '@opentelemetry/sdk-metrics';
+import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import type { Counter, Histogram } from '@opentelemetry/api';
 import { Resource } from '@opentelemetry/resources';
 import {
   SEMRESATTRS_SERVICE_NAME,
@@ -28,6 +29,7 @@ export interface TelemetryConfig {
   serviceVersion?: string;
   otlpEndpoint?: string;
   exportIntervalMs?: number;
+  logLevel?: 'debug' | 'info' | 'warn' | 'error';
 }
 
 export function initializeTelemetry(config: TelemetryConfig = {}): NodeSDK | null {
@@ -65,16 +67,16 @@ export function initializeTelemetry(config: TelemetryConfig = {}): NodeSDK | nul
         url: otlpEndpoint,
       }),
       exportIntervalMillis: exportIntervalMs,
-    }),
+    }) as any,
     instrumentations: [
       getNodeAutoInstrumentations({
         '@opentelemetry/instrumentation-http': { enabled: true },
-        '@opentelemetry/instrumentation-ws': { enabled: true },
+        '@opentelemetry/instrumentation-ws': { enabled: true } as any,
         // Agent Runtime 需要 net 来追踪 WebSocket 连接
         '@opentelemetry/instrumentation-net': { enabled: true },
         '@opentelemetry/instrumentation-fs': { enabled: false },
         '@opentelemetry/instrumentation-dns': { enabled: false },
-      }),
+      } as any),
     ],
   });
 

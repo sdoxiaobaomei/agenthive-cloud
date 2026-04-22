@@ -124,12 +124,12 @@ Returns file path, line number, and matching content.`,
     // 确保搜索路径在工作空间内
     if (!searchPath.startsWith(resolve(context.workspacePath))) {
       return {
-        type: 'deny',
+        behavior: 'deny',
         message: 'Search path is outside workspace'
       }
     }
 
-    return { type: 'allow' }
+    return { behavior: 'allow' }
   },
 
   renderToolUseMessage(input) {

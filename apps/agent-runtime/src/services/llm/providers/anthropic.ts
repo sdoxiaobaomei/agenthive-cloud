@@ -64,7 +64,7 @@ export class AnthropicProvider implements ILLMProvider {
         throw new Error(`Anthropic API error: ${response.status} ${error}`)
       }
 
-      const data = await response.json()
+      const data = await response.json() as any
       
       return {
         content: this.extractContent(data),
