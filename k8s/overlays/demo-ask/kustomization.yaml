@@ -1,34 +1,45 @@
 # ============================================================================
-# ASK Demo 环境 Kustomize 配置
+# ACK Demo 环境 Kustomize 配置
 # ============================================================================
-# 说明:
-#   此 overlay 专为阿里云 ASK (Serverless Kubernetes) 设计。
-#   与 local/production overlay 的区别:
-#     - 使用公开镜像（无需本地构建或私有仓库）
-#     - 资源限制最小化（ASK 按实际使用计费）
-#     - 移除 ASK 不支持的特性（如 imagePullPolicy: Never）
-#     - 使用 NodePort Service 替代 LoadBalancer（节省 SLB 费用）
-#
-# 使用方式:
-#   kubectl apply -k k8s/overlays/demo-ask
-# ============================================================================
+# 专为杭州 ACK Demo 集群设计
+# - 跳过本地 Postgres（使用北京 ECS 外部数据库）
+# - 镜像来源：ACR personal 版
+# - 资源精简：单副本，适合 4C8G 单节点
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# 命名空间
 namespace: agenthive
 
-# 基础资源（可选: 可以引用 base，也可以只部署简化版）
-# 这里我们先定义一个独立的轻量 demo，验证集群可用性
 resources:
-  - namespace.yaml
-  - nginx-demo.yaml
+  - ./base/00-namespace.yaml
+  - ./base/01-secrets.yaml
+  - ./base/03-redis.yaml
+  - ./base/04-api.yaml
+  - ./base/05-landing.yaml
+  - ./base/08-configmap.yaml
+  - rabbitmq.yaml
+  - ingress.yaml
 
-# 统一标签
+images:
+  - name: agenthive/api
+    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/api
+    newTag: latest
+  - name: agenthive/landing
+    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/landing
+    newTag: latest
+  - name: redis
+    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/redis
+    newTag: 7-alpine
+
+patches:
+  - path: configmap-patch.yaml
+  - path: api-patch.yaml
+  - path: landing-patch.yaml
+
 labels:
   - pairs:
       environment: demo-ask
-      managed-by: terraform
+      managed-by: kustomize
     includeSelectors: true
     includeTemplates: true

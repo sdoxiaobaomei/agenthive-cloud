@@ -1,12 +1,26 @@
 // Redis 配置
 import { Redis } from 'ioredis'
 
-// Redis 连接配置
+const getRedisConfig = () => {
+  if (process.env.REDIS_URL && !process.env.REDIS_HOST) {
+    const url = new URL(process.env.REDIS_URL)
+    return {
+      host: url.hostname,
+      port: parseInt(url.port || '6379'),
+      password: url.password || undefined,
+      db: parseInt(process.env.REDIS_DB || '0'),
+    }
+  }
+  return {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD || undefined,
+    db: parseInt(process.env.REDIS_DB || '0'),
+  }
+}
+
 const redisConfig = {
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD || undefined,
-  db: parseInt(process.env.REDIS_DB || '0'),
+  ...getRedisConfig(),
   retryStrategy: (times: number) => {
     const delay = Math.min(times * 50, 2000)
     return delay
