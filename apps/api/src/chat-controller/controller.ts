@@ -106,8 +106,8 @@ export const sendMessage = async (req: Request, res: Response) => {
       tasks = await chatService.executeAgentTask(id, intent, parseResult.data.content)
     }
 
-    // Add assistant response
-    const responseContent = buildResponse(intent, tasks)
+    // Generate assistant response via LLM
+    const responseContent = await chatService.generateReply(id, intent, parseResult.data.content, tasks)
     const assistantMsg = await chatService.addMessage(id, 'assistant', responseContent, {
       intent,
       tickets: tasks.map((t) => ({
@@ -213,25 +213,4 @@ export const getProgress = async (req: Request, res: Response) => {
   }
 }
 
-function buildResponse(intent: string, tasks: Array<{ ticketId: string; workerRole: string; status: string }>): string {
-  if (tasks.length === 0) {
-    switch (intent) {
-      case 'explain':
-        return '我来为您解释这个问题...'
-      case 'chat':
-        return '好的，请继续说。'
-      default:
-        return '已收到您的请求，正在处理中...'
-    }
-  }
 
-  const roleNames: Record<string, string> = {
-    frontend: '小花 (前端开发)',
-    backend: '阿铁 (后端开发)',
-    qa: '阿镜 (QA 工程师)',
-  }
-
-  const taskList = tasks.map((t) => `- ${roleNames[t.workerRole] || t.workerRole}: ${t.ticketId}`).join('\n')
-
-  return `已为您创建以下任务:\n${taskList}\n\nAgent 团队正在并行执行，您可以通过 WebSocket 实时查看进度。`
-}

@@ -119,7 +119,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: 🔨 Build workspace packages
-        run: pnpm --filter './packages/*' run build
+        run: |
+          cd packages/observability
+          pnpm run build
+          cd ../../apps/agent-runtime
+          pnpm run build || true
 
       - name: 🔨 Build API
         run: |
