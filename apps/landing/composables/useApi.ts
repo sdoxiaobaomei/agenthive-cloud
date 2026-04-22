@@ -277,22 +277,8 @@ export function useApi() {
 
     // 自动注入 JWT Token（除非 skipAuth 为 true）
     if (!options?.skipAuth) {
-      // 优先从 useAuth composable 读取，其次从 Pinia store 读取（与登录逻辑保持一致）
-      let currentToken: string | null = token?.value || null
-      
-      if (!currentToken) {
-        try {
-          const authStore = useAuthStore()
-          currentToken = authStore.token || null
-        } catch {
-          currentToken = null
-        }
-      }
-      
-      // fallback：从 localStorage 读取（页面刷新后 Pinia 尚未恢复时）
-      if (!currentToken && typeof window !== 'undefined') {
-        currentToken = localStorage.getItem('agenthive:auth-token')
-      }
+      // useAuth() 已经与 Pinia store 同步，直接读取即可
+      const currentToken = token?.value || null
       
       if (currentToken) {
         headers['Authorization'] = `Bearer ${currentToken}`
