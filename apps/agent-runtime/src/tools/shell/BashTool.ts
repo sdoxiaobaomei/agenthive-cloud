@@ -130,7 +130,7 @@ Returns stdout, stderr, and exit code.`,
     // 检查工作目录
     if (!isPathWithinWorkspace(cwd, context.workspacePath)) {
       return {
-        type: 'deny',
+        behavior: 'deny',
         message: `Access denied: cwd is outside workspace`
       }
     }
@@ -139,7 +139,7 @@ Returns stdout, stderr, and exit code.`,
     for (const pattern of DANGEROUS_PATTERNS) {
       if (pattern.test(input.command)) {
         return {
-          type: 'deny',
+          behavior: 'deny',
           message: `Dangerous command detected: ${input.command}`
         }
       }
@@ -150,17 +150,17 @@ Returns stdout, stderr, and exit code.`,
     for (const dir of sensitiveDirs) {
       if (input.command.includes(dir) && !context.workspacePath.includes(dir)) {
         return {
-          type: 'ask',
+          behavior: 'ask',
           prompt: `Command may access system directory: ${dir}. Allow?`
         }
       }
     }
 
-    return { type: 'allow' }
+    return { behavior: 'allow' }
   },
 
   renderToolUseMessage(input) {
-    return input.description || `Running: ${input.command.slice(0, 50)}${input.command.length > 50 ? '...' : ''}`
+    return input.description || `Running: ${input.command!.slice(0, 50)}${input.command!.length > 50 ? '...' : ''}`
   },
 
   renderToolResultMessage(result) {

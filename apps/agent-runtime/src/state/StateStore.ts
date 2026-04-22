@@ -219,8 +219,8 @@ export class StateStore extends EventEmitter {
       const current = this.get<T>(path)
       listener({
         path,
-        previousValue: undefined,
-        newValue: current,
+        previousValue: undefined as any,
+        newValue: current as any,
         timestamp: Date.now(),
         version: this.getSlice(path)?.version || 0
       })
@@ -416,8 +416,9 @@ export class StateStore extends EventEmitter {
       
       if (this.persistConfig.storage === 'local') {
         // 浏览器环境使用 localStorage，Node 环境需要自定义存储
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem(this.persistConfig.key, data)
+        const ls = (globalThis as any).localStorage
+        if (ls) {
+          ls.setItem(this.persistConfig.key, data)
         }
       } else if (this.persistConfig.customStorage) {
         await this.persistConfig.customStorage.set(this.persistConfig.key, data)
@@ -440,8 +441,9 @@ export class StateStore extends EventEmitter {
       let data: string | null = null
       
       if (this.persistConfig.storage === 'local') {
-        if (typeof localStorage !== 'undefined') {
-          data = localStorage.getItem(this.persistConfig.key)
+        const ls = (globalThis as any).localStorage
+        if (ls) {
+          data = ls.getItem(this.persistConfig.key)
         }
       } else if (this.persistConfig.customStorage) {
         data = await this.persistConfig.customStorage.get(this.persistConfig.key)

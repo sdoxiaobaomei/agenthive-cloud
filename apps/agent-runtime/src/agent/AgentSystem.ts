@@ -795,7 +795,7 @@ export class AgentManager extends EventEmitter {
         }
 
         // 验证输入
-        const parseResult = tool.inputSchema.safeParse(toolInput)
+        const parseResult = (tool.inputSchema as any).safeParse(toolInput)
         if (!parseResult.success) {
           results.push({
             id,
@@ -1062,7 +1062,7 @@ Use this when:
         success: result.success,
         agentId: task.id,
         content: result.content,
-        status: (result.success ? 'completed' : 'failed') as const,
+        status: (result.success ? 'completed' : 'failed') as 'completed' | 'failed',
         toolCalls: result.toolCalls,
         iterations: result.iterations,
         duration: result.duration

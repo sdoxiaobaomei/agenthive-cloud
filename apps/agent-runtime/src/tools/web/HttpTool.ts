@@ -2,7 +2,7 @@
  * HTTP Tool - 通用 HTTP 请求工具
  */
 import { z } from 'zod'
-import { buildTool, type ToolContext, type PermissionDecision } from '../ToolClaudeCode.js'
+import { buildTool, type ToolContext, type EnhancedPermissionDecision as PermissionDecision } from '../ToolClaudeCode.js'
 
 const inputSchema = z.object({
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional().default('GET'),
@@ -50,9 +50,9 @@ Warning: POST, PUT, PATCH, and DELETE methods can modify remote state.`,
   inputSchema,
   outputSchema,
   
-  isConcurrencySafe: (input) => READONLY_METHODS.includes(input.method),
-  isReadOnly: (input) => READONLY_METHODS.includes(input.method),
-  isDestructive: (input) => ['DELETE'].includes(input.method),
+  isConcurrencySafe: (input) => READONLY_METHODS.includes(input.method!),
+  isReadOnly: (input) => READONLY_METHODS.includes(input.method!),
+  isDestructive: (input) => ['DELETE'].includes(input.method!),
   
   async execute(input, context: ToolContext) {
     try {
@@ -60,7 +60,7 @@ Warning: POST, PUT, PATCH, and DELETE methods can modify remote state.`,
         method: input.method,
         headers: input.headers || {},
         body: input.body,
-        signal: AbortSignal.timeout(input.timeout)
+        signal: AbortSignal.timeout(input.timeout!)
       })
 
       // Get response headers
@@ -95,7 +95,7 @@ Warning: POST, PUT, PATCH, and DELETE methods can modify remote state.`,
     for (const pattern of BLOCKED_URLS) {
       if (pattern.test(input.url)) {
         return {
-          type: 'deny',
+          behavior: 'deny',
           message: 'Access to internal/local URLs is not allowed'
         }
       }
@@ -104,20 +104,20 @@ Warning: POST, PUT, PATCH, and DELETE methods can modify remote state.`,
     // Check protocol
     if (!input.url.startsWith('http://') && !input.url.startsWith('https://')) {
       return {
-        type: 'deny',
+        behavior: 'deny',
         message: 'Only HTTP and HTTPS protocols are allowed'
       }
     }
 
     // Warn about write operations
-    if (!READONLY_METHODS.includes(input.method)) {
+    if (!READONLY_METHODS.includes(input.method!)) {
       return {
-        type: 'ask',
+        behavior: 'ask',
         prompt: `Allow ${input.method} request to ${input.url}? This may modify remote state.`
       }
     }
 
-    return { type: 'allow' }
+    return { behavior: 'allow' }
   },
 
   renderToolUseMessage(input) {
@@ -137,7 +137,7 @@ Warning: POST, PUT, PATCH, and DELETE methods can modify remote state.`,
   },
 
   classify(input) {
-    if (READONLY_METHODS.includes(input.method)) {
+    if (READONLY_METHODS.includes(input.method!)) {
       return {
         category: 'execute',
         isSafe: true,

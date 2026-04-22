@@ -59,12 +59,13 @@ export interface QueryLoopV2Result {
   iterations: number
   compactionCount: number
   tokensSaved: number
+  error?: string
+  duration: number
   usage?: {
     promptTokens: number
     completionTokens: number
     totalTokens: number
   }
-  duration: number
 }
 
 export interface QueryState {
@@ -458,7 +459,7 @@ export class QueryLoopV2 extends EventEmitter {
       messages: [],
       checkPermission: canUseTool,
       llm: {
-        complete: async (messages, options) => {
+        complete: async (messages: any, options: any) => {
           const result = await this.config.llmService.complete(messages, options)
           return {
             content: result.content,
@@ -466,12 +467,12 @@ export class QueryLoopV2 extends EventEmitter {
             usage: result.usage
           }
         },
-        stream: async function* (messages, options) {
+        stream: async function* (this: any, messages: any, options: any) {
           for await (const chunk of this.config.llmService.stream(messages, options)) {
             yield chunk
           }
         }.bind(this)
-      }
+      } as any
     }
 
     // 执行工具

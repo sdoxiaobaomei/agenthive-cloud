@@ -12,8 +12,8 @@ import type { ToolRegistry } from '../Tool.js'
 
 // 注册所有文件工具
 export function registerFileTools(registry: ToolRegistry): void {
-  registry.register(FileReadTool)
-  registry.register(FileWriteTool)
-  registry.register(FileEditTool)
-  registry.register(GlobTool)
+  ;(registry as any).register(FileReadTool)
+  ;(registry as any).register(FileWriteTool)
+  ;(registry as any).register(FileEditTool)
+  ;(registry as any).register(GlobTool)
 }

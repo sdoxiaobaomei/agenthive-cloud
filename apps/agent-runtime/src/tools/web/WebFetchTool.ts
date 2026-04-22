@@ -2,7 +2,7 @@
  * Web Fetch Tool - 网页内容获取工具
  */
 import { z } from 'zod'
-import { buildTool, type ToolContext, type PermissionDecision } from '../ToolClaudeCode.js'
+import { buildTool, type ToolContext, type EnhancedPermissionDecision as PermissionDecision } from '../ToolClaudeCode.js'
 
 const inputSchema = z.object({
   url: z.string().describe('URL to fetch'),
@@ -56,7 +56,7 @@ Note: JavaScript-rendered content may not be fully captured.`,
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; AgentRuntime/2.0)'
         },
-        signal: AbortSignal.timeout(input.timeout)
+        signal: AbortSignal.timeout(input.timeout!)
       })
 
       if (!response.ok) {
@@ -74,9 +74,10 @@ Note: JavaScript-rendered content may not be fully captured.`,
       let content = extractReadableContent(html)
       
       // Truncate if needed
-      const truncated = content.length > input.maxLength
+      const maxLength = input.maxLength!
+      const truncated = content.length > maxLength
       if (truncated) {
-        content = content.slice(0, input.maxLength) + '\n\n[Content truncated...]'
+        content = content.slice(0, maxLength) + '\n\n[Content truncated...]'
       }
 
       return {
@@ -99,7 +100,7 @@ Note: JavaScript-rendered content may not be fully captured.`,
     for (const pattern of BLOCKED_URLS) {
       if (pattern.test(input.url)) {
         return {
-          type: 'deny',
+          behavior: 'deny',
           message: 'Access to internal/local URLs is not allowed'
         }
       }
@@ -108,12 +109,12 @@ Note: JavaScript-rendered content may not be fully captured.`,
     // Check protocol
     if (!input.url.startsWith('http://') && !input.url.startsWith('https://')) {
       return {
-        type: 'deny',
+        behavior: 'deny',
         message: 'Only HTTP and HTTPS protocols are allowed'
       }
     }
 
-    return { type: 'allow' }
+    return { behavior: 'allow' }
   },
 
   renderToolUseMessage(input) {

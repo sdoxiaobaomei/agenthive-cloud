@@ -246,7 +246,7 @@ export class ToolRegistry {
   getReadOnlyTools(): Tool<any, any>[] {
     return this.getAllTools().filter(tool => {
       if (!tool.isEnabled()) return false
-      return tool.isReadOnly()
+      return tool.isReadOnly({} as any)
     })
   }
 

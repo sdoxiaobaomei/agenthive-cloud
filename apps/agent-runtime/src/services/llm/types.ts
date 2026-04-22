@@ -50,6 +50,7 @@ export interface LLMCompletionResult {
     totalTokens: number
   }
   model: string
+  id?: string
 }
 
 export interface LLMStreamChunk {

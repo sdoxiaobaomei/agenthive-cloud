@@ -620,13 +620,13 @@ Use this when:
 
   // 安全标记
   isConcurrencySafe: () => true, // 子代理可以并发运行
-  isReadOnly: (input) => {
+  isReadOnly: (input: any) => {
     // explore 和 plan 是只读的
     return input.agentType === 'explore' || input.agentType === 'plan'
   },
   isDestructive: () => false,
 
-  async execute(input, context: ToolContext) {
+  async execute(input: any, context: any) {
     const manager = getSubAgentManager()
     
     // 构建父代理上下文
@@ -673,7 +673,7 @@ Use this when:
     }
   },
 
-  async checkPermissions(input, context): Promise<PermissionDecision> {
+  async checkPermissions(input: any, context: any): Promise<PermissionDecision> {
     // 检查递归调用限制
     if (context.agentId.startsWith('subagent-')) {
       return {
@@ -685,25 +685,25 @@ Use this when:
     return { type: 'allow' }
   },
 
-  renderToolUseMessage(input) {
+  renderToolUseMessage(input: any) {
     return `Creating ${input.agentType} agent: ${input.prompt.slice(0, 50)}${input.prompt.length > 50 ? '...' : ''}`
   },
 
-  renderToolResultMessage(result) {
+  renderToolResultMessage(result: any) {
     if (result.status === 'running') {
       return `Agent ${result.agentId} running in background`
     }
     return `Agent ${result.agentId} completed with ${result.iterations} iterations`
   },
 
-  userFacingName(input) {
+  userFacingName(input: any) {
     return `Run ${input?.agentType || 'agent'}`
   },
 
-  toAutoClassifierInput(input) {
+  toAutoClassifierInput(input: any) {
     return `Create ${input.agentType} agent: ${input.prompt.slice(0, 100)}`
   }
-})
+} as any)
 
 // 默认导出
 export default AgentTool

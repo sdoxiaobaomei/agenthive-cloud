@@ -67,7 +67,7 @@ export {
 
 export {
   QueryLoopV2,
-  type QueryResult,
+  type QueryLoopV2Result as QueryResult,
   type QueryProgressData,
 } from './agent/QueryLoopV2.js'
 
@@ -77,8 +77,11 @@ export {
 
 export {
   ConversationContextV2,
-  type LLMMessage,
 } from './context/ConversationContextV2.js'
+
+export type {
+  LLMMessage,
+} from './services/llm/types.js'
 
 // ============================================================================
 // Compaction Engine
@@ -101,7 +104,7 @@ export {
 } from './services/llm/LLMService.js'
 
 export type {
-  LLMServiceConfig,
+  LLMProviderConfig as LLMServiceConfig,
   LLMCompletionOptions,
   LLMCompletionResult,
   LLMStreamChunk,
@@ -129,7 +132,6 @@ export type {
   Tool,
   ToolDef,
   ToolMetadata,
-  ToolProgressData,
   ToolResult as LegacyToolResult,
   ToolCategory as LegacyToolCategory,
   ToolClassifierResult,
@@ -318,7 +320,7 @@ export async function initialize(config: AgentRuntimeConfig = {}): Promise<{
   }
 
   const logger = new Logger('AgentRuntime')
-  logger.info(`Agent Runtime v${VERSION} initialized`, config)
+  logger.info(`Agent Runtime v${VERSION} initialized`, config as Record<string, unknown>)
 
   // Create and populate tool registry
   const toolRegistry = createStandardToolRegistry()

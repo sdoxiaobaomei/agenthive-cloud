@@ -12,6 +12,7 @@ import type { QueryLoopV2Result, QueryProgressData } from './QueryLoopV2.js'
 
 // 统一的配置接口
 export interface UnifiedQueryLoopConfig extends Omit<LegacyConfig, 'toolRegistry'> {
+  toolRegistry?: any
   // 可选的 V2 配置
   compactionEngine?: QueryLoopV2Config['compactionEngine']
   maxTokens?: number

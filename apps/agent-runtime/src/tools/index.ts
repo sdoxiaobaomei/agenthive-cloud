@@ -165,18 +165,18 @@ export function registerStandardTools(
   }
   
   // 文件操作工具
-  registry.register(FileReadTool)
-  registry.register(FileWriteTool)
-  registry.register(FileEditTool)
+  ;(registry as any).register(FileReadTool)
+  ;(registry as any).register(FileWriteTool)
+  ;(registry as any).register(FileEditTool)
   
   // 搜索工具
-  registry.register(GrepTool)
+  ;(registry as any).register(GrepTool)
   
   // Shell 工具
-  registry.register(BashTool)
+  ;(registry as any).register(BashTool)
   
   // Agent 工具
-  registry.register(AgentTool)
+  ;(registry as any).register(AgentTool)
   
   return registry
 }
