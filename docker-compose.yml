@@ -90,7 +90,10 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-dev}
       DB_NAME: ${DB_NAME:-agenthive}
       REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
       JWT_SECRET: ${JWT_SECRET:-dev-secret}
+      OLLAMA_URL: http://host.docker.internal:11434
+      LLM_MODEL: qwen3:14b
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_SERVICE_NAME: agenthive-api
       OTEL_TRACES_SAMPLER: parentbased_traceidratio

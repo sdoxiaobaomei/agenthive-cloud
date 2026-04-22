@@ -28,7 +28,7 @@ cd "$(dirname "$0")/.."
 echo "📦 构建 Landing 镜像..."
 docker build \
     -t "$REGISTRY/landing:$VERSION" \
-    -f apps/apps/landing/Dockerfile.prod \
+    -f apps/landing/Dockerfile.prod \
     --platform "$PLATFORM" \
     ./apps
 
@@ -36,9 +36,9 @@ echo ""
 echo "📦 构建 API 镜像..."
 docker build \
     -t "$REGISTRY/api:$VERSION" \
-    -f apps/apps/api/Dockerfile.prod \
+    -f apps/api/Dockerfile \
     --platform "$PLATFORM" \
-    ./apps/apps/api
+    ./apps/api
 
 echo ""
 echo "📤 推送镜像..."
@@ -53,5 +53,5 @@ echo "  Landing: $REGISTRY/landing:$VERSION"
 echo "  API:     $REGISTRY/api:$VERSION"
 echo ""
 echo "使用方式:"
-echo "  更新 k8s/04-api.yaml 和 k8s/05-landing.yaml 中的 image 字段"
+echo "  更新 k8s/base/04-api.yaml 和 k8s/base/05-landing.yaml 中的 image 字段"
 echo "  然后运行: ./scripts/deploy.sh"

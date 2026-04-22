@@ -20,8 +20,8 @@ export const demoPlan: ExecutionPlan = {
       order: 0,
       context: {
         relevant_files: [
-          'apps/apps/web/src/views/Workspace.vue',
-          'apps/apps/web/src/components/execution/ExecutionBoard.vue',
+          'apps/web/src/views/Workspace.vue',
+          'apps/web/src/components/execution/ExecutionBoard.vue',
         ],
         constraints: ['使用 Element Plus 组件', '保持暗色主题兼容'],
       },
@@ -35,8 +35,8 @@ export const demoPlan: ExecutionPlan = {
       order: 0,
       context: {
         relevant_files: [
-          'apps/apps/web/src/types/execution.ts',
-          'apps/apps/web/src/stores/execution.ts',
+          'apps/web/src/types/execution.ts',
+          'apps/web/src/stores/execution.ts',
         ],
         constraints: ['类型必须与 agents/orchestrator.ts 对齐'],
       },
@@ -50,8 +50,8 @@ export const demoPlan: ExecutionPlan = {
       order: 0,
       context: {
         relevant_files: [
-          'apps/apps/web/src/views/Workspace.vue',
-          'apps/apps/web/src/views/Dashboard.vue',
+          'apps/web/src/views/Workspace.vue',
+          'apps/web/src/views/Dashboard.vue',
         ],
         constraints: ['不破坏现有的 Overview/Studio 切换逻辑'],
         depends_on: ['T-001'],

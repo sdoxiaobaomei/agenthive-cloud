@@ -4,7 +4,7 @@
 set -e
 
 NAMESPACE="${NAMESPACE:-agenthive}"
-K8S_DIR="${K8S_DIR:-k8s}"
+K8S_DIR="${K8S_DIR:-k8s/base}"
 
 echo "🚀 AgentHive Kubernetes 部署"
 echo "============================="
@@ -45,14 +45,14 @@ echo ""
 echo "🗄️  部署 PostgreSQL..."
 kubectl apply -f "$K8S_DIR/02-postgres.yaml"
 echo "⏳ 等待 PostgreSQL 就绪..."
-kubectl wait --for=condition=ready pod -l app=postgres -n "$NAMESPACE" --timeout=120s
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgres -n "$NAMESPACE" --timeout=120s
 echo "✅ PostgreSQL 就绪"
 echo ""
 
 echo "📦 部署 Redis..."
 kubectl apply -f "$K8S_DIR/03-redis.yaml"
 echo "⏳ 等待 Redis 就绪..."
-kubectl wait --for=condition=ready pod -l app=redis -n "$NAMESPACE" --timeout=60s
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n "$NAMESPACE" --timeout=60s
 echo "✅ Redis 就绪"
 echo ""
 
@@ -67,14 +67,14 @@ echo ""
 
 # 5. 等待应用就绪
 echo "⏳ 等待应用就绪..."
-kubectl wait --for=condition=ready pod -l app=api -n "$NAMESPACE" --timeout=120s
-kubectl wait --for=condition=ready pod -l app=landing -n "$NAMESPACE" --timeout=120s
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=api -n "$NAMESPACE" --timeout=120s
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=landing -n "$NAMESPACE" --timeout=120s
 echo "✅ 应用就绪"
 echo ""
 
 # 6. 部署 Ingress
 echo "🌐 部署 Ingress..."
-kubectl apply -f "$K8S_DIR/06-ingress.yaml"
+kubectl apply -f "$K8S_DIR/09-ingress.yaml"
 echo ""
 
 # 显示状态

@@ -177,7 +177,7 @@ echo "✅ 完成: $REGISTRY/landing:$VERSION, $REGISTRY/api:$VERSION"
 #### Step 4: 创建 Namespace 和基础配置
 
 ```yaml
-# k8s/00-namespace.yaml
+# k8s/base/00-namespace.yaml
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -187,7 +187,7 @@ metadata:
 ```
 
 ```yaml
-# k8s/01-secrets.yaml
+# k8s/base/01-secrets.yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -218,7 +218,7 @@ data:
 #### Step 5: 部署 PostgreSQL（StatefulSet）
 
 ```yaml
-# k8s/02-postgres.yaml
+# k8s/base/02-postgres.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -312,7 +312,7 @@ spec:
 #### Step 6: 部署 Redis
 
 ```yaml
-# k8s/03-redis.yaml
+# k8s/base/03-redis.yaml
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -392,7 +392,7 @@ spec:
 #### Step 7: 部署 API
 
 ```yaml
-# k8s/04-api.yaml
+# k8s/base/04-api.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -491,7 +491,7 @@ spec:
 #### Step 8: 部署 Landing
 
 ```yaml
-# k8s/05-landing.yaml
+# k8s/base/05-landing.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -540,7 +540,7 @@ spec:
 #### Step 9: 配置 Ingress
 
 ```yaml
-# k8s/06-ingress.yaml
+# k8s/base/09-ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -596,33 +596,33 @@ NAMESPACE="agenthive"
 echo "🚀 部署 AgentHive 到 Kubernetes..."
 
 # 1. 创建命名空间
-kubectl apply -f k8s/00-namespace.yaml
+kubectl apply -f k8s/base/00-namespace.yaml
 
 # 2. 创建配置和密钥
 echo "📦 创建 Secrets 和 ConfigMaps..."
-kubectl apply -f k8s/01-secrets.yaml
+kubectl apply -f k8s/base/01-secrets.yaml
 
 # 3. 部署数据库
 echo "🗄️  部署 PostgreSQL..."
-kubectl apply -f k8s/02-postgres.yaml
+kubectl apply -f k8s/base/02-postgres.yaml
 kubectl wait --for=condition=ready pod -l app=postgres -n $NAMESPACE --timeout=120s
 
 echo "📦 部署 Redis..."
-kubectl apply -f k8s/03-redis.yaml
+kubectl apply -f k8s/base/03-redis.yaml
 kubectl wait --for=condition=ready pod -l app=redis -n $NAMESPACE --timeout=60s
 
 # 4. 部署应用
 echo "🚀 部署 API..."
-kubectl apply -f k8s/04-api.yaml
+kubectl apply -f k8s/base/04-api.yaml
 kubectl wait --for=condition=ready pod -l app=api -n $NAMESPACE --timeout=120s
 
 echo "🎨 部署 Landing..."
-kubectl apply -f k8s/05-landing.yaml
+kubectl apply -f k8s/base/05-landing.yaml
 kubectl wait --for=condition=ready pod -l app=landing -n $NAMESPACE --timeout=120s
 
 # 5. 部署 Ingress
 echo "🌐 部署 Ingress..."
-kubectl apply -f k8s/06-ingress.yaml
+kubectl apply -f k8s/base/09-ingress.yaml
 
 echo ""
 echo "✅ 部署完成！"

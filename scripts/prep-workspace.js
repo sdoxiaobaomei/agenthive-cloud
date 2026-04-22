@@ -23,8 +23,8 @@ function copyFilesForT005() {
 }
 
 function copyFilesForT006() {
-  const srcRoot = 'apps/apps/web/src';
-  const destRoot = 'agents/workspace/T006/repo/apps/apps/web/src';
+  const srcRoot = 'apps/web/src';
+  const destRoot = 'agents/workspace/T006/repo/apps/web/src';
   function walk(dir) {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const p = path.join(dir, entry.name);
@@ -38,8 +38,8 @@ function copyFilesForT006() {
     }
   }
   walk(srcRoot);
-  fs.mkdirSync('agents/workspace/T006/repo/apps/apps/web', { recursive: true });
-  fs.copyFileSync('apps/apps/web/package.json', 'agents/workspace/T006/repo/apps/apps/web/package.json');
+  fs.mkdirSync('agents/workspace/T006/repo/apps/web', { recursive: true });
+  fs.copyFileSync('apps/web/package.json', 'agents/workspace/T006/repo/apps/web/package.json');
 }
 
 copyFilesForT004();

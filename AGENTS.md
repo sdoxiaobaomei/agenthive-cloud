@@ -104,7 +104,7 @@ ai-digital-twin/                      # Hive 控制中心
 ### Landing (Nuxt 3)
 
 ```bash
-cd apps/apps/landing
+cd apps/landing
 
 # 开发服务器
 npm run dev              # http://localhost:3000
@@ -125,7 +125,7 @@ npm run test:e2e         # Playwright E2E 测试
 ### Web (Vue 3 + Vite)
 
 ```bash
-cd apps/apps/web
+cd apps/web
 
 # 开发服务器
 npm run dev              # http://localhost:5173/app/
@@ -147,7 +147,7 @@ npm run test:e2e         # Playwright
 ### API (Express)
 
 ```bash
-cd apps/apps/api
+cd apps/api
 
 # 开发
 npm run dev              # tsx watch 热重载
@@ -165,7 +165,7 @@ npm run test:ui          # Vitest UI
 ### Agent Runtime
 
 ```bash
-cd apps/apps/agent-runtime
+cd apps/agent-runtime
 
 # 开发
 npm run dev              # tsx watch
@@ -398,7 +398,7 @@ VITE_WS_URL=ws://localhost:8080/ws
 
 ```bash
 # Agent Runtime 部署
-cd apps/apps/agent-runtime
+cd apps/agent-runtime
 kubectl apply -f deploy/k8s/
 
 # 或使用 Helm
@@ -507,7 +507,7 @@ node scripts/health-check/basic.sh
 ### 1. 克隆和安装
 
 ```bash
-cd apps/apps/landing
+cd apps/landing
 npm install
 
 cd ../web
@@ -529,15 +529,15 @@ cp .env.example .env.local
 
 ```bash
 # 终端 1 - Landing
-cd apps/apps/landing
+cd apps/landing
 npm run dev
 
 # 终端 2 - Web
-cd apps/apps/web
+cd apps/web
 npm run dev
 
 # 终端 3 - API
-cd apps/apps/api
+cd apps/api
 npm run dev
 ```
 
