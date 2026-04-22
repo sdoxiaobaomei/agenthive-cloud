@@ -1,0 +1,2 @@
+com.agenthive.common.mybatis.config.MybatisPlusConfig
+com.agenthive.common.mybatis.config.LogicDeleteConfig

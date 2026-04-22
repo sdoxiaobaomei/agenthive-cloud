@@ -1,0 +1,68 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+  profiles:
+    active: dev
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: false
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin, RETAIN_UNIQUE
+      routes:
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=0
+        - id: user-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - StripPrefix=0
+        - id: payment-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - StripPrefix=0
+        - id: order-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - StripPrefix=0
+        - id: cart-service
+          uri: http://localhost:8085
+          predicates:
+            - Path=/api/carts/**
+          filters:
+            - StripPrefix=0
+        - id: logistics-service
+          uri: http://localhost:8086
+          predicates:
+            - Path=/api/logistics/**
+          filters:
+            - StripPrefix=0
+
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+
+jwt:
+  secret: ${JWT_SECRET:agenthive-default-secret-key-2024-change-in-production}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: debug
