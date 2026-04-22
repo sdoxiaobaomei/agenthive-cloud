@@ -66,7 +66,7 @@ pids/
 # .agents/
 
 # Java Maven build outputs
-apps/java/*/target/
+apps/java/**/target/
 
 # Nuxt build outputs (custom output dir)
 .output-new/
