@@ -61,10 +61,10 @@ spec:
           #   Never = 从不拉取，只用本地镜像（ASK 不支持，因为 ECI 没有本地缓存）
           imagePullPolicy: IfNotPresent
 
-          # ports: 容器暴露的端口
-          - containerPort: 80
-            name: http
-            protocol: TCP
+          ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
 
           # resources: 资源请求和限制
           #   requests: K8s 调度时保证分配给 Pod 的最小资源

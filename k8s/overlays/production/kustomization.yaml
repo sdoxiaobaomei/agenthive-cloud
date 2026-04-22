@@ -5,8 +5,6 @@ namespace: agenthive-production
 
 resources:
   - ../../base
-  - ingress.yaml
-  - hpa.yaml
 
 # 生产镜像配置
 images:
@@ -24,8 +22,103 @@ replicas:
   - name: landing
     count: 3
 
-# 生产资源限制
+# 生产资源限制和覆盖
 patches:
+  - target:
+      kind: Ingress
+      name: agenthive-ingress
+    patch: |-
+      - op: replace
+        path: /metadata
+        value:
+          name: agenthive-ingress
+          annotations:
+            nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+            nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+            nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+            nginx.ingress.kubernetes.io/ssl-redirect: "true"
+            nginx.ingress.kubernetes.io/rate-limit: "100"
+            nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+            cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      - op: replace
+        path: /spec
+        value:
+          ingressClassName: nginx
+          tls:
+            - hosts:
+                - agenthive.cloud
+                - www.agenthive.cloud
+                - api.agenthive.cloud
+              secretName: production-tls-secret
+          rules:
+            - host: agenthive.cloud
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: prod-landing
+                        port:
+                          number: 3000
+            - host: www.agenthive.cloud
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: prod-landing
+                        port:
+                          number: 3000
+            - host: api.agenthive.cloud
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: prod-api
+                        port:
+                          number: 3001
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: api-hpa
+    patch: |-
+      - op: replace
+        path: /spec/scaleTargetRef/name
+        value: prod-api
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/behavior/scaleUp/stabilizationWindowSeconds
+        value: 60
+      - op: replace
+        path: /spec/behavior/scaleUp/policies
+        value:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: landing-hpa
+    patch: |-
+      - op: replace
+        path: /spec/scaleTargetRef/name
+        value: prod-landing
+      - op: replace
+        path: /spec/minReplicas
+        value: 3
+      - op: replace
+        path: /spec/behavior/scaleUp/stabilizationWindowSeconds
+        value: 60
+      - op: replace
+        path: /spec/behavior/scaleUp/policies
+        value:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
   - target:
       kind: Deployment
       name: api
@@ -58,7 +151,6 @@ patches:
       - op: replace
         path: /spec/template/spec/containers/0/resources/limits/cpu
         value: "500m"
-  # 生产环境 PDB 要求至少 50% 可用
   - target:
       kind: PodDisruptionBudget
       name: api
@@ -74,7 +166,10 @@ patches:
         path: /spec/minAvailable
         value: 2
 
-commonLabels:
-  environment: production
+labels:
+  - pairs:
+      environment: production
+    includeSelectors: true
+    includeTemplates: true
 
 namePrefix: prod-

@@ -26,6 +26,9 @@ resources:
   - nginx-demo.yaml
 
 # 统一标签
-commonLabels:
-  environment: demo-ask
-  managed-by: terraform
+labels:
+  - pairs:
+      environment: demo-ask
+      managed-by: terraform
+    includeSelectors: true
+    includeTemplates: true

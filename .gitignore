@@ -64,3 +64,15 @@ pids/
 # KIMI agent files
 # Keep project skills in git for team sharing
 # .agents/
+
+# Java Maven build outputs
+apps/java/*/target/
+
+# Nuxt build outputs (custom output dir)
+.output-new/
+
+# Temporary sprint tracking
+TODO_SPRINT.md
+
+# Downloaded build tools
+tools/apache-maven-*/
