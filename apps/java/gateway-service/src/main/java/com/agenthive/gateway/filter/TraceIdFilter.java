@@ -1,6 +1,5 @@
 package com.agenthive.gateway.filter;
 
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -11,7 +10,6 @@ import reactor.core.publisher.Mono;
 
 import java.util.UUID;
 
-@Slf4j
 @Component
 public class TraceIdFilter implements GlobalFilter, Ordered {
 
@@ -29,7 +27,9 @@ public class TraceIdFilter implements GlobalFilter, Ordered {
                 .build();
         return chain.filter(exchange.mutate().request(mutatedRequest).build())
                 .then(Mono.fromRunnable(() -> {
-                    exchange.getResponse().getHeaders().add(TRACE_ID_HEADER, finalTraceId);
+                    if (!exchange.getResponse().isCommitted()) {
+                        exchange.getResponse().getHeaders().add(TRACE_ID_HEADER, finalTraceId);
+                    }
                 }));
     }
 

@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: payment-service
+  cloud:
+    nacos:
+      config:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        file-extension: yaml
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        # Use persistent instance to avoid gRPC ephemeral connection issues
+        ephemeral: false
+        # Heartbeat interval
+        heart-beat-interval: 5000
+        # Disable automatic registration if Nacos is not available
+        register-enabled: true

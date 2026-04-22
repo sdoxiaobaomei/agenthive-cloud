@@ -1,0 +1,15 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: cart-service
+  data:
+    redis:
+      host: agenthive-redis
+      port: 6379
+  cloud:
+    nacos:
+      config:
+        import-check:
+          enabled: false

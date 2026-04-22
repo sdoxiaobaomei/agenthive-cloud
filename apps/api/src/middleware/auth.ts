@@ -11,7 +11,7 @@ const PUBLIC_PATHS = [
   '/auth/sms/',
 ]
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction) {
+export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
   if (PUBLIC_PATHS.some((p) => req.path.includes(p))) {
     return next()
   }
@@ -28,23 +28,32 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
     return res.status(401).json({ success: false, error: 'Unauthorized' })
   }
 
-  const payload = jwt.verify(token)
-  if (!payload) {
+  try {
+    const payload = await jwt.verify(token)
+    if (!payload) {
+      return res.status(401).json({ success: false, error: 'Invalid or expired token' })
+    }
+
+    ;(req as any).userId = payload.userId
+    ;(req as any).user = payload
+    next()
+  } catch (error) {
+    logger.error('Auth middleware error', error instanceof Error ? error : undefined)
     return res.status(401).json({ success: false, error: 'Invalid or expired token' })
   }
-
-  ;(req as any).userId = payload.userId
-  ;(req as any).user = payload
-  next()
 }
 
-export function optionalAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+export async function optionalAuthMiddleware(req: Request, res: Response, next: NextFunction) {
   const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token
   if (token) {
-    const payload = jwt.verify(token)
-    if (payload) {
-      ;(req as any).userId = payload.userId
-      ;(req as any).user = payload
+    try {
+      const payload = await jwt.verify(token)
+      if (payload) {
+        ;(req as any).userId = payload.userId
+        ;(req as any).user = payload
+      }
+    } catch {
+      // ignore invalid token for optional auth
     }
   }
   next()

@@ -5,6 +5,8 @@ import com.agenthive.auth.service.dto.RegisterRequest;
 import com.agenthive.auth.service.dto.TokenResponse;
 import com.agenthive.auth.domain.vo.UserVO;
 
+import java.util.List;
+
 public interface AuthService {
 
     TokenResponse register(RegisterRequest request);
@@ -16,4 +18,6 @@ public interface AuthService {
     void logout(String token);
 
     UserVO getCurrentUser(String token);
+
+    List<String> getUserRoles(Long userId);
 }

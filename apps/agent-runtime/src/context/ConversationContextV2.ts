@@ -363,6 +363,25 @@ export class ConversationContextV2 {
   getCompressionHistory(): CompressionInfo[] {
     return [...this.compressionHistory]
   }
+
+  // 替换消息（用于应用压缩结果）
+  replaceMessages(messages: LLMMessage[]): void {
+    // 保留系统提示词
+    const systemMessages = this.messages.filter(m => m.role === 'system')
+    const newSystemMessages = messages.filter(m => m.role === 'system')
+
+    // 如果新的消息中没有系统消息但原来有，保留原来的系统消息
+    if (newSystemMessages.length === 0 && systemMessages.length > 0) {
+      this.messages = [...systemMessages, ...messages.filter(m => m.role !== 'system')]
+    } else {
+      this.messages = [...messages]
+    }
+
+    this.logger.info('Messages replaced', {
+      newCount: this.messages.length,
+      systemPromptPreserved: this.systemPrompt ? true : false
+    })
+  }
 }
 
 // 全局上下文实例

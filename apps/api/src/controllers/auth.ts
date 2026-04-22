@@ -1,6 +1,7 @@
 // 认证控制器
 import type { Request, Response } from 'express'
 import { z } from 'zod'
+import bcrypt from 'bcrypt'
 import { userDb, delay } from '../utils/database.js'
 import { jwt } from '../utils/jwt.js'
 import { smsService } from '../services/sms.js'
@@ -79,7 +80,7 @@ export const loginBySms = async (req: Request, res: Response) => {
         role: 'user',
       })
     }
-    const token = jwt.sign({
+    const token = await jwt.sign({
       userId: user.id,
       username: user.username,
       role: user.role,
@@ -115,13 +116,16 @@ export const login = async (req: Request, res: Response) => {
     if (!parseResult.success) {
       return res.status(400).json({ success: false, error: '用户名和密码不能为空' })
     }
-    const { username } = parseResult.data
-    const allUsers = await userDb.getAll()
-    let user = allUsers.find((u: any) => u.username === username)
-    if (!user) {
-      user = await userDb.create({ username, role: 'user' })
+    const { username, password } = parseResult.data
+    const user = await userDb.findByUsername(username)
+    if (!user || !user.password_hash) {
+      return res.status(401).json({ success: false, error: '用户名或密码错误' })
     }
-    const token = jwt.sign({
+    const isValid = await bcrypt.compare(password, user.password_hash)
+    if (!isValid) {
+      return res.status(401).json({ success: false, error: '用户名或密码错误' })
+    }
+    const token = await jwt.sign({
       userId: user.id,
       username: user.username,
       role: user.role,
@@ -159,7 +163,7 @@ export const register = async (req: Request, res: Response) => {
         details: parseResult.error.format(),
       })
     }
-    const { username, email, phone, code } = parseResult.data
+    const { username, email, phone, code, password } = parseResult.data
     if (phone && code) {
       const verifyResult = await smsService.verifyCode(phone, code)
       if (!verifyResult.success) {
@@ -171,8 +175,9 @@ export const register = async (req: Request, res: Response) => {
     if (existingUser) {
       return res.status(409).json({ success: false, error: '用户名已存在' })
     }
-    const user = await userDb.create({ username, email, phone, role: 'user' })
-    const token = jwt.sign({
+    const password_hash = await bcrypt.hash(password, 10)
+    const user = await userDb.create({ username, email, phone, role: 'user', password_hash })
+    const token = await jwt.sign({
       userId: user.id,
       username: user.username,
       role: user.role,
@@ -222,7 +227,7 @@ export const refreshToken = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, error: '未提供 Token' })
     }
     const token = authHeader.slice(7)
-    const payload = jwt.verify(token)
+    const payload = await jwt.verify(token)
     if (!payload) {
       return res.status(401).json({ success: false, error: 'Token 无效或已过期' })
     }
@@ -230,7 +235,7 @@ export const refreshToken = async (req: Request, res: Response) => {
     if (!user) {
       return res.status(404).json({ success: false, error: '用户不存在' })
     }
-    const newToken = jwt.sign({
+    const newToken = await jwt.sign({
       userId: user.id,
       username: user.username,
       role: user.role,
@@ -266,7 +271,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, error: '未提供 Token' })
     }
     const token = authHeader.slice(7)
-    const payload = jwt.verify(token)
+    const payload = await jwt.verify(token)
     if (!payload) {
       return res.status(401).json({ success: false, error: 'Token 无效或已过期' })
     }

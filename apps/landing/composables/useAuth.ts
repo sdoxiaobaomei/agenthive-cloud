@@ -29,9 +29,35 @@ export function useAuth() {
   // 初始化：在客户端从 localStorage 读取（SSR 安全）
   if (import.meta.client && !isInitialized.value) {
     try {
-      // 优先从 cookie 读取，其次从 localStorage 读取（兼容旧版本）
-      const savedToken = authCookie.value || localStorage.getItem('agenthive:auth-token')
-      const savedUser = localStorage.getItem('agenthive:auth-user')
+      // 优先从 Pinia 持久化存储读取（与 stores/auth.ts 保持一致）
+      let savedToken: string | null = null
+      let savedUser: User | null = null
+      
+      const piniaRaw = localStorage.getItem('agenthive:auth')
+      if (piniaRaw) {
+        try {
+          const piniaData = JSON.parse(piniaRaw)
+          savedToken = piniaData.token || null
+          savedUser = piniaData.user || null
+        } catch (e) {
+          console.error('Failed to parse Pinia auth data:', e)
+        }
+      }
+      
+      // 其次从 cookie 读取，最后从旧版 localStorage 读取（兼容旧版本）
+      if (!savedToken) {
+        savedToken = authCookie.value || localStorage.getItem('agenthive:auth-token')
+      }
+      if (!savedUser) {
+        const userRaw = localStorage.getItem('agenthive:auth-user')
+        if (userRaw) {
+          try {
+            savedUser = JSON.parse(userRaw)
+          } catch (e) {
+            console.error('Failed to parse user data:', e)
+          }
+        }
+      }
 
       if (savedToken) {
         token.value = savedToken
@@ -40,11 +66,7 @@ export function useAuth() {
       }
 
       if (savedUser) {
-        try {
-          user.value = JSON.parse(savedUser)
-        } catch (e) {
-          console.error('Failed to parse user data:', e)
-        }
+        user.value = savedUser
       }
     } catch (e) {
       console.error('Failed to access storage:', e)

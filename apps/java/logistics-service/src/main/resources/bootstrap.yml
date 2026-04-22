@@ -5,9 +5,19 @@ spring:
         server-addr: ${NACOS_HOST:localhost}:${NACOS_PORT:8848}
         namespace: ${NACOS_NAMESPACE:}
         group: DEFAULT_GROUP
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+        # Use persistent instance to avoid gRPC ephemeral connection issues
+        ephemeral: false
+        # Heartbeat interval
+        heart-beat-interval: 5000
+        # Disable automatic registration if Nacos is not available
+        register-enabled: true
       config:
         server-addr: ${NACOS_HOST:localhost}:${NACOS_PORT:8848}
         namespace: ${NACOS_NAMESPACE:}
         group: DEFAULT_GROUP
         file-extension: yaml
         enabled: false
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}

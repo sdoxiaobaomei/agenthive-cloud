@@ -1,5 +1,6 @@
 // LLM Service - 统一的大语言模型服务接口
 import { EventEmitter } from 'events'
+import crypto from 'crypto'
 import { ILLMProvider, LLMMessage, LLMCompletionOptions, LLMCompletionResult, LLMStreamChunk, LLMProviderConfig, LLMToolDefinition } from './types.js'
 import { AnthropicProvider } from './providers/anthropic.js'
 import { OpenAIProvider } from './providers/openai.js'
@@ -112,14 +113,7 @@ export class LLMService extends EventEmitter {
   // 生成缓存键
   private generateCacheKey(messages: LLMMessage[], options?: LLMCompletionOptions): string {
     const data = JSON.stringify({ messages, options })
-    // 简单的 hash
-    let hash = 0
-    for (let i = 0; i < data.length; i++) {
-      const char = data.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash
-    }
-    return hash.toString(16)
+    return crypto.createHash('sha256').update(data).digest('hex')
   }
 
   // 检查缓存

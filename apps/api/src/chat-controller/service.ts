@@ -13,6 +13,7 @@ import { getLLMService } from '../services/llm.js'
 import logger from '../utils/logger.js'
 import { spawn } from 'child_process'
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
 import { getTraceParentEnv } from '@agenthive/observability'
 import type {
@@ -45,6 +46,20 @@ const INTENT_CLASSIFICATION_PROMPT = `分析用户输入的意图，从以下选
 
 function generateId(prefix = 'id'): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
+}
+
+function validateOrchestratorPath(): void {
+  if (!fs.existsSync(ORCHESTRATOR_PATH)) {
+    throw new Error(`Orchestrator file not found: ${ORCHESTRATOR_PATH}`)
+  }
+
+  const projectRoot = path.resolve(__dirname, '../../../../')
+  const resolvedPath = path.resolve(ORCHESTRATOR_PATH)
+  const relative = path.relative(projectRoot, resolvedPath)
+
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw new Error(`Orchestrator path is outside project root: ${ORCHESTRATOR_PATH}`)
+  }
 }
 
 export const chatService = {
@@ -176,6 +191,9 @@ export const chatService = {
       TARGET_REPO: process.cwd(),
       ...(traceEnv || {}),
     }
+
+    // Validate orchestrator path before spawning
+    validateOrchestratorPath()
 
     logger.info('Spawning orchestrator', { sessionId, intent, ticketCount: tickets.length })
 

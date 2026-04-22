@@ -21,6 +21,10 @@ export const useAuthStore = defineStore(
       const { token: t, user: u } = response.data
       token.value = t
       user.value = u
+      // 同步到 useApi/useAuth 兼容的 localStorage key
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('agenthive:auth-token', t)
+      }
       return u
     }
 
@@ -33,6 +37,9 @@ export const useAuthStore = defineStore(
       const { token: t, user: u } = response.data
       token.value = t
       user.value = u
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('agenthive:auth-token', t)
+      }
       return u
     }
 
@@ -54,6 +61,9 @@ export const useAuthStore = defineStore(
       } finally {
         token.value = null
         user.value = null
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('agenthive:auth-token')
+        }
       }
     }
 

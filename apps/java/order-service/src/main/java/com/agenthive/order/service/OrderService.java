@@ -1,7 +1,7 @@
 package com.agenthive.order.service;
 
 import com.agenthive.order.domain.vo.OrderVO;
-import com.agenthive.order.internal.common.PageResult;
+import com.agenthive.common.core.result.PageResult;
 import com.agenthive.order.service.dto.CreateOrderRequest;
 
 public interface OrderService {

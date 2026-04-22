@@ -1,14 +1,11 @@
 // Agent Runtime V3 - 使用 LLM 和 QueryLoop 的完整 AI Agent
-import { EventEmitter } from 'events'
+import { BaseAgentRuntime } from './BaseAgentRuntime.js'
+import type { AgentConfig, Task, Command } from '../types/index.js'
 import { trace, SpanStatusCode } from '@opentelemetry/api'
 import { AI_ATTRIBUTES, AI_SPAN_NAMES } from '@agenthive/observability'
-import type { AgentConfig, AgentStatus, Task, Command } from '../types/index.js'
-import { WebSocketClient } from './websocket-client.js'
 import { TaskExecutorManagerV3 } from './task-executor-v3.js'
-import { FileSystemService } from './filesystem.js'
-import { Logger } from '../utils/logger.js'
-import { getMCPManager } from '../mcp/index.js'
 import { initializeLLMService } from './llm/LLMService.js'
+import { getMCPManager } from '../mcp/index.js'
 
 export interface AgentRuntimeV3Config extends AgentConfig {
   llmConfig: {
@@ -20,23 +17,12 @@ export interface AgentRuntimeV3Config extends AgentConfig {
   enableStreaming?: boolean
 }
 
-export class AgentRuntimeV3 extends EventEmitter {
-  private config: AgentRuntimeV3Config
-  private wsClient: WebSocketClient
+export class AgentRuntimeV3 extends BaseAgentRuntime<AgentRuntimeV3Config> {
   private executorManager: TaskExecutorManagerV3
-  private fileSystem: FileSystemService
-  private logger: Logger
   private mcpManager = getMCPManager()
-  private status: AgentStatus = 'idle'
-  private currentTask: Task | null = null
-  private heartbeatTimer: NodeJS.Timeout | null = null
-  private isShuttingDown = false
 
   constructor(config: AgentRuntimeV3Config) {
-    super()
-    this.config = config
-    this.logger = new Logger(config.id)
-    this.wsClient = new WebSocketClient(config.supervisorUrl, config.id)
+    super(config)
     const llmService = initializeLLMService({
       defaultProvider: {
         provider: config.llmConfig.provider,
@@ -50,99 +36,41 @@ export class AgentRuntimeV3 extends EventEmitter {
       llmService,
       enableStreaming: config.enableStreaming ?? true
     })
-    this.fileSystem = new FileSystemService(config.workspacePath)
-    this.setupEventHandlers()
+    this.setupExecutorEventHandlers()
   }
 
-  async start(): Promise<void> {
-    this.logger.info('Starting Agent Runtime V3...', { agentId: this.config.id })
-    try {
-      await this.fileSystem.initialize()
-      await this.wsClient.connect()
-      await this.register()
-      this.startHeartbeat()
-      this.status = 'idle'
-      this.emit('started')
-      this.logger.info('Agent Runtime V3 started successfully')
-    } catch (error) {
-      this.logger.error('Failed to start Agent Runtime', { error })
-      this.status = 'error'
-      throw error
+  protected getRuntimeName(): string {
+    return 'Agent Runtime V3'
+  }
+
+  getAvailableTools(): string[] {
+    return this.executorManager.getAvailableTools()
+  }
+
+  protected getRegisterCapabilities(): string[] {
+    return [...this.config.capabilities, 'llm', 'ai_execution']
+  }
+
+  protected getRegisterExtraFields(): Record<string, unknown> {
+    return { model: this.config.llmConfig.model }
+  }
+
+  protected getHeartbeatExtraFields(): Record<string, unknown> {
+    return {
+      tools: this.executorManager.getAvailableTools(),
+      model: this.config.llmConfig.model
     }
   }
 
-  async stop(): Promise<void> {
-    if (this.isShuttingDown) return
-    this.isShuttingDown = true
-    this.logger.info('Stopping Agent Runtime...')
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer)
-      this.heartbeatTimer = null
-    }
-    if (this.currentTask && this.status === 'working') {
-      await this.waitForTaskCompletion(30000)
-    }
+  protected getExecutorManager(): TaskExecutorManagerV3 {
+    return this.executorManager
+  }
+
+  protected async beforeDisconnect(): Promise<void> {
     await this.mcpManager.disconnectAll()
-    await this.wsClient.disconnect()
-    this.status = 'shutdown'
-    this.emit('stopped')
-    this.logger.info('Agent Runtime stopped')
   }
 
-  async pause(): Promise<void> {
-    if (this.status !== 'working') {
-      this.status = 'paused'
-      this.emit('paused')
-      this.logger.info('Agent paused')
-    }
-  }
-
-  async resume(): Promise<void> {
-    if (this.status === 'paused') {
-      this.status = 'idle'
-      this.emit('resumed')
-      this.logger.info('Agent resumed')
-    }
-  }
-
-  async executeCommand(command: Command): Promise<void> {
-    this.logger.info('Executing command', { type: command.type })
-    switch (command.type) {
-      case 'run_task':
-        await this.handleRunTask(command.payload as unknown as Task)
-        break
-      case 'cancel_task':
-        await this.handleCancelTask()
-        break
-      case 'pause':
-        await this.pause()
-        break
-      case 'resume':
-        await this.resume()
-        break
-      case 'shutdown':
-        await this.stop()
-        break
-      case 'add_mcp':
-        await this.handleAddMCP(command.payload as { name: string; command: string; args?: string[] })
-        break
-      case 'set_permission_mode':
-        await this.handleSetPermissionMode(command.payload as { mode: string })
-        break
-      case 'list_tools':
-        await this.handleListTools()
-        break
-    }
-  }
-
-  getStatus(): AgentStatus { return this.status }
-  getCurrentTask(): Task | null { return this.currentTask }
-  getConfig(): AgentRuntimeV3Config { return this.config }
-  getAvailableTools(): string[] { return this.executorManager.getAvailableTools() }
-
-  private setupEventHandlers(): void {
-    this.wsClient.on('message', (message) => { this.handleWebSocketMessage(message) })
-    this.wsClient.on('disconnected', () => { this.emit('disconnected') })
+  private setupExecutorEventHandlers(): void {
     this.executorManager.on('progress', (data) => {
       this.wsClient.send('task:progress', { taskId: data.taskId, progress: data.progress, message: data.message })
     })
@@ -154,53 +82,24 @@ export class AgentRuntimeV3 extends EventEmitter {
     })
   }
 
-  private async register(): Promise<void> {
-    await this.wsClient.send('agent:register', {
-      id: this.config.id,
-      name: this.config.name,
-      role: this.config.role,
-      capabilities: [...this.config.capabilities, 'llm', 'ai_execution'],
-      status: this.status,
-      tools: this.executorManager.getAvailableTools(),
-      model: this.config.llmConfig.model
-    })
-    this.logger.info('Agent registered with supervisor')
-  }
-
-  private startHeartbeat(): void {
-    this.heartbeatTimer = setInterval(async () => {
-      if (this.isShuttingDown) return
-      try {
-        const usage = process.memoryUsage()
-        await this.wsClient.send('agent:heartbeat', {
-          agentId: this.config.id,
-          status: this.status,
-          currentTask: this.currentTask?.id,
-          memory: Math.round(usage.heapUsed / 1024 / 1024),
-          tools: this.executorManager.getAvailableTools(),
-          model: this.config.llmConfig.model
-        })
-      } catch (error) {
-        this.logger.error('Failed to send heartbeat', { error })
-      }
-    }, this.config.heartbeatInterval)
-  }
-
-  private async handleWebSocketMessage(message: any): Promise<void> {
-    switch (message.type) {
-      case 'task:assigned':
-        await this.handleRunTask(message.payload as Task)
+  protected async handleCustomCommand(command: Command): Promise<void> {
+    switch (command.type) {
+      case 'add_mcp':
+        await this.handleAddMCP(command.payload as { name: string; command: string; args?: string[] })
         break
-      case 'command':
-        await this.executeCommand(message.payload as Command)
+      case 'set_permission_mode':
+        await this.handleSetPermissionMode(command.payload as { mode: string })
         break
-      case 'ping':
-        await this.wsClient.send('pong', {})
+      case 'list_tools':
+        await this.handleListTools()
+        break
+      default:
+        // V3 原始代码对未知命令静默忽略
         break
     }
   }
 
-  private async handleRunTask(task: Task): Promise<void> {
+  protected async handleRunTask(task: Task): Promise<void> {
     if (this.status === 'paused') {
       this.logger.warn('Cannot start task while paused')
       return
@@ -268,7 +167,7 @@ export class AgentRuntimeV3 extends EventEmitter {
     }
   }
 
-  private async handleCancelTask(): Promise<void> {
+  protected async handleCancelTask(): Promise<void> {
     if (!this.currentTask) {
       this.logger.warn('No task to cancel')
       return
@@ -314,12 +213,5 @@ export class AgentRuntimeV3 extends EventEmitter {
       data: `Built-in tools: ${tools.join(', ')}\nMCP tools: ${mcpTools.map(t => `${t.client}:${t.tool.name}`).join(', ')}`,
       isError: false
     })
-  }
-
-  private async waitForTaskCompletion(timeout: number): Promise<void> {
-    const startTime = Date.now()
-    while (this.currentTask && Date.now() - startTime < timeout) {
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
   }
 }

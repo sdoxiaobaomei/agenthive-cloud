@@ -19,7 +19,6 @@ import java.util.List;
 public class AuthController {
 
     private final AuthService authService;
-    private final com.agenthive.auth.mapper.RoleMapper roleMapper;
 
     @PostMapping("/register")
     public Result<TokenResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -52,9 +51,7 @@ public class AuthController {
 
     @GetMapping("/users/{id}/roles")
     public Result<List<String>> getUserRoles(@PathVariable Long id) {
-        List<String> roles = roleMapper.selectRolesByUserId(id).stream()
-                .map(com.agenthive.auth.domain.entity.SysRole::getRoleCode).toList();
-        return Result.success(roles);
+        return Result.success(authService.getUserRoles(id));
     }
 
     private String getClientIp(HttpServletRequest request) {

@@ -32,12 +32,13 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
             "if current == false then" +
             "  redis.call('SET', key, 1, 'EX', window);" +
             "  return 1;" +
-            "end" +
+            "end;" +
             "local count = tonumber(current);" +
             "if count >= limit then" +
             "  return 0;" +
             "else" +
             "  redis.call('INCR', key);" +
+            "  redis.call('EXPIRE', key, window);" +
             "  return 1;" +
             "end";
 

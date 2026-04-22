@@ -1,8 +1,8 @@
 package com.agenthive.order.controller;
 
 import com.agenthive.order.domain.vo.OrderVO;
-import com.agenthive.order.internal.common.PageResult;
-import com.agenthive.order.internal.common.Result;
+import com.agenthive.common.core.result.PageResult;
+import com.agenthive.common.core.result.Result;
 import com.agenthive.order.service.OrderService;
 import com.agenthive.order.service.dto.CreateOrderRequest;
 import jakarta.validation.Valid;

@@ -1,0 +1,18 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: payment-service
+  data:
+    redis:
+      host: agenthive-redis
+      port: 6379
+  cloud:
+    nacos:
+      config:
+        import-check:
+          enabled: false
+
+order-service:
+  url: http://agenthive-order:8084

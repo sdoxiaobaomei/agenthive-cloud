@@ -28,6 +28,7 @@ const showPassword = ref(false)
 const countdown = ref(0)
 const timer = ref<number | null>(null)
 const agreed = ref(false)
+const devCode = ref<string>('')
 
 const form = reactive({
   phone: '',
@@ -70,8 +71,15 @@ const sendCode = async () => {
     loading.value = true
     console.log('[SendCode] Calling API...')
     // 调用 authStore 发送验证码
-    await authStore.sendSmsCode(form.phone, 'login')
-    ElMessage.success('验证码已发送')
+    const { auth } = useApi()
+    const response = await auth.sendSms({ phone: form.phone, type: 'login' })
+    if (!response.success) {
+      throw new Error(response.message || '发送验证码失败')
+    }
+    // 开发环境：提取并显示 devCode（Mock 短信不会真实发送到手机）
+    // @ts-ignore
+    devCode.value = response.devCode || ''
+    ElMessage.success(devCode.value ? `验证码已发送（开发环境验证码：${devCode.value}）` : '验证码已发送')
     
     // 开始倒计时
     countdown.value = 60
@@ -114,6 +122,12 @@ const handleSubmit = async () => {
   
   console.log('[Login] Validating form...')
   console.log('[Login] Form data:', { phone: form.phone, code: form.code, password: form.password })
+  
+  // 开发环境：自动填充 devCode（如果用户未输入且已获取）
+  if (mode.value === 'code' && !form.code && devCode.value) {
+    form.code = devCode.value
+    ElMessage.info(`已自动填充开发验证码：${devCode.value}`)
+  }
   
   // 手动验证，避免 Element Plus 验证卡住
   if (mode.value === 'code') {

@@ -9,10 +9,12 @@ import { QueryLoopV2, QueryLoopV2Config } from './QueryLoopV2.js'
 import { isFeatureEnabled } from '../config/featureFlags.js'
 import type { ConversationContextV2 } from '../context/ConversationContextV2.js'
 import type { QueryLoopV2Result, QueryProgressData } from './QueryLoopV2.js'
+import type { PermissionManager } from '../permissions/PermissionManager.js'
 
 // 统一的配置接口
 export interface UnifiedQueryLoopConfig extends Omit<LegacyConfig, 'toolRegistry'> {
   toolRegistry?: any
+  permissionManager?: PermissionManager
   // 可选的 V2 配置
   compactionEngine?: QueryLoopV2Config['compactionEngine']
   maxTokens?: number
@@ -59,6 +61,7 @@ export function createQueryLoop(config: UnifiedQueryLoopConfig): IQueryLoop {
     const v2Config: QueryLoopV2Config = {
       llmService: config.llmService,
       toolRegistry: config.toolRegistry as any, // V2 registry
+      permissionManager: config.permissionManager,
       compactionEngine: config.compactionEngine,
       maxIterations: config.maxIterations,
       maxTokens: config.maxTokens ?? 12000,

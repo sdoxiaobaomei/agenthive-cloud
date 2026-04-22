@@ -5,9 +5,9 @@ import com.agenthive.order.domain.entity.OrderItem;
 import com.agenthive.order.domain.enums.OrderStatus;
 import com.agenthive.order.domain.vo.OrderItemVO;
 import com.agenthive.order.domain.vo.OrderVO;
-import com.agenthive.order.internal.common.BusinessException;
-import com.agenthive.order.internal.common.PageResult;
-import com.agenthive.order.internal.common.SnowflakeIdGenerator;
+import com.agenthive.common.core.exception.AgentHiveException;
+import com.agenthive.common.core.result.PageResult;
+import com.agenthive.common.core.util.SnowflakeIdGenerator;
 import com.agenthive.order.mapper.OrderItemMapper;
 import com.agenthive.order.mapper.OrderMapper;
 import com.agenthive.order.mq.OrderMqProducer;
@@ -42,7 +42,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OrderVO createOrder(CreateOrderRequest request) {
-        String orderNo = "ORD" + idGenerator.nextIdStr();
+        String orderNo = "ORD" + String.valueOf(idGenerator.nextId());
         BigDecimal totalAmount = BigDecimal.ZERO;
 
         List<OrderItem> orderItems = new ArrayList<>();
@@ -91,7 +91,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderVO getOrder(String orderNo) {
         Order order = orderMapper.selectByOrderNo(orderNo);
         if (order == null) {
-            throw new BusinessException("订单不存在");
+            throw new AgentHiveException(400, "订单不存在");
         }
         List<OrderItem> items = orderItemMapper.selectByOrderId(order.getId());
         return convertToVO(order, items);
@@ -107,7 +107,7 @@ public class OrderServiceImpl implements OrderService {
             return convertToVO(order, items);
         }).collect(Collectors.toList());
 
-        return PageResult.of(page, size, pageParam.getTotal(), records);
+        return new PageResult<>(records, pageParam.getTotal(), page, size);
     }
 
     @Override
@@ -115,10 +115,10 @@ public class OrderServiceImpl implements OrderService {
     public void cancelOrder(String orderNo) {
         Order order = orderMapper.selectByOrderNo(orderNo);
         if (order == null) {
-            throw new BusinessException("订单不存在");
+            throw new AgentHiveException(400, "订单不存在");
         }
         if (order.getStatus() != OrderStatus.CREATED) {
-            throw new BusinessException("只有待支付订单才能取消");
+            throw new AgentHiveException(400, "只有待支付订单才能取消");
         }
         order.setStatus(OrderStatus.CANCELLED);
         orderMapper.updateById(order);
@@ -130,10 +130,10 @@ public class OrderServiceImpl implements OrderService {
     public void confirmOrder(String orderNo) {
         Order order = orderMapper.selectByOrderNo(orderNo);
         if (order == null) {
-            throw new BusinessException("订单不存在");
+            throw new AgentHiveException(400, "订单不存在");
         }
         if (order.getStatus() != OrderStatus.DELIVERED) {
-            throw new BusinessException("只有已送达订单才能确认收货");
+            throw new AgentHiveException(400, "只有已送达订单才能确认收货");
         }
         order.setStatus(OrderStatus.COMPLETED);
         order.setCompletedAt(LocalDateTime.now());

@@ -105,6 +105,7 @@ export const smsService = {
    * 验证短信验证码
    */
   verifyCode: async (phone: string, code: string): Promise<SmsVerifyResult> => {
+    const trimmedCode = code.trim()
     const smsCode = await smsDb.findByPhone(phone)
     
     if (!smsCode) {
@@ -136,7 +137,7 @@ export const smsService = {
     await smsDb.updateAttempts(phone, smsCode.attempts + 1)
     
     // 验证验证码
-    if (smsCode.code !== code) {
+    if (smsCode.code !== trimmedCode) {
       const remainingAttempts = SMS_CONFIG.maxAttempts - (smsCode.attempts + 1)
       return {
         success: false,
