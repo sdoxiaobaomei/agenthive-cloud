@@ -83,14 +83,14 @@ export default defineNuxtConfig({
   // 运行时配置
   runtimeConfig: {
     public: {
-      apiBase: '/api',
+      apiBase: '',
     },
   },
   
   // Nitro 配置
   nitro: {
     output: {
-      dir: '.output-new',
+      dir: '.output',
     },
     // 开发环境代理 API 请求到后端服务器 (3001)
     // 注意：后端路由没有 /api 前缀，所以代理时去掉 /api

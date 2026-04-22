@@ -77,17 +77,6 @@ jobs:
           build-args: |
             NODE_ENV=production
 
-      # Build and push Web
-      - name: Build and push Web
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./apps/web/Dockerfile
-          push: true
-          tags: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/web:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
       # Build and push Agent Runtime
       - name: Build and push Agent Runtime
         uses: docker/build-push-action@v5
@@ -112,7 +101,6 @@ jobs:
           echo "|------|------|" >> $GITHUB_STEP_SUMMARY
           echo "| **API** | ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/api:${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Landing** | ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/landing:${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Web** | ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/web:${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Agent Runtime** | ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/agent-runtime:${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "> 部署到 ACK 请使用 IaC Apply (Demo) 或手动 kubectl 操作。" >> $GITHUB_STEP_SUMMARY

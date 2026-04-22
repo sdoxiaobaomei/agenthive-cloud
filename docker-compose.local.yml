@@ -31,7 +31,7 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ./apps/apps/api:/app
+      - ./apps/api:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development

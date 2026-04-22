@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const LANDING = 'apps/apps/landing/components';
+const LANDING = 'apps/landing/components';
 
 const toDelete = [
   'AgentTracker.vue',

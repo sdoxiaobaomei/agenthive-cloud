@@ -20,7 +20,7 @@
 ### 1.1 安装依赖
 
 ```bash
-cd apps/apps/api
+cd apps/api
 npm install --save \
   @opentelemetry/sdk-node \
   @opentelemetry/auto-instrumentations-node \
@@ -79,7 +79,7 @@ process.on('SIGTERM', () => {
 ### 1.3 在应用入口引入
 
 ```typescript
-// apps/apps/api/src/index.ts
+// apps/api/src/index.ts
 import './telemetry'; // 必须放在最前面！
 import express from 'express';
 // ...
@@ -107,7 +107,7 @@ OTEL_EXPORTER_OTLP_INSECURE=true
 ### 2.1 安装依赖
 
 ```bash
-cd apps/apps/landing
+cd apps/landing
 npm install --save \
   @opentelemetry/sdk-trace-web \
   @opentelemetry/instrumentation-document-load \

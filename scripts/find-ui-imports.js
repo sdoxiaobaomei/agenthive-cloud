@@ -12,7 +12,7 @@ function walk(dir, cb) {
   }
 }
 
-walk('apps/apps/landing', (p) => {
+walk('apps/landing', (p) => {
   const content = fs.readFileSync(p, 'utf8');
   const matches = content.match(/from ['"]@agenthive\/ui\/[^'"]+['"]/g);
   if (matches) {

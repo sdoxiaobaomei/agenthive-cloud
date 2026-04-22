@@ -33,27 +33,27 @@ $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
 
 Write-Host "`n[3/6] Creating namespace and config..." -ForegroundColor Yellow
-kubectl apply -f k8s/01-namespace.yaml
-kubectl apply -f k8s/02-configmap.yaml
-kubectl apply -f k8s/03-secret.yaml
+kubectl apply -f k8s/base/00-namespace.yaml
+kubectl apply -f k8s/base/08-configmap.yaml
+kubectl apply -f k8s/base/01-secrets.yaml
 Write-Host "✓ Namespace and config created" -ForegroundColor Green
 
 Write-Host "`n[4/6] Deploying databases..." -ForegroundColor Yellow
-kubectl apply -f k8s/04-postgres.yaml
-kubectl apply -f k8s/05-redis.yaml
+kubectl apply -f k8s/base/02-postgres.yaml
+kubectl apply -f k8s/base/03-redis.yaml
 Write-Host "✓ Databases deployed" -ForegroundColor Green
 
 Write-Host "`n[5/6] Deploying applications..." -ForegroundColor Yellow
-kubectl apply -f k8s/06-api.yaml
-kubectl apply -f k8s/07-landing.yaml
+kubectl apply -f k8s/base/04-api.yaml
+kubectl apply -f k8s/base/05-landing.yaml
 Write-Host "✓ Applications deployed" -ForegroundColor Green
 
 # 等待就绪
 Write-Host "`n[6/6] Waiting for pods to be ready..." -ForegroundColor Yellow
-kubectl wait --for=condition=ready pod -l app=postgres -n agenthive --timeout=120s 2>$null | Out-Null
-kubectl wait --for=condition=ready pod -l app=redis -n agenthive --timeout=60s 2>$null | Out-Null
-kubectl wait --for=condition=ready pod -l app=api -n agenthive --timeout=120s 2>$null | Out-Null
-kubectl wait --for=condition=ready pod -l app=landing -n agenthive --timeout=120s 2>$null | Out-Null
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=postgres -n agenthive --timeout=120s 2>$null | Out-Null
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=redis -n agenthive --timeout=60s 2>$null | Out-Null
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=api -n agenthive --timeout=120s 2>$null | Out-Null
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=landing -n agenthive --timeout=120s 2>$null | Out-Null
 Write-Host "✓ All pods are ready" -ForegroundColor Green
 
 # 显示状态
@@ -72,4 +72,4 @@ Write-Host ""
 Write-Host "Useful commands:"
 Write-Host "  kubectl logs -f deployment/api -n agenthive"
 Write-Host "  kubectl logs -f deployment/landing -n agenthive"
-Write-Host "  kubectl delete -f k8s/ to clean up"
+Write-Host "  kubectl delete -f k8s/base/ to clean up"

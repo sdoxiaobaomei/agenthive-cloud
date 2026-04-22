@@ -1,50 +1,50 @@
 {
-  "name": "@agenthive/agent-runtime",
-  "version": "2.1.0",
-  "description": "AgentHive Agent Runtime - AI-powered agent execution environment with LLM integration",
-  "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc --noEmitOnError false || echo 'Build completed with type errors'",
-    "start": "node dist/index.js",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "docker:build": "docker build -t agenthive/agent-runtime:latest .",
-    "docker:push": "docker push agenthive/agent-runtime:latest",
-    "k8s:deploy": "kubectl apply -f deploy/k8s/",
-    "k8s:delete": "kubectl delete -f deploy/k8s/",
-    "helm:install": "helm install agent-runtime deploy/helm/agent-runtime",
-    "helm:upgrade": "helm upgrade agent-runtime deploy/helm/agent-runtime",
-    "helm:uninstall": "helm uninstall agent-runtime"
-  },
-  "dependencies": {
-    "@agenthive/observability": "1.0.0",
-    "@opentelemetry/api": "^1.8.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.47.0",
-    "@opentelemetry/exporter-metrics-otlp-grpc": "^0.51.0",
-    "@opentelemetry/exporter-trace-otlp-grpc": "^0.51.0",
-    "@opentelemetry/resources": "^1.24.0",
-    "@opentelemetry/sdk-metrics": "^1.24.0",
-    "@opentelemetry/sdk-node": "^0.51.0",
-    "@opentelemetry/semantic-conventions": "^1.24.0",
-    "fast-glob": "^3.3.2",
-    "node-abort-controller": "^3.1.1",
-    "simple-git": "^3.22.0",
-    "ws": "^8.16.0",
-    "zod": "^3.22.4"
-  },
-  "devDependencies": {
-    "@types/node": "^20.10.0",
-    "@types/ws": "^8.5.10",
-    "@vitest/coverage-v8": "^1.6.1",
-    "tsx": "^4.7.0",
-    "typescript": "^5.3.0",
-    "vitest": "^1.0.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+    "name":  "@agenthive/agent-runtime",
+    "version":  "2.1.0",
+    "description":  "AgentHive Agent Runtime - AI-powered agent execution environment with LLM integration",
+    "type":  "module",
+    "main":  "dist/index.js",
+    "types":  "dist/index.d.ts",
+    "scripts":  {
+                    "dev":  "tsx watch src/index.ts",
+                    "build":  "tsc --noEmitOnError false || echo \u0027Build completed with type errors\u0027",
+                    "start":  "node dist/index.js",
+                    "test":  "vitest run",
+                    "test:watch":  "vitest",
+                    "test:coverage":  "vitest run --coverage",
+                    "docker:build":  "docker build -t agenthive/agent-runtime:latest .",
+                    "docker:push":  "docker push agenthive/agent-runtime:latest",
+                    "k8s:deploy":  "kubectl apply -f deploy/k8s/",
+                    "k8s:delete":  "kubectl delete -f deploy/k8s/",
+                    "helm:install":  "helm install agent-runtime deploy/helm/agent-runtime",
+                    "helm:upgrade":  "helm upgrade agent-runtime deploy/helm/agent-runtime",
+                    "helm:uninstall":  "helm uninstall agent-runtime"
+                },
+    "dependencies":  {
+                         "@agenthive/observability":  "workspace:*",
+                         "@opentelemetry/api":  "^1.8.0",
+                         "@opentelemetry/auto-instrumentations-node":  "^0.47.0",
+                         "@opentelemetry/exporter-metrics-otlp-grpc":  "^0.51.0",
+                         "@opentelemetry/exporter-trace-otlp-grpc":  "^0.51.0",
+                         "@opentelemetry/resources":  "^1.24.0",
+                         "@opentelemetry/sdk-metrics":  "^1.24.0",
+                         "@opentelemetry/sdk-node":  "^0.51.0",
+                         "@opentelemetry/semantic-conventions":  "^1.24.0",
+                         "fast-glob":  "^3.3.2",
+                         "node-abort-controller":  "^3.1.1",
+                         "simple-git":  "^3.22.0",
+                         "ws":  "^8.16.0",
+                         "zod":  "^3.22.4"
+                     },
+    "devDependencies":  {
+                            "@types/node":  "^20.10.0",
+                            "@types/ws":  "^8.5.10",
+                            "@vitest/coverage-v8":  "^1.6.1",
+                            "tsx":  "^4.7.0",
+                            "typescript":  "^5.3.0",
+                            "vitest":  "^1.0.0"
+                        },
+    "engines":  {
+                    "node":  "\u003e=18.0.0"
+                }
 }

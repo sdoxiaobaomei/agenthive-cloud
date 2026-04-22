@@ -154,10 +154,10 @@ docker-compose logs -f
 
 ```bash
 # 终端 1 - 启动控制台
-cd apps/apps/landing && npm run dev
+cd apps/landing && npm run dev
 
 # 终端 2 - 启动 API
-cd apps/apps/api && npm run dev
+cd apps/api && npm run dev
 ```
 
 访问 http://localhost:3000 打开控制台
