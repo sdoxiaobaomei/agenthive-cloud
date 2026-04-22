@@ -39,7 +39,7 @@ import { ArrowRight } from '@element-plus/icons-vue'
 import { navigateTo } from '#app'
 
 const startBuilding = () => {
-  navigateTo('http://localhost:3001/')
+  navigateTo('https://xiaochaitian.asia/')
 }
 
 const viewDemo = () => {

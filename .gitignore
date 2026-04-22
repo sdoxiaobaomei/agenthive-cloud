@@ -76,3 +76,19 @@ TODO_SPRINT.md
 
 # Downloaded build tools
 tools/apache-maven-*/
+
+# Terraform
+.terraform/
+terraform.tfstate*
+*.tfvars
+
+# Deployment artifacts
+*.err
+*.sql
+*.tar
+kubeconfig-*
+
+# Third-party K8s manifests (downloaded during deploy)
+# Keep these out of git; documented in deployment notes
+ingress-nginx-deploy.yaml
+cert-manager.yaml

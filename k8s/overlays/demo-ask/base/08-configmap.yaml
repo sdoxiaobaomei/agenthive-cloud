@@ -1,0 +1,46 @@
+# ConfigMap - 应用配置
+# 集中管理非敏感配置项
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: agenthive
+data:
+  # 环境配置
+  NODE_ENV: "production"
+  
+  # 数据库配置
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_NAME: "agenthive"
+  DB_USER: "agenthive"
+  
+  # Redis 配置
+  REDIS_URL: "redis://redis:6379"
+  
+  # API 配置
+  API_URL: "http://api:3001"
+  
+  # 应用配置
+  APP_NAME: "AgentHive Cloud"
+  LOG_LEVEL: "info"
+  API_VERSION: "v1"
+  
+  # 性能配置
+  MAX_CONNECTIONS: "100"
+  REQUEST_TIMEOUT: "30000"
+  CACHE_TTL: "3600"
+
+  # OpenTelemetry
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-gateway.monitoring:4317"
+  OTEL_EXPORTER_OTLP_INSECURE: "true"
+  OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
+  OTEL_TRACES_SAMPLER_ARG: "0.1"
+  OTEL_LOG_LEVEL: "warn"
+  OTEL_SDK_DISABLED: "false"
+
+  # Logging
+  STRUCTURED_LOGGING: "true"

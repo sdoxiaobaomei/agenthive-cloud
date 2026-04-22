@@ -256,10 +256,10 @@ export function useApi() {
   const { token } = useAuth()
   const { startLoading, stopLoading } = useLoading()
   // 配置 API Base URL
-  // - 客户端: 直接访问本地 API 端口
+  // - 客户端: 生产环境访问公网 API，开发环境访问本地端口
   // - SSR 服务端: 访问容器内 API 服务
   const baseUrl = import.meta.client
-    ? 'http://localhost:3001'
+    ? (config.public.apiBase || 'https://api.xiaochaitian.asia')
     : 'http://api:3001'
 
   // 默认超时时间（毫秒）
