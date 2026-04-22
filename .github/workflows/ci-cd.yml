@@ -71,7 +71,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: 🔨 Build workspace packages
-        run: pnpm --filter './packages/*' --filter './apps/agent-runtime' run build
+        run: |
+          cd packages/observability
+          pnpm run build
+          cd ../../apps/agent-runtime
+          pnpm run build
 
       - name: 🔍 Type Check
         run: pnpm --filter './packages/*' --filter './apps/api' run typecheck
