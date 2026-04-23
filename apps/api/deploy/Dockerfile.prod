@@ -1,21 +1,33 @@
-# API 生产构建 Dockerfile - 本地构建版本
-# 假设你已经在本地运行过 npm run build
+# syntax=docker/dockerfile:1
+# API 生产构建 Dockerfile - 本地预构建版本
+# 假设你已经在本地运行过 npm run build（从 monorepo 根目录构建）
+# Build: docker build -f apps/api/deploy/Dockerfile.prod -t agenthive/api:<tag> .
 
-FROM node:20-alpine
+FROM node:20-alpine AS production
 
-# 安装 dumb-init
 RUN apk add --no-cache dumb-init
 
 WORKDIR /app
 
-# 只复制生产必需的文件
-COPY dist ./dist
-COPY package*.json ./
+# Copy only production artifacts
+COPY apps/api/dist ./dist
+COPY apps/api/package.json ./
 
-# 只安装生产依赖
-RUN npm ci --only=production && npm cache clean --force
+# Install pnpm to resolve workspace deps locally
+RUN npm install -g pnpm@9
 
-# 创建非 root 用户
+# Copy workspace packages (built dist only) that API depends on
+COPY packages/observability/package.json ./packages/observability/
+COPY packages/observability/dist ./packages/observability/dist
+COPY apps/agent-runtime/package.json ./apps/agent-runtime/
+COPY apps/agent-runtime/dist ./apps/agent-runtime/dist
+COPY pnpm-workspace.yaml ./
+COPY package.json ./
+
+# Install only production dependencies (workspace links resolved by pnpm)
+RUN pnpm install --prod --frozen-lockfile
+
+# Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 && \
     chown -R nodejs:nodejs /app

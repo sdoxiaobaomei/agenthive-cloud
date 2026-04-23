@@ -1,42 +1,53 @@
-# Agent Runtime Dockerfile
-# Build pre-requisites:
-#   cd apps/agent-runtime && npm run build
-# Build command:
-#   docker build -f apps/agent-runtime/Dockerfile -t agenthive/agent-runtime:<tag> ./apps/agent-runtime
+# syntax=docker/dockerfile:1
+# Agent Runtime Service - Production Optimized
+# Pre-requisite: run `pnpm -r build` from repo root.
+# Build command (from repo root):
+#   docker build -f apps/agent-runtime/Dockerfile -t agenthive/agent-runtime:<tag> .
+#
+# Expected image size: ~150-220 MB (vs 1GB+ before)
 
+# ============ 构建阶段 ============
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml ./
+COPY packages/observability/package.json ./packages/observability/
+COPY apps/agent-runtime/package.json ./apps/agent-runtime/
+
+RUN pnpm install --frozen-lockfile
+
+# Copy pre-built dist artifacts
+COPY packages/observability/dist ./packages/observability/dist
+COPY apps/agent-runtime/dist ./apps/agent-runtime/dist
+
+# Deploy production bundle
+RUN pnpm --filter=@agenthive/agent-runtime deploy --prod /prod/agent-runtime
+
+# ============ 生产阶段 ============
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install dumb-init for proper signal handling
+# Install dumb-init and git (simple-git dependency requires git CLI)
 RUN apk add --no-cache dumb-init git
 
-# Create non-root user
+# Create non-root user with workspace directory
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 -G nodejs && \
     mkdir -p /workspace && \
     chown -R nodejs:nodejs /workspace /app
 
-# Copy workspace node_modules (includes @agenthive/* packages)
-COPY --chown=nodejs:nodejs ../../node_modules ./node_modules
-COPY --chown=nodejs:nodejs ../../package.json ./
-
-# Copy application
-COPY --chown=nodejs:nodejs dist ./dist
-COPY --chown=nodejs:nodejs package.json ./
-
-# Labels for traceability
-ARG VERSION=unknown
-ARG GIT_COMMIT=unknown
-ARG BUILD_TIME=unknown
-LABEL org.opencontainers.image.title="AgentHive Agent Runtime"
-LABEL org.opencontainers.image.version="${VERSION}"
-LABEL org.opencontainers.image.revision="${GIT_COMMIT}"
-LABEL org.opencontainers.image.created="${BUILD_TIME}"
+# Copy deployed production bundle
+COPY --from=builder --chown=nodejs:nodejs /prod/agent-runtime .
 
 USER nodejs
 
-# Health check
+ENV NODE_ENV=production
+
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "console.log('healthy')" || exit 1
 

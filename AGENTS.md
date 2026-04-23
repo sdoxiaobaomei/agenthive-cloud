@@ -1,10 +1,10 @@
-# AgentHive Cloud - AI 数字孪生项目
+# AgentHive Cloud - AI 蜂群协作平台
 
 > **Hive Mode (蜂群模式)**: 多 Agent 协作的 AI 驱动开发系统
 
 ## 项目概述
 
-AgentHive Cloud 是一个 AI 数字孪生平台，采用多 Agent 协作架构（称为"蜂群模式"），模拟软件开发团队的协作方式。项目整合了控制中心和多 Agent 系统，所有代码统一在一个仓库中管理。
+AgentHive Cloud 是一个 AI 蜂群协作平台，采用多 Agent 协作架构（称为"蜂群模式"），模拟软件开发团队的协作方式。项目整合了控制中心和多 Agent 系统，所有代码统一在一个仓库中管理。
 
 ---
 

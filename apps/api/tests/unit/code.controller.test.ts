@@ -101,7 +101,7 @@ describe('Code Controller', () => {
         { path: 'test.vue', expected: 'vue' },
         { path: 'test.json', expected: 'json' },
         { path: 'test.css', expected: 'css' },
-        { path: 'test.html', expected: 'html' },
+        { path: 'index.html', expected: 'html' },
         { path: 'test.sql', expected: 'sql' },
       ]
 

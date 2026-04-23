@@ -1,53 +1,43 @@
-# Landing 最小化构建 Dockerfile
-# 只复制必要的文件
-# 构建: docker build -t agenthive/landing:latest -f apps/landing/Dockerfile.minimal ../../
+# syntax=docker/dockerfile:1
+# Landing 最小化构建 Dockerfile - 静态生成 (nginx)
+# Build: docker build -f apps/landing/Dockerfile.minimal -t agenthive/landing:<tag> .
+
+# ============ 依赖安装阶段 ============
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml ./
+COPY packages/types/package.json ./packages/types/
+COPY apps/landing/package.json ./apps/landing/
+
+RUN pnpm install --frozen-lockfile
 
 # ============ 构建阶段 ============
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 安装 pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
-# 1. 复制根级别配置
-COPY package.json ./
-COPY pnpm-workspace.yaml ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=deps /app/package.json ./package.json
 
-# 2. 复制共享包
-COPY packages/types/package.json ./packages/types/
-COPY packages/types/src ./packages/types/src/
-COPY packages/types/tsconfig.json ./packages/types/
+COPY packages/types ./packages/types
+COPY apps/landing ./apps/landing
 
-# 3. 复制 landing 应用（Nuxt 需要更多文件）
-COPY apps/landing/package.json ./apps/landing/
-COPY apps/landing/nuxt.config.ts ./apps/landing/
-COPY apps/landing/tsconfig.json ./apps/landing/
-COPY apps/landing/app.vue ./apps/landing/
-COPY apps/landing/components ./apps/landing/components/
-COPY apps/landing/composables ./apps/landing/composables/
-COPY apps/landing/layouts ./apps/landing/layouts/
-COPY apps/landing/middleware ./apps/landing/middleware/
-COPY apps/landing/pages ./apps/landing/pages/
-COPY apps/landing/plugins ./apps/landing/plugins/
-COPY apps/landing/public ./apps/landing/public/
-COPY apps/landing/server ./apps/landing/server/
-COPY apps/landing/stores ./apps/landing/stores/
-COPY apps/landing/utils ./apps/landing/utils/
-COPY apps/landing/assets ./apps/landing/assets/
-
-# 安装依赖并构建
-RUN pnpm install
-RUN cd packages/types && pnpm build 2>/dev/null || true
-RUN cd apps/landing && pnpm build
+RUN pnpm --filter=@agenthive/types build
+RUN pnpm --filter=agenthive-landing build
 
 # ============ 生产阶段 ============
 FROM nginx:alpine
 
-# 复制构建产物
 COPY --from=builder /app/apps/landing/.output/public /usr/share/nginx/html
 
-# 使用默认 nginx 配置（简化）
 RUN echo 'server { listen 80; location / { root /usr/share/nginx/html; index index.html; try_files $uri $uri/ /index.html; } }' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

@@ -5,6 +5,7 @@
     "type":  "module",
     "main":  "dist/index.js",
     "types":  "dist/index.d.ts",
+    "files": ["dist"],
     "scripts":  {
                     "dev":  "tsx watch src/index.ts",
                     "build":  "tsc --noEmitOnError false",
@@ -12,7 +13,7 @@
                     "test":  "vitest run",
                     "test:watch":  "vitest",
                     "test:coverage":  "vitest run --coverage",
-                    "docker:build":  "docker build -t agenthive/agent-runtime:latest .",
+                    "docker:build":  "docker build -f apps/agent-runtime/Dockerfile -t agenthive/agent-runtime:latest .",
                     "docker:push":  "docker push agenthive/agent-runtime:latest",
                     "k8s:deploy":  "kubectl apply -f deploy/k8s/",
                     "k8s:delete":  "kubectl delete -f deploy/k8s/",

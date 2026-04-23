@@ -1,12 +1,5 @@
-# ==================== 保留的构建输出（必须放最前面）====================
-!apps/agent-runtime/dist/**
-!apps/api/dist/**
-!apps/landing/.output/**
-!apps/landing/.output/server/node_modules/**
-!packages/*/dist/**
-!**/node_modules/**/dist/**
-
 # ==================== 依赖目录（最大体积来源）====================
+node_modules
 **/node_modules
 .pnpm-store
 **/.pnpm-store
@@ -16,34 +9,57 @@
 **/.yarn
 
 # ==================== 构建输出 ====================
+dist
 **/dist
+.nuxt
 **/.nuxt
+.output
 **/.output
+.turbo
 **/.turbo
+.cache
 **/.cache
+build
 **/build
 
 # ==================== 测试和日志 ====================
+*.log
 **/*.log
+test
 **/test
+__tests__
 **/__tests__
+*.test.ts
 **/*.test.ts
+*.test.js
 **/*.test.js
+*.spec.ts
 **/*.spec.ts
+*.spec.js
 **/*.spec.js
+coverage
 **/coverage
 
 # ==================== 本地环境文件 ====================
+.env
 **/.env
+.env.local
 **/.env.local
+.env.*.local
 **/.env.*.local
+.envrc
 **/.envrc
 
 # ==================== IDE 和编辑器 ====================
+.vscode
 **/.vscode
+.idea
 **/.idea
+*.swp
 **/*.swp
+*.swo
 **/*.swo
+*~
 **/*~
 
 # ==================== 版本控制 ====================
@@ -53,9 +69,13 @@
 .gitmodules
 
 # ==================== 文档（不需要在容器中）====================
+README.md
 **/README.md
+CHANGELOG.md
 **/CHANGELOG.md
+LICENSE
 **/LICENSE
+CONTRIBUTING.md
 **/CONTRIBUTING.md
 
 # ==================== CI/CD ====================
@@ -66,7 +86,9 @@ azure-pipelines.yml
 .circleci
 
 # ==================== Docker 相关 ====================
+Dockerfile*
 **/Dockerfile*
+.dockerignore
 **/.dockerignore
 docker-compose*.yml
 .docker
@@ -74,21 +96,36 @@ docker-compose*.yml
 # ==================== 其他工具 ====================
 .playwright-mcp
 
-# 视频/图片资源（如果在代码仓库中）
+# 视频/图片资源
+*.mp4
 **/*.mp4
+*.mov
 **/*.mov
+*.avi
 **/*.avi
 
 # 备份文件
+*.bak
 **/*.bak
+*.backup
 **/*.backup
 
 # 操作系统文件
+.DS_Store
 **/.DS_Store
+Thumbs.db
 **/Thumbs.db
 desktop.ini
 
 # 临时文件
+tmp
 **/tmp
+temp
 **/temp
+*.tmp
 **/*.tmp
+
+# ==================== 保留的构建输出（必须放最后）====================
+!packages/*/dist/**
+!apps/*/dist/**
+!apps/landing/.output/**
