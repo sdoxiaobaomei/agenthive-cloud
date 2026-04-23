@@ -45,7 +45,7 @@ services:
   # API 服务 (Express)
   # ==========================================
   api:
-    image: ${REGISTRY:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha}/api:${TAG:-latest}
+    image: agenthive-api:local
     build:
       context: ./apps/api
       dockerfile: Dockerfile
@@ -91,7 +91,7 @@ services:
   # Landing (Nuxt 3)
   # ==========================================
   landing:
-    image: ${REGISTRY:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha}/landing:${TAG:-latest}
+    image: agenthive-landing:local
     build:
       context: ./apps/landing
       dockerfile: Dockerfile

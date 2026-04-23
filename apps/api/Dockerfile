@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # API Service - Production Optimized (pnpm monorepo)
 # Uses pnpm deploy for minimal production bundle.
 # Pre-requisite: run `pnpm -r build` (or `cd apps/api && pnpm build`) from repo root.
