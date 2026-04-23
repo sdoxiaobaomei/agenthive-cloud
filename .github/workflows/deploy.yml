@@ -23,7 +23,7 @@ on:
         default: 'false'
 
 env:
-  REGISTRY: registry.cn-beijing.aliyuncs.com
+  REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
   COMPOSE_FILE: docker-compose.demo.yml
   ENV_FILE: .env.demo.local
 

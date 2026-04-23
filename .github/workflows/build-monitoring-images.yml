@@ -35,7 +35,7 @@ on:
       - 'monitoring/**'
 
 env:
-  REGISTRY: registry.cn-beijing.aliyuncs.com
+  REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
   NAMESPACE: agenthive
 
 jobs:
