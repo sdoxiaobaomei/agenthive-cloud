@@ -37,7 +37,23 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H 39.107.87.106 >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      # ---------- 1. 拉取代码并部署 ----------
+      # ---------- 1. 登录阿里云容器镜像服务 ----------
+      - name: Login to ACR on ECS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: 39.107.87.106
+          username: root
+          key: ${{ secrets.ECS_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -e
+            echo "=== 登录阿里云 ACR ==="
+            docker login registry.cn-beijing.aliyuncs.com \
+              -u ${{ secrets.ALIYUN_USERNAME }} \
+              -p ${{ secrets.ALIYUN_PASSWORD }} \
+              2>/dev/null || echo "⚠️ ACR 登录失败，可能已登录或凭证错误"
+
+      # ---------- 2. 拉取代码并部署 ----------
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -51,29 +67,33 @@ jobs:
 
             echo "=== [1/5] 拉取最新代码 ==="
             git fetch origin
-            git reset --hard origin/main
+            git reset --hard origin/master
             echo "当前 commit: $(git rev-parse --short HEAD)"
 
-            echo "=== [2/5] 构建并启动服务 ==="
+            echo "=== [2/5] 拉取镜像并启动服务 ==="
             COMPOSE_CMD="docker compose -f ${{ env.COMPOSE_FILE }} --env-file ${{ env.ENV_FILE }}"
             
+            # 强制重新拉取镜像
             if [ "${{ github.event.inputs.rebuild }}" == "true" ]; then
-              $COMPOSE_CMD build --no-cache
+              echo "🔄 强制重新拉取镜像..."
+              $COMPOSE_CMD pull --ignore-buildable
+            else
+              $COMPOSE_CMD pull --ignore-buildable
             fi
             
-            # 构建基础服务
-            $COMPOSE_CMD up -d --build
+            # 启动基础服务（不再构建）
+            $COMPOSE_CMD up -d
             
             # 可选：启动 Java 微服务
             if [ "${{ github.event.inputs.java_profile }}" == "true" ]; then
               echo "启动 Java 微服务..."
-              $COMPOSE_CMD --profile java up -d --build
+              $COMPOSE_CMD --profile java up -d
             fi
             
             # 可选：启动监控栈
             if [ "${{ github.event.inputs.monitoring_profile }}" == "true" ]; then
               echo "启动监控栈..."
-              $COMPOSE_CMD --profile monitoring up -d --build
+              $COMPOSE_CMD --profile monitoring up -d
             fi
 
             echo "=== [3/5] 等待服务启动 ==="
