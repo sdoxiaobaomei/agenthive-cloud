@@ -37,23 +37,7 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H 39.107.87.106 >> ~/.ssh/known_hosts 2>/dev/null || true
 
-      # ---------- 1. 登录阿里云容器镜像服务 ----------
-      - name: Login to ACR on ECS
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 39.107.87.106
-          username: root
-          key: ${{ secrets.ECS_SSH_KEY }}
-          script_stop: true
-          script: |
-            set -e
-            echo "=== 登录阿里云 ACR ==="
-            docker login registry.cn-beijing.aliyuncs.com \
-              -u ${{ secrets.ALIYUN_USERNAME }} \
-              -p ${{ secrets.ALIYUN_PASSWORD }} \
-              2>/dev/null || echo "⚠️ ACR 登录失败，可能已登录或凭证错误"
-
-      # ---------- 2. 拉取代码并部署 ----------
+      # ---------- 1. 拉取代码并部署 ----------
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -65,21 +49,30 @@ jobs:
             set -e
             cd /opt/agenthive-cloud
 
-            echo "=== [1/5] 拉取最新代码 ==="
+            echo "=== [1/6] 拉取最新代码 ==="
             git fetch origin
             git reset --hard origin/master
             echo "当前 commit: $(git rev-parse --short HEAD)"
 
-            echo "=== [2/5] 拉取镜像并启动服务 ==="
+            echo "=== [2/6] 登录阿里云 ACR ==="
+            # 尝试登录ACR（ECS可能已登录，失败不阻塞）
+            set +e
+            docker login registry.cn-beijing.aliyuncs.com \
+              -u "${{ secrets.ALIYUN_USERNAME }}" \
+              -p "${{ secrets.ALIYUN_PASSWORD }}" 2>/dev/null
+            LOGIN_RESULT=$?
+            set -e
+            if [ $LOGIN_RESULT -eq 0 ]; then
+              echo "✅ ACR 登录成功"
+            else
+              echo "⚠️ ACR 登录失败，尝试使用已有凭证继续..."
+            fi
+
+            echo "=== [3/6] 拉取镜像并启动服务 ==="
             COMPOSE_CMD="docker compose -f ${{ env.COMPOSE_FILE }} --env-file ${{ env.ENV_FILE }}"
             
-            # 强制重新拉取镜像
-            if [ "${{ github.event.inputs.rebuild }}" == "true" ]; then
-              echo "🔄 强制重新拉取镜像..."
-              $COMPOSE_CMD pull --ignore-buildable
-            else
-              $COMPOSE_CMD pull --ignore-buildable
-            fi
+            # 拉取最新镜像（忽略需要构建的服务）
+            $COMPOSE_CMD pull --ignore-buildable
             
             # 启动基础服务（不再构建）
             $COMPOSE_CMD up -d
@@ -96,13 +89,13 @@ jobs:
               $COMPOSE_CMD --profile monitoring up -d
             fi
 
-            echo "=== [3/5] 等待服务启动 ==="
+            echo "=== [4/6] 等待服务启动 ==="
             sleep 8
 
-            echo "=== [4/5] 容器状态 ==="
+            echo "=== [5/6] 容器状态 ==="
             $COMPOSE_CMD ps
 
-            echo "=== [5/5] 健康检查 ==="
+            echo "=== [6/6] 健康检查 ==="
             MAX_RETRY=6
             RETRY=0
             while [ $RETRY -lt $MAX_RETRY ]; do
