@@ -311,7 +311,7 @@ function buildReplySystemPrompt(intent: ChatIntent, tasks: AgentTask[]): string 
     ? tasks.map((t) => `- ${roleNames[t.workerRole] || t.workerRole}: ${t.ticketId}`).join('\n')
     : '无'
 
-  return `你是 AgentHive AI 助手，一个多 Agent 协作的 AI 数字孪生平台的智能助手。
+  return `你是 AgentHive AI 助手，一个多 Agent 协作的 AI 蜂群协作平台的智能助手。
 
 你的职责：
 - 理解用户的软件开发需求

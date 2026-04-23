@@ -1,73 +1,57 @@
+# syntax=docker/dockerfile:1
 # API CI 优化构建 Dockerfile
 # 正确处理 monorepo workspace 依赖
-# 构建命令: docker build -t agenthive/api:latest -f apps/api/Dockerfile.ci .
+# Build: docker build -f apps/api/deploy/Dockerfile.ci -t agenthive/api:<tag> .
 
 # ============ 依赖安装阶段 ============
 FROM node:20-alpine AS deps
 
 WORKDIR /app
 
-# 安装 pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
-# 先只复制 package 文件（利用 Docker 缓存）
 COPY pnpm-workspace.yaml package.json ./
-COPY packages/types/package.json ./packages/types/
+COPY pnpm-lock.yaml* ./
+COPY packages/observability/package.json ./packages/observability/
 COPY apps/agent-runtime/package.json ./apps/agent-runtime/
 COPY apps/api/package.json ./apps/api/
 
-# 复制 lockfile（如果存在）
-COPY pnpm-lock.yaml* ./
-
-# 安装依赖
-RUN pnpm install
+RUN pnpm install --frozen-lockfile
 
 # ============ 构建阶段 ============
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 安装 pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
-# 复制已安装的 node_modules
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=deps /app/package.json ./package.json
 
-# 复制 workspace 配置和源码
-COPY pnpm-workspace.yaml package.json ./
-COPY packages/types ./packages/types
+COPY packages/observability ./packages/observability
 COPY apps/agent-runtime ./apps/agent-runtime
 COPY apps/api ./apps/api
 
-# 修复 pnpm + TypeScript 类型问题：创建 .npmrc
-RUN echo "node-linker=hoisted" > .npmrc
-
-# 重新安装以应用 hoisted 模式
-RUN pnpm install
-
-# 构建共享包（如果有构建脚本）
-RUN cd packages/types && pnpm build 2>/dev/null || echo "types 无需构建"
-
-# 构建 agent-runtime
+# Build shared packages
+RUN cd packages/observability && pnpm build 2>/dev/null || echo "types 无需构建"
 RUN cd apps/agent-runtime && pnpm build 2>/dev/null || echo "agent-runtime 无需构建"
 
-# 构建 API（使用 transpile-only 跳过严格类型检查）
+# Build API (with fallback for type issues)
 RUN cd apps/api && pnpm tsc --build --force 2>/dev/null || pnpm tsc --transpile-only
+
+# Deploy production bundle
+RUN pnpm --filter=@agenthive/api deploy --prod /prod/api
 
 # ============ 生产阶段 ============
 FROM node:20-alpine AS production
 
-# 安装 dumb-init
 RUN apk add --no-cache dumb-init
 
 WORKDIR /app
 
-# 从构建阶段复制
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /prod/api .
 
-# 创建非 root 用户
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 && \
     chown -R nodejs:nodejs /app

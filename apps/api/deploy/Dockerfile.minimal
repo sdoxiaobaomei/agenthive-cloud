@@ -1,52 +1,46 @@
+# syntax=docker/dockerfile:1
 # API 最小化构建 Dockerfile
-# 只复制必要的文件，不依赖 .dockerignore
-# 构建: docker build -t agenthive/api:latest -f apps/api/Dockerfile.minimal ../../
+# 从 monorepo 根目录构建，只复制必要文件
+# Build: docker build -f apps/api/deploy/Dockerfile.minimal -t agenthive/api:<tag> .
 
 # ============ 构建阶段 ============
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 1. 复制根级别配置
-COPY package.json ./
-COPY pnpm-workspace.yaml ./
+RUN npm install -g pnpm@9
 
-# 2. 复制共享包（types）
+COPY pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml ./
+
 COPY packages/types/package.json ./packages/types/
-COPY packages/types/src ./packages/types/src/
-COPY packages/types/tsconfig.json ./packages/types/
-
-# 3. 复制 agent-runtime
+COPY packages/observability/package.json ./packages/observability/
 COPY apps/agent-runtime/package.json ./apps/agent-runtime/
-COPY apps/agent-runtime/src ./apps/agent-runtime/src/
-COPY apps/agent-runtime/tsconfig.json ./apps/agent-runtime/
-
-# 4. 复制 API 应用
 COPY apps/api/package.json ./apps/api/
-COPY apps/api/src ./apps/api/src/
-COPY apps/api/tsconfig.json ./apps/api/
 
-# 安装 pnpm 并安装依赖
-RUN npm install -g pnpm && pnpm install
+RUN pnpm install --frozen-lockfile
 
-# 构建（按依赖顺序）
-RUN cd packages/types && pnpm build 2>/dev/null || true
-RUN cd apps/agent-runtime && pnpm build 2>/dev/null || true
-RUN cd apps/api && pnpm build
+COPY packages/types ./packages/types
+COPY packages/observability ./packages/observability
+COPY apps/agent-runtime ./apps/agent-runtime
+COPY apps/api ./apps/api
+
+RUN pnpm --filter=@agenthive/types build
+RUN pnpm --filter=@agenthive/observability build
+RUN pnpm --filter=@agenthive/agent-runtime build
+RUN pnpm --filter=@agenthive/api build
+
+RUN pnpm --filter=@agenthive/api deploy --prod /prod/api
 
 # ============ 生产阶段 ============
-FROM node:20-alpine
+FROM node:20-alpine AS production
 
 RUN apk add --no-cache dumb-init
 
 WORKDIR /app
 
-# 只复制运行必需的文件
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /prod/api .
 
-# 创建非 root 用户
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001 && \
     chown -R nodejs:nodejs /app

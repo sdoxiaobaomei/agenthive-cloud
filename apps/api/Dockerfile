@@ -1,46 +1,52 @@
-# API Dockerfile - Production Optimized (npm workspaces)
-# Build pre-requisites:
-#   cd apps/api && npm run build
-# Build command:
+# syntax=docker/dockerfile:1
+# API Service - Production Optimized (pnpm monorepo)
+# Uses pnpm deploy for minimal production bundle.
+# Pre-requisite: run `pnpm -r build` (or `cd apps/api && pnpm build`) from repo root.
+# Build command (from repo root):
 #   docker build -f apps/api/Dockerfile -t agenthive/api:<tag> .
+#
+# Expected image size: ~180-250 MB (vs 1GB+ before)
 
+# ============ 构建阶段 ============
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install pnpm globally (pinned for reproducibility)
+RUN npm install -g pnpm@9
+
+# Copy workspace manifests
+COPY pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml ./
+COPY packages/observability/package.json ./packages/observability/
+COPY apps/agent-runtime/package.json ./apps/agent-runtime/
+COPY apps/api/package.json ./apps/api/
+
+# Install all dependencies (needed for deploy to resolve workspace links)
+RUN pnpm install --frozen-lockfile
+
+# Copy pre-built dist artifacts (assumes `pnpm -r build` was run on host)
+COPY packages/observability/dist ./packages/observability/dist
+COPY apps/agent-runtime/dist ./apps/agent-runtime/dist
+COPY apps/api/dist ./apps/api/dist
+
+# Deploy production bundle (extracts only prod deps + workspace dist)
+RUN pnpm --filter=@agenthive/api deploy --prod /prod/api
+
+# ============ 生产阶段 ============
 FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install dumb-init for proper signal handling
+# Install dumb-init for proper PID 1 signal handling
 RUN apk add --no-cache dumb-init
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S appuser -u 1001 -G nodejs
 
-# Copy workspace node_modules (includes @agenthive/* packages)
-COPY --chown=appuser:nodejs node_modules ./node_modules
-COPY --chown=appuser:nodejs package.json ./
-
-# Dereference @agenthive workspace symlinks (Windows symlinks break in Linux containers)
-RUN rm -rf ./node_modules/@agenthive/* && \
-    mkdir -p ./node_modules/@agenthive/observability ./node_modules/@agenthive/agent-runtime
-
-COPY --chown=appuser:nodejs packages/observability/package.json ./node_modules/@agenthive/observability/
-COPY --chown=appuser:nodejs packages/observability/dist ./node_modules/@agenthive/observability/dist
-
-COPY --chown=appuser:nodejs apps/agent-runtime/package.json ./node_modules/@agenthive/agent-runtime/
-COPY --chown=appuser:nodejs apps/agent-runtime/dist ./node_modules/@agenthive/agent-runtime/dist
-
-# Copy API application
-COPY --chown=appuser:nodejs apps/api/dist ./dist
-COPY --chown=appuser:nodejs apps/api/package.json ./
-
-# Labels for traceability
-ARG VERSION=unknown
-ARG GIT_COMMIT=unknown
-ARG BUILD_TIME=unknown
-LABEL org.opencontainers.image.title="AgentHive API"
-LABEL org.opencontainers.image.version="${VERSION}"
-LABEL org.opencontainers.image.revision="${GIT_COMMIT}"
-LABEL org.opencontainers.image.created="${BUILD_TIME}"
+# Copy the deployed production bundle (already contains dist + prod node_modules)
+COPY --from=builder --chown=appuser:nodejs /prod/api .
 
 # Switch to non-root user
 USER appuser

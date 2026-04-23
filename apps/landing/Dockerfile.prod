@@ -1,51 +1,56 @@
-# Landing 生产构建 Dockerfile - 优化版本
-# Nuxt 3 静态生成，使用多阶段构建
+# syntax=docker/dockerfile:1
+# Landing 生产构建 Dockerfile - Nuxt 3 静态生成 (多阶段构建)
+# Build: docker build -f apps/landing/Dockerfile.prod -t agenthive/landing:<tag> .
+
+# ============ 依赖安装阶段 ============
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+RUN npm install -g pnpm@9
+
+COPY pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml ./
+COPY packages/types/package.json ./packages/types/
+COPY apps/landing/package.json ./apps/landing/
+
+RUN pnpm install --frozen-lockfile
 
 # ============ 构建阶段 ============
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 安装 pnpm（Nuxt 项目通常使用 pnpm）
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
-# 复制 workspace 配置
-COPY pnpm-workspace.yaml package.json ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=deps /app/package.json ./package.json
+
 COPY packages/types ./packages/types
-
-# 复制 landing 应用
 COPY apps/landing ./apps/landing
 
-# 安装所有依赖
-RUN pnpm install --frozen-lockfile
-
-# 构建 Nuxt 应用
-WORKDIR /app/apps/landing
-RUN pnpm build
+RUN pnpm --filter=@agenthive/types build
+RUN pnpm --filter=agenthive-landing build
 
 # ============ 生产阶段 ============
 FROM nginx:alpine
 
 # 复制构建产物到 Nginx 目录
-# Nuxt 3 静态生成的文件在 .output/public
 COPY --from=builder /app/apps/landing/.output/public /usr/share/nginx/html
 
-# 复制自定义 Nginx 配置
+# 复制自定义 Nginx 配置（如果存在）
 COPY --from=builder /app/apps/landing/nginx.conf /etc/nginx/conf.d/default.conf
 
 # 创建必要的目录并设置权限
 RUN mkdir -p /var/cache/nginx /var/run && \
     chown -R nginx:nginx /var/cache/nginx /var/run /usr/share/nginx/html
 
-# 使用非 root 用户（Nginx 镜像默认有 nginx 用户）
 USER nginx
 
-# 暴露端口
 EXPOSE 80
 
-# 健康检查
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
-# Nginx 前台运行
 CMD ["nginx", "-g", "daemon off;"]

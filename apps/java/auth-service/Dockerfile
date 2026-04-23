@@ -1,16 +1,36 @@
+# syntax=docker/dockerfile:1
+# Auth Service - Optimized Spring Boot 3 Layered Build
+# Uses jarmode=layertools to split fat JAR into cacheable layers.
+
+# ============ 提取阶段 ============
+FROM eclipse-temurin:21-jre-alpine AS builder
+WORKDIR /app
+COPY target/auth-service-*.jar app.jar
+RUN java -Djarmode=layertools -jar app.jar extract
+
+# ============ 生产阶段 ============
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-COPY target/auth-service-*.jar app.jar
+# JVM memory settings (container-aware)
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0"
+ENV SPRING_PROFILES_ACTIVE=docker
+
+# Create non-root user
+RUN addgroup -S appgroup -g 1001 && \
+    adduser -S appuser -u 1001 -G appgroup && \
+    chown -R appuser:appgroup /app
+
+# Copy layers (dependencies rarely change -> cached)
+COPY --from=builder --chown=appuser:appgroup /app/dependencies/ ./
+COPY --from=builder --chown=appuser:appgroup /app/spring-boot-loader/ ./
+COPY --from=builder --chown=appuser:appgroup /app/snapshot-dependencies/ ./
+COPY --from=builder --chown=appuser:appgroup /app/application/ ./
+
+USER appuser
 
 EXPOSE 8081
-
-# JVM 内存参数（可通过环境变量覆盖）
-ENV JAVA_OPTS="-Xms256m -Xmx512m"
-
-# Spring Profile（Docker 环境自动激活 docker profile）
-ENV SPRING_PROFILES_ACTIVE=docker
 
 # Labels for traceability
 ARG VERSION=unknown
@@ -21,4 +41,7 @@ LABEL org.opencontainers.image.version="${VERSION}"
 LABEL org.opencontainers.image.revision="${GIT_COMMIT}"
 LABEL org.opencontainers.image.created="${BUILD_TIME}"
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:8081/actuator/health || exit 1
+
+ENTRYPOINT exec java ${JAVA_OPTS} org.springframework.boot.loader.launch.JarLauncher
