@@ -33,6 +33,9 @@ Thumbs.db
 AGENTS/workspace/
 AGENTS/.obsidian/
 
+# Personal notes (not project docs)
+notes/
+
 # Playwright
 .playwright-mcp/
 
