@@ -597,15 +597,15 @@ export function useApi() {
   const chat = {
     /** 创建会话 */
     createSession: (data: { projectId?: string; title?: string }) =>
-      post<{ id: string; title: string; projectId?: string; createdAt: string }>('/api/chat/sessions', data),
+      post<{ id: string; title: string; projectId?: string; createdAt: string }>('/api/chat/sessions', data, { silent: true }),
 
     /** 获取会话列表 */
     listSessions: () =>
-      get<{ items: Array<{ id: string; title: string; projectId?: string; createdAt: string; updatedAt: string }>; total: number }>('/api/chat/sessions'),
+      get<{ items: Array<{ id: string; title: string; projectId?: string; createdAt: string; updatedAt: string }>; total: number }>('/api/chat/sessions', { silent: true }),
 
     /** 获取会话详情 */
     getSession: (id: string) =>
-      get<{ id: string; title: string; projectId?: string; createdAt: string; updatedAt: string }>(`/api/chat/sessions/${id}`),
+      get<{ id: string; title: string; projectId?: string; createdAt: string; updatedAt: string }>(`/api/chat/sessions/${id}`, { silent: true }),
 
     /** 发送消息 */
     sendMessage: (sessionId: string, data: { content: string }) =>
@@ -613,7 +613,7 @@ export function useApi() {
         message: { id: string; role: string; content: string; timestamp: string };
         intent: string;
         tasks: Array<{ ticketId: string; workerRole: string; status: string }>;
-      }>(`/api/chat/sessions/${sessionId}/messages`, data),
+      }>(`/api/chat/sessions/${sessionId}/messages`, data, { silent: true }),
 
     /** 获取消息列表 */
     getMessages: (sessionId: string, page?: number, pageSize?: number) =>
@@ -622,19 +622,19 @@ export function useApi() {
         total: number;
         page: number;
         pageSize: number;
-      }>(`/api/chat/sessions/${sessionId}/messages?page=${page || 1}&pageSize=${pageSize || 50}`),
+      }>(`/api/chat/sessions/${sessionId}/messages?page=${page || 1}&pageSize=${pageSize || 50}`, { silent: true }),
 
     /** 执行任务 */
     executeTask: (sessionId: string, data: { content: string }) =>
-      post<{ intent: string; tasks: Array<{ ticketId: string; workerRole: string; status: string }> }>(`/api/chat/sessions/${sessionId}/execute`, data),
+      post<{ intent: string; tasks: Array<{ ticketId: string; workerRole: string; status: string }> }>(`/api/chat/sessions/${sessionId}/execute`, data, { silent: true }),
 
     /** 获取任务列表 */
     getTasks: (sessionId: string) =>
-      get<{ tasks: Array<any>; total: number }>(`/api/chat/sessions/${sessionId}/tasks`),
+      get<{ tasks: Array<any>; total: number }>(`/api/chat/sessions/${sessionId}/tasks`, { silent: true }),
 
     /** 获取进度 */
     getProgress: (sessionId: string) =>
-      get<any>(`/api/chat/sessions/${sessionId}/progress`),
+      get<any>(`/api/chat/sessions/${sessionId}/progress`, { silent: true }),
   }
 
   // ============ 代码相关 API ============
