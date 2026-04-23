@@ -39,7 +39,8 @@ class OpenAIProvider implements LLMProvider {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`
+        'Authorization': `Bearer ${this.config.apiKey}`,
+        'User-Agent': process.env.LLM_USER_AGENT || 'claude-code/0.1.0'
       },
       body: JSON.stringify({
         model: this.config.model,
@@ -78,7 +79,8 @@ class OpenAIProvider implements LLMProvider {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`
+        'Authorization': `Bearer ${this.config.apiKey}`,
+        'User-Agent': process.env.LLM_USER_AGENT || 'KimiCLI/1.5'
       },
       body: JSON.stringify({
         model: this.config.model,
