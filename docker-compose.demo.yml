@@ -55,6 +55,7 @@ services:
         pnpm config set registry https://registry.npmmirror.com --global &&
         cd /app &&
         pnpm install &&
+        pnpm --filter @agenthive/observability --filter @agenthive/agent-runtime run build &&
         cd /app/apps/api &&
         pnpm run dev
       "
@@ -106,6 +107,7 @@ services:
         pnpm config set registry https://registry.npmmirror.com --global &&
         cd /app &&
         pnpm install &&
+        pnpm --filter @agenthive/observability --filter @agenthive/types run build &&
         cd /app/apps/landing &&
         pnpm run dev
       "
