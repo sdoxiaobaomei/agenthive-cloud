@@ -81,6 +81,9 @@ services:
       target: production
     container_name: agenthive-api
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 8.8.8.8
     environment:
       NODE_ENV: development
       PORT: 3001
@@ -92,8 +95,13 @@ services:
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
       JWT_SECRET: ${JWT_SECRET:-dev-secret}
+      # LLM: Kimi Code API（优先）/ Ollama（fallback）
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.kimi.com/coding/v1}
+      LLM_MODEL: ${LLM_MODEL:-kimi-for-coding}
+      LLM_USER_AGENT: ${LLM_USER_AGENT:-claude-code/0.1.0}
       OLLAMA_URL: http://host.docker.internal:11434
-      LLM_MODEL: qwen3:14b
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:14b}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_SERVICE_NAME: agenthive-api
       OTEL_TRACES_SAMPLER: parentbased_traceidratio
@@ -131,6 +139,8 @@ services:
       context: .
       dockerfile: apps/landing/Dockerfile
       target: production
+      args:
+        - NUXT_PUBLIC_API_BASE=http://localhost:3001
     container_name: agenthive-landing
     restart: unless-stopped
     environment:
@@ -145,7 +155,7 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
       interval: 30s
       timeout: 5s
       retries: 3

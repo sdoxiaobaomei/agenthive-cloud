@@ -15,6 +15,10 @@ RUN npm install -g pnpm@9
 # Copy entire monorepo (node_modules excluded by root .dockerignore)
 COPY . .
 
+# Inject public API base (build-time env for Nuxt runtimeConfig.public)
+ARG NUXT_PUBLIC_API_BASE=https://api.xiaochaitian.asia
+ENV NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE}
+
 # Install dependencies and build
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter=@agenthive/types build
