@@ -36,7 +36,7 @@ on:
 
 env:
   REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
-  NAMESPACE: agenthive
+  NAMESPACE: namespace-alpha
 
 jobs:
   # 构建 Prometheus 镜像
