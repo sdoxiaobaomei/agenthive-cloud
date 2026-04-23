@@ -45,7 +45,7 @@ services:
   # API 服务 (Express)
   # ==========================================
   api:
-    image: ${API_IMAGE:-registry.cn-beijing.aliyuncs.com/agenthive/api:latest}
+    image: ${API_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/agenthive/api:latest}
     pull_policy: always
     container_name: agenthive-api-demo
     ports:
@@ -83,7 +83,7 @@ services:
   # Landing (Nuxt 3)
   # ==========================================
   landing:
-    image: ${LANDING_IMAGE:-registry.cn-beijing.aliyuncs.com/agenthive/landing:latest}
+    image: ${LANDING_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/agenthive/landing:latest}
     pull_policy: always
     container_name: agenthive-landing-demo
     ports:

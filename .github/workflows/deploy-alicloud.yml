@@ -23,7 +23,7 @@ on:
           - production
 
 env:
-  REGISTRY: registry.cn-beijing.aliyuncs.com
+  REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
   NAMESPACE: agenthive
   REGION: cn-beijing
   NODE_VERSION: '20'
