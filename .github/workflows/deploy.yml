@@ -58,8 +58,8 @@ jobs:
             # 尝试登录ACR（ECS可能已登录，失败不阻塞）
             set +e
             docker login registry.cn-beijing.aliyuncs.com \
-              -u "${{ secrets.ALIYUN_USERNAME }}" \
-              -p "${{ secrets.ALIYUN_PASSWORD }}" 2>/dev/null
+              -u "${{ secrets.ACR_USERNAME }}" \
+              -p "${{ secrets.ACR_PASSWORD }}" 2>/dev/null
             LOGIN_RESULT=$?
             set -e
             if [ $LOGIN_RESULT -eq 0 ]; then
