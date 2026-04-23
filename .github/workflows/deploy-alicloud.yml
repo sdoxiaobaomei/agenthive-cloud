@@ -2,8 +2,15 @@ name: Deploy to Alibaba Cloud
 
 on:
   push:
-    branches: [ master, main, staging ]
-    tags: [ 'v*' ]
+    branches: [master, main]
+    tags: ['v*']
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'AGENTS/**'
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - '.github/workflows/deploy-alicloud.yml'
   workflow_dispatch:
     inputs:
       environment:
@@ -19,15 +26,59 @@ env:
   REGISTRY: registry.cn-beijing.aliyuncs.com
   NAMESPACE: agenthive
   REGION: cn-beijing
+  NODE_VERSION: '20'
 
 jobs:
   build-and-push:
+    name: Build & Push to ACR
     runs-on: ubuntu-latest
-    outputs:
-      image_tag: ${{ steps.meta.outputs.tags }}
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # ---------- Setup Node.js & pnpm ----------
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # ---------- Build workspace packages & apps ----------
+      # API and Agent Runtime Dockerfiles require pre-built dist artifacts.
+      # We build them on the host so the Docker COPY instructions succeed.
+      - name: Build workspace packages
+        run: |
+          echo "Building @agenthive/observability..."
+          pnpm --filter=@agenthive/observability build
+          
+          echo "Building @agenthive/agent-runtime..."
+          pnpm --filter=@agenthive/agent-runtime build
+          
+          echo "Building @agenthive/api..."
+          pnpm --filter=@agenthive/api build
+
+      # ---------- Setup Docker ----------
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -39,75 +90,92 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Extract metadata
-        id: meta
+      # ---------- Extract metadata ----------
+      - name: Extract metadata for API
+        id: meta-api
         uses: docker/metadata-action@v5
         with:
-          images: |
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/api
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/landing
+          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/api
           tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
             type=semver,pattern={{version}}
-            type=sha
 
-      # Build and push API
-      - name: Build and push API
+      - name: Extract metadata for Landing
+        id: meta-landing
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/landing
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Extract metadata for Agent Runtime
+        id: meta-agent-runtime
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/agent-runtime
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      # ---------- Build & Push ----------
+      - name: Build and push API image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./apps/api/Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/api:latest
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/api:${{ github.sha }}
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=production
 
-      # Build and push Landing
-      - name: Build and push Landing
+      - name: Build and push Landing image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./apps/landing/Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/landing:latest
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/landing:${{ github.sha }}
+          tags: ${{ steps.meta-landing.outputs.tags }}
+          labels: ${{ steps.meta-landing.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=production
             NUXT_PUBLIC_API_BASE=https://api.xiaochaitian.asia
 
-      # Build and push Agent Runtime
-      - name: Build and push Agent Runtime
+      - name: Build and push Agent Runtime image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./apps/agent-runtime/Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/agent-runtime:latest
-            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/agent-runtime:${{ github.sha }}
+          tags: ${{ steps.meta-agent-runtime.outputs.tags }}
+          labels: ${{ steps.meta-agent-runtime.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Save image tag
-      - name: Save image tag
-        run: echo "IMAGE_TAG=${{ github.sha }}" >> $GITHUB_ENV
-
-      - name: 📊 Build Summary
+      # ---------- Summary ----------
+      - name: Build Summary
         if: always()
         run: |
           echo "## 🐳 ACR Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| 镜像 | 地址 |" >> $GITHUB_STEP_SUMMARY
+          echo "| 镜像 | Tags |" >> $GITHUB_STEP_SUMMARY
           echo "|------|------|" >> $GITHUB_STEP_SUMMARY
-          echo "| **API** | ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/api:${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Landing** | ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/landing:${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| **Agent Runtime** | ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/agent-runtime:${{ github.sha }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **API** | ${{ steps.meta-api.outputs.tags }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Landing** | ${{ steps.meta-landing.outputs.tags }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Agent Runtime** | ${{ steps.meta-agent-runtime.outputs.tags }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> 部署到 ACK 请使用 IaC Apply (Demo) 或手动 kubectl 操作。" >> $GITHUB_STEP_SUMMARY
+          echo "ECS 部署命令:" >> $GITHUB_STEP_SUMMARY
+          echo '\`\`\`bash' >> $GITHUB_STEP_SUMMARY
+          echo 'docker compose -f docker-compose.demo.yml --env-file .env.demo pull && docker compose -f docker-compose.demo.yml --env-file .env.demo up -d' >> $GITHUB_STEP_SUMMARY
+          echo '\`\`\`' >> $GITHUB_STEP_SUMMARY

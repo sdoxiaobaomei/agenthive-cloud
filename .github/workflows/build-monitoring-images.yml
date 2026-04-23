@@ -35,7 +35,7 @@ on:
       - 'monitoring/**'
 
 env:
-  REGISTRY: registry.cn-hangzhou.aliyuncs.com
+  REGISTRY: registry.cn-beijing.aliyuncs.com
   NAMESPACE: agenthive
 
 jobs:
