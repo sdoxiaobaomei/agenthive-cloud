@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Landing Service - Nuxt 3 SSR with Multi-stage Build
 # Builds entirely inside container to avoid host OS / Windows symlink issues.
 # Build command (from repo root):
