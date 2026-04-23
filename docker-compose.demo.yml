@@ -93,8 +93,8 @@ services:
   landing:
     image: agenthive-landing:local
     build:
-      context: ./apps/landing
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/landing/Dockerfile
       target: production
     container_name: agenthive-landing-demo
     working_dir: /app
