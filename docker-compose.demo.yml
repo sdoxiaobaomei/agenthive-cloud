@@ -47,8 +47,8 @@ services:
   api:
     image: agenthive-api:local
     build:
-      context: ./apps/api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/api/Dockerfile
       target: production
     container_name: agenthive-api-demo
     working_dir: /app
