@@ -1,0 +1,366 @@
+# AgentHive 演示配置
+# 适用场景：8C16G 抢占式实例跑业务层，2C2G ECS(172.24.146.165)跑数据层
+# 通过 Cloudflare Tunnel 暴露给面试官
+#
+# 启动命令：
+#   基础版（Node.js 全栈）：
+#     docker compose -f docker-compose.demo.yml --env-file .env.demo up -d
+#
+#   含 Java 微服务：
+#     docker compose -f docker-compose.demo.yml --env-file .env.demo --profile java up -d
+#
+#   含监控栈：
+#     docker compose -f docker-compose.demo.yml --env-file .env.demo --profile monitoring up -d
+#
+#   含公网 Tunnel：
+#     docker compose -f docker-compose.demo.yml --env-file .env.demo --profile with-tunnel up -d
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # Nginx - 统一入口
+  # ==========================================
+  nginx:
+    image: nginx:alpine
+    container_name: agenthive-nginx-demo
+    ports:
+      - "${DEMO_PORT:-80}:80"
+      - "${DEMO_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - api
+      - landing
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - agenthive-demo
+
+  # ==========================================
+  # API 服务 (Express)
+  # ==========================================
+  api:
+    image: ${REGISTRY:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha}/api:${TAG:-latest}
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+      target: production
+    container_name: agenthive-api-demo
+    working_dir: /app
+    command: >
+      sh -c "npm install && npm run dev"
+    ports:
+      - "${API_PORT:-3001}:3001"
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      # ===== 2C2G 数据层（VPC 内网）=====
+      - DB_HOST=172.24.146.165
+      - DB_PORT=5432
+      - DB_NAME=${DB_NAME:-agenthive}
+      - DB_USER=${DB_USER:-agenthive}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=172.24.146.165
+      - REDIS_PORT=6379
+      - REDIS_URL=redis://172.24.146.165:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # ===== LLM: Kimi Code API =====
+      - LLM_API_KEY=${LLM_API_KEY}
+      - LLM_BASE_URL=https://api.kimi.com/coding/v1
+      - LLM_MODEL=${LLM_MODEL:-kimi-code}
+      # ===== 其他 =====
+      - JWT_SECRET=${JWT_SECRET:-demo-jwt-secret-change-me}
+      - UV_THREADPOOL_SIZE=4
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-demo
+
+  # ==========================================
+  # Landing (Nuxt 3)
+  # ==========================================
+  landing:
+    image: ${REGISTRY:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha}/landing:${TAG:-latest}
+    build:
+      context: ./apps/landing
+      dockerfile: Dockerfile
+      target: production
+    container_name: agenthive-landing-demo
+    working_dir: /app
+    command: >
+      sh -c "
+        npm install -g pnpm &&
+        pnpm install &&
+        pnpm run dev
+      "
+    ports:
+      - "${LANDING_PORT:-3000}:3000"
+    volumes:
+      - ./apps:/app
+      - landing-node-modules:/app/node_modules
+      - landing-pnpm-store:/root/.local/share/pnpm/store
+    environment:
+      - NODE_ENV=development
+      - NUXT_HOST=0.0.0.0
+      - NUXT_PORT=3000
+      - NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-http://localhost:3001}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-demo
+
+  # ==========================================
+  # Java 微服务（象征性跑 3 个，默认不启动）
+  # 启动时加 --profile java
+  # ==========================================
+  java-gateway:
+    build:
+      context: ./apps/java/gateway-service
+      dockerfile: Dockerfile
+    container_name: agenthive-java-gateway
+    environment:
+      - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
+      - NACOS_SERVER=nacos:8848
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - nacos
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-demo
+    profiles:
+      - java
+
+  java-auth:
+    build:
+      context: ./apps/java/auth-service
+      dockerfile: Dockerfile
+    container_name: agenthive-java-auth
+    environment:
+      - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
+      - NACOS_SERVER=nacos:8848
+      - DB_HOST=172.24.146.165
+      - DB_PORT=5432
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - nacos
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-demo
+    profiles:
+      - java
+
+  java-user:
+    build:
+      context: ./apps/java/user-service
+      dockerfile: Dockerfile
+    container_name: agenthive-java-user
+    environment:
+      - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
+      - NACOS_SERVER=nacos:8848
+      - DB_HOST=172.24.146.165
+      - DB_PORT=5432
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - nacos
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-demo
+    profiles:
+      - java
+
+  nacos:
+    image: nacos/nacos-server:v2.3.0
+    container_name: agenthive-nacos
+    environment:
+      - MODE=standalone
+      - PREFER_HOST_MODE=hostname
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - agenthive-demo
+    profiles:
+      - java
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: agenthive-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-demo
+    profiles:
+      - java
+
+  # ==========================================
+  # 监控栈（默认不启动）
+  # 启动时加 --profile monitoring
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: agenthive-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-demo
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: agenthive-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3002:3000"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-demo
+    profiles:
+      - monitoring
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: agenthive-tempo
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./monitoring/tempo/tempo.yml:/etc/tempo.yml:ro
+      - tempo-data:/tmp/tempo
+    ports:
+      - "3200:3200"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    networks:
+      - agenthive-demo
+    profiles:
+      - monitoring
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: agenthive-loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./monitoring/loki/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-demo
+    profiles:
+      - monitoring
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: agenthive-otel-collector
+    command: ["--config=/etc/otel-collector.yml"]
+    volumes:
+      - ./monitoring/opentelemetry/otel-collector/otel-collector.yml:/etc/otel-collector.yml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-demo
+    profiles:
+      - monitoring
+
+  # ==========================================
+  # Cloudflare Tunnel（可选）
+  # 启动时加 --profile with-tunnel
+  # ==========================================
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: agenthive-tunnel-demo
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      - nginx
+    networks:
+      - agenthive-demo
+    profiles:
+      - with-tunnel
+
+networks:
+  agenthive-demo:
+    driver: bridge
+
+volumes:
+  landing-node-modules:
+  landing-pnpm-store:
+  prometheus-data:
+  grafana-data:
+  tempo-data:
+  loki-data:

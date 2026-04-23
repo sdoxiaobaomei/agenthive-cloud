@@ -1,109 +1,96 @@
-# GitHub Actions 工作流说明
+# GitHub Actions 部署说明
 
-## 分支管理策略
-
-本项目采用 **简化版 GitHub Flow**，适合 Demo/展示型项目：
+## 架构
 
 ```
-main (master)  ← 唯一长期分支
-    │
-    ├── feature/* 或 fix/* 分支 ──► PR ──► CI 检查 ──► Merge
-    │
-    └── Milestone 完成时打 tag: v0.1.0, v0.2.0...
-              └── 可选发布 GitHub Release
+GitHub Push → GitHub Actions (SSH) → 8C16G ECS (39.107.87.106)
+                                           │
+                                           ▼
+                                    docker-compose up -d --build
+                                           │
+                                    连接 2C2G ECS (172.24.146.165)
+                                    PostgreSQL + Redis
 ```
 
-### 为什么不使用 develop/release 分支？
+## 配置步骤
 
-| 分支 | 用途 | Demo 项目是否需要 |
-|------|------|------------------|
-| `main` | 唯一长期分支，始终可构建 | ✅ 必需 |
-| `feature/*` | 功能开发 | ✅ 必需 |
-| `develop` | 隔离开发中和已发布代码 | ❌ PR + CI 已保证 main 稳定性 |
-| `release` | 版本发布前冻结窗口 | ❌ Demo 不需要严格版本冻结 |
+### 1. 在 8C16G ECS 上初始化项目（只需执行一次）
 
-### Tag 与 Release
+```bash
+ssh root@39.107.87.106
 
-- **打 tag**: 推荐。标记里程碑，如 `v0.1.0`（MVP）、`v0.2.0`（Dashboard 完成）
-- **语义化版本**: `v主.次.修`，如 `v1.2.3`
-- **发 Release**: 推荐。推送 `v*` 标签时自动触发 ACR 镜像构建，GitHub Release 自动生成 changelog
+# 安装 Git + Docker（阿里云 Linux 3）
+yum install -y git docker docker-compose-plugin
+systemctl enable --now docker
 
----
+# 克隆项目
+mkdir -p /opt
+chmod 755 /opt
+git clone https://github.com/你的用户名/agenthive-cloud.git /opt/agenthive-cloud
+cd /opt/agenthive-cloud
 
-## IaC (Infrastructure as Code)
+# 创建环境文件
+cp .env.demo .env.demo.local
+# 编辑 .env.demo.local，填入：
+#   DB_PASSWORD=xxx
+#   REDIS_PASSWORD=xxx
+#   LLM_API_KEY=sk-xxx
+#   JWT_SECRET=xxx
+#   CF_TUNNEL_TOKEN=xxx
 
-> **核心原则**: IaC 资源**绝不自动创建**，只在需要展示时手动触发，展示完毕后手动销毁。
-
-| 工作流 | 文件 | 触发方式 | 说明 |
-|--------|------|----------|------|
-| **IaC PR Check** | `iac-pr-check.yml` | PR 修改 `iac/**` | 自动：`fmt` + `validate` + `checkov` + `plan` 评论 |
-| **IaC Apply (Demo)** | `iac-apply-demo.yml` | `workflow_dispatch` | **手动**：创建 Demo 环境（约 ¥0.6/小时） |
-| **IaC Destroy (Demo)** | `iac-destroy-demo.yml` | `workflow_dispatch` | **手动**：销毁 Demo 环境，停止计费 |
-| **IaC Apply (Env)** | `iac-apply-env.yml` | `workflow_dispatch` | **手动**：管理 environments（dev/staging/prod） |
-
-### 使用流程
-
-```
-需要展示 Demo
-    │
-    ├──► Actions → IaC Apply (Demo) → 勾选确认 → 创建资源
-    │
-    ├──► 展示完毕
-    │
-    └──► Actions → IaC Destroy (Demo) → 勾选确认 → 销毁资源
+# 测试启动
+docker compose -f docker-compose.demo.yml --env-file .env.demo.local up -d
 ```
 
-### 前置配置
+### 2. 配置 GitHub Secrets
 
-在仓库 **Settings → Secrets and variables → Actions** 中添加：
+进入 GitHub 仓库 → Settings → Secrets and variables → Actions → New repository secret
 
-```
-ALIYUN_ACCESS_KEY_ID     = 阿里云 AccessKey ID
-ALIYUN_ACCESS_KEY_SECRET = 阿里云 AccessKey Secret
-```
+| Secret Name | 值 | 获取方式 |
+|-------------|-----|----------|
+| `ECS_SSH_KEY` | 8C16G ECS 的私钥 | `cat ~/.ssh/id_rsa`（ECS 上生成的） |
 
-> ⚠️ **安全提示**: 当前使用 AccessKey 是过渡方案。企业级推荐配置 **阿里云 OIDC 联邦身份**。配置见 `iac/README.md` 的 CI/CD 集成章节。
-
----
-
-## 应用 CI/CD
-
-| 工作流 | 文件 | 触发方式 | 说明 |
-|--------|------|----------|------|
-| **CI (代码质量)** | `ci-cd.yml` | PR / push `main` | 自动：type-check、lint、build、test |
-| **CD (ACR 镜像)** | `deploy-alicloud.yml` | push `main/staging`、tag `v*`、手动 | 自动：构建并推送镜像到 **阿里云 ACR** |
-| **安全扫描** | `security-scan.yml` | PR / push `main` / 每周定时 | 自动：Trivy、npm audit、CodeQL |
-
-### 为什么没有自动部署到 ACK？
-
-本项目定位为 **Demo/展示**，ACK 集群只在需要展示时通过 **IaC Apply (Demo)** 手动创建。镜像推送到 ACR 后，部署到 ACK 的时机由展示者自行控制（手动 kubectl 或在 IaC Apply 后执行）。
-
----
-
-## 监控镜像构建
-
-| 工作流 | 文件 | 触发方式 | 说明 |
-|--------|------|----------|------|
-| **监控镜像** | `build-monitoring-images.yml` | push `monitoring/**`、tag `monitoring-v*`、手动 | 构建 Prometheus/Grafana/Node-Exporter 镜像到 ACR |
-
-### 前置配置
-
-```
-ACR_USERNAME = 阿里云容器镜像服务用户名
-ACR_PASSWORD = 阿里云容器镜像服务密码
+**生成 SSH Key（如果还没有）**：
+```bash
+ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/github_actions
+# 把公钥放到 ECS 的 authorized_keys
+cat ~/.ssh/github_actions.pub >> ~/.ssh/authorized_keys
+# 把私钥内容复制到 GitHub Secrets
+cat ~/.ssh/github_actions
 ```
 
----
+### 3. 触发部署
 
-## Workflow 触发条件速查表
+```bash
+# 本地改完代码
+git add .
+git commit -m "feat: xxx"
+git push origin main
 
-| 场景 | 触发的工作流 |
-|------|-------------|
-| 提交 PR（修改 `apps/**`） | `ci-cd.yml`（代码检查）、`security-scan.yml` |
-| 提交 PR（修改 `iac/**`） | `iac-pr-check.yml`（Plan 预览） |
-| Push 到 `main`（修改应用代码） | `ci-cd.yml`、`deploy-alicloud.yml`（ACR 镜像）、`security-scan.yml` |
-| Push 到 `main`（修改 `monitoring/**`） | `build-monitoring-images.yml` |
-| 推送 `v*` 标签 | `deploy-alicloud.yml`（ACR 镜像） |
-| 需要展示 Demo 环境 | **手动触发** `iac-apply-demo.yml` |
-| Demo 展示完毕 | **手动触发** `iac-destroy-demo.yml` |
-| 管理 environments | **手动触发** `iac-apply-env.yml` |
+# GitHub Actions 会自动部署到 8C16G ECS
+# 查看部署状态：GitHub 仓库 → Actions 标签页
+```
+
+### 4. 强制重新构建（清除缓存）
+
+GitHub 仓库 → Actions → Deploy to ECS → Run workflow → rebuild 勾选 true
+
+## 安全建议
+
+1. **不要用密码登录 ECS**：SSH Key 比密码安全
+2. **定期轮换 SSH Key**：
+   ```bash
+   ssh-keygen -t ed25519 -f ~/.ssh/github_actions_new
+   # 更新 GitHub Secret，删除旧公钥
+   ```
+3. **ECS 上不要存敏感文件**：`.env.demo.local` 里的 API Key 是唯一的敏感信息，确保它不在 git 里
+
+## 故障排查
+
+如果部署失败，SSH 到 ECS 检查：
+
+```bash
+cd /opt/agenthive-cloud
+docker compose -f docker-compose.demo.yml logs --tail=100 api
+docker compose -f docker-compose.demo.yml ps
+```
