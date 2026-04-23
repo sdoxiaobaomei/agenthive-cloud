@@ -45,11 +45,7 @@ services:
   # API 服务 (Express)
   # ==========================================
   api:
-    image: agenthive-api:local
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
-      target: production
+    image: node:20-alpine
     container_name: agenthive-api-demo
     working_dir: /app
     command: >
@@ -91,11 +87,7 @@ services:
   # Landing (Nuxt 3)
   # ==========================================
   landing:
-    image: agenthive-landing:local
-    build:
-      context: .
-      dockerfile: apps/landing/Dockerfile
-      target: production
+    image: node:20-alpine
     container_name: agenthive-landing-demo
     working_dir: /app
     command: >
