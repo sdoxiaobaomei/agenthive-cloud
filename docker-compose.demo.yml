@@ -45,27 +45,12 @@ services:
   # API 服务 (Express)
   # ==========================================
   api:
-    image: node:20-alpine
+    image: ${API_IMAGE:-registry.cn-beijing.aliyuncs.com/agenthive/api:latest}
     container_name: agenthive-api-demo
-    working_dir: /app/apps/api
-    command: >
-      sh -c "
-        npm config set registry https://registry.npmmirror.com --global &&
-        npm install -g pnpm &&
-        pnpm config set registry https://registry.npmmirror.com --global &&
-        cd /app &&
-        pnpm install &&
-        cd /app/apps/api &&
-        pnpm run dev
-      "
     ports:
       - "${API_PORT:-3001}:3001"
-    volumes:
-      - ./:/app
-      - api-node-modules:/app/node_modules
-      - api-pnpm-store:/root/.local/share/pnpm/store
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - PORT=3001
       # ===== 2C2G 数据层（VPC 内网）=====
       - DB_HOST=172.24.146.165
@@ -81,6 +66,7 @@ services:
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_BASE_URL=https://api.kimi.com/coding/v1
       - LLM_MODEL=${LLM_MODEL:-kimi-code}
+      - LLM_USER_AGENT=${LLM_USER_AGENT:-claude-code/0.1.0}
       # ===== 其他 =====
       - JWT_SECRET=${JWT_SECRET:-demo-jwt-secret-change-me}
       - UV_THREADPOOL_SIZE=4
@@ -96,30 +82,14 @@ services:
   # Landing (Nuxt 3)
   # ==========================================
   landing:
-    image: node:20-alpine
+    image: ${LANDING_IMAGE:-registry.cn-beijing.aliyuncs.com/agenthive/landing:latest}
     container_name: agenthive-landing-demo
-    working_dir: /app/apps/landing
-    command: >
-      sh -c "
-        npm config set registry https://registry.npmmirror.com --global &&
-        npm install -g pnpm &&
-        pnpm config set registry https://registry.npmmirror.com --global &&
-        cd /app &&
-        pnpm install &&
-        cd /app/apps/landing &&
-        pnpm run dev
-      "
     ports:
       - "${LANDING_PORT:-3000}:3000"
-    volumes:
-      - ./:/app
-      - landing-node-modules:/app/node_modules
-      - landing-pnpm-store:/root/.local/share/pnpm/store
     environment:
-      - NODE_ENV=development
-      - NUXT_HOST=0.0.0.0
-      - NUXT_PORT=3000
-      - NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE:-http://localhost:3001}
+      - NODE_ENV=production
+      - NITRO_PORT=3000
+      - API_URL=http://api:3001
     restart: unless-stopped
     deploy:
       resources:
