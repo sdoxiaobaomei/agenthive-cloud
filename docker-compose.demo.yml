@@ -50,7 +50,9 @@ services:
     working_dir: /app/apps/api
     command: >
       sh -c "
+        npm config set registry https://registry.npmmirror.com &&
         npm install -g pnpm &&
+        pnpm config set registry https://registry.npmmirror.com &&
         cd /app &&
         pnpm install &&
         cd /app/apps/api &&
@@ -99,7 +101,9 @@ services:
     working_dir: /app/apps/landing
     command: >
       sh -c "
+        npm config set registry https://registry.npmmirror.com &&
         npm install -g pnpm &&
+        pnpm config set registry https://registry.npmmirror.com &&
         cd /app &&
         pnpm install &&
         cd /app/apps/landing &&
