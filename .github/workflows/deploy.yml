@@ -1,12 +1,12 @@
 name: Deploy to ECS
 
 on:
-  push:
+  # 在 ACR 镜像构建成功后自动触发部署
+  workflow_run:
+    workflows: ["Deploy to Alibaba Cloud"]
+    types: [completed]
     branches: [master, main]
-    paths-ignore:
-      - '**.md'
-      - '.github/workflows/**'
-      - 'docs/**'
+  # 支持手动触发
   workflow_dispatch:
     inputs:
       rebuild:
@@ -23,6 +23,7 @@ on:
         default: 'false'
 
 env:
+  REGISTRY: registry.cn-beijing.aliyuncs.com
   COMPOSE_FILE: docker-compose.demo.yml
   ENV_FILE: .env.demo.local
 
@@ -30,6 +31,8 @@ jobs:
   deploy:
     name: Deploy to 8C16G ECS
     runs-on: ubuntu-latest
+    # 手动触发时直接运行；自动触发时仅在上游 workflow 成功才运行
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       # ---------- 0. 设置 SSH known_hosts ----------
       - name: Setup SSH known_hosts
@@ -44,20 +47,21 @@ jobs:
           host: 39.107.87.106
           username: root
           key: ${{ secrets.ECS_SSH_KEY }}
-          script_stop: true
           script: |
             set -e
             cd /opt/agenthive-cloud
 
             echo "=== [1/6] 拉取最新代码 ==="
             git fetch origin
-            git reset --hard origin/master
+            # 兼容 main 和 master 分支
+            DEFAULT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            git reset --hard origin/${DEFAULT_BRANCH}
             echo "当前 commit: $(git rev-parse --short HEAD)"
 
             echo "=== [2/6] 登录阿里云 ACR ==="
-            # 尝试登录ACR（ECS可能已登录，失败不阻塞）
+            # 尝试登录 ACR（ECS 可能已登录，失败不阻塞）
             set +e
-            docker login registry.cn-beijing.aliyuncs.com \
+            docker login ${{ env.REGISTRY }} \
               -u "${{ secrets.ACR_USERNAME }}" \
               -p "${{ secrets.ACR_PASSWORD }}" 2>/dev/null
             LOGIN_RESULT=$?
@@ -71,10 +75,10 @@ jobs:
             echo "=== [3/6] 拉取镜像并启动服务 ==="
             COMPOSE_CMD="docker compose -f ${{ env.COMPOSE_FILE }} --env-file ${{ env.ENV_FILE }}"
             
-            # 拉取最新镜像（忽略需要构建的服务）
+            # 拉取最新镜像（忽略需要本地构建的服务）
             $COMPOSE_CMD pull --ignore-buildable
             
-            # 启动基础服务（不再构建）
+            # 启动基础服务
             $COMPOSE_CMD up -d
             
             # 可选：启动 Java 微服务
