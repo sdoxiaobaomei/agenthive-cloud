@@ -47,14 +47,21 @@ services:
   api:
     image: node:20-alpine
     container_name: agenthive-api-demo
-    working_dir: /app
+    working_dir: /app/apps/api
     command: >
-      sh -c "npm install -g pnpm && pnpm install && pnpm run dev"
+      sh -c "
+        npm install -g pnpm &&
+        cd /app &&
+        pnpm install &&
+        cd /app/apps/api &&
+        pnpm run dev
+      "
     ports:
       - "${API_PORT:-3001}:3001"
     volumes:
-      - ./apps/api:/app
-      - /app/node_modules
+      - ./:/app
+      - api-node-modules:/app/node_modules
+      - api-pnpm-store:/root/.local/share/pnpm/store
     environment:
       - NODE_ENV=development
       - PORT=3001
@@ -89,18 +96,20 @@ services:
   landing:
     image: node:20-alpine
     container_name: agenthive-landing-demo
-    working_dir: /app/landing
+    working_dir: /app/apps/landing
     command: >
       sh -c "
         npm install -g pnpm &&
+        cd /app &&
         pnpm install &&
+        cd /app/apps/landing &&
         pnpm run dev
       "
     ports:
       - "${LANDING_PORT:-3000}:3000"
     volumes:
-      - ./apps/landing:/app/landing
-      - landing-node-modules:/app/landing/node_modules
+      - ./:/app
+      - landing-node-modules:/app/node_modules
       - landing-pnpm-store:/root/.local/share/pnpm/store
     environment:
       - NODE_ENV=development
@@ -350,6 +359,8 @@ networks:
     driver: bridge
 
 volumes:
+  api-node-modules:
+  api-pnpm-store:
   landing-node-modules:
   landing-pnpm-store:
   prometheus-data:
