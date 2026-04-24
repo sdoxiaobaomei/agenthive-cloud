@@ -151,7 +151,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=production
-            NUXT_PUBLIC_API_BASE=https://api.xiaochaitian.asia
+            NUXT_PUBLIC_API_BASE=/api
 
       - name: Build and push Agent Runtime image
         uses: docker/build-push-action@v5
