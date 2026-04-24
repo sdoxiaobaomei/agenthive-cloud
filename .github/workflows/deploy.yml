@@ -63,6 +63,14 @@ jobs:
             git reset --hard origin/${DEFAULT_BRANCH}
             echo "当前 commit: $(git rev-parse --short HEAD)"
 
+            echo "=== [1.5/6] 检查环境配置文件 ==="
+            if [ ! -f .env.demo.local ]; then
+                cp .env.demo .env.demo.local
+                echo "⚠️  .env.demo.local 不存在，已从 .env.demo 自动创建"
+                echo "⚠️  请手动编辑 .env.demo.local，将占位符密码替换为真实密码"
+            fi
+            echo "环境文件: .env.demo.local"
+
             echo "=== [2/6] 登录阿里云 ACR ==="
             # 尝试登录 ACR（ECS 可能已登录，失败不阻塞）
             set +e
