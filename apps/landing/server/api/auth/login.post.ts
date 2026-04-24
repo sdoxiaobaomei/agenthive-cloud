@@ -9,22 +9,34 @@ export default defineEventHandler(async (event) => {
 
   const result = await proxyToApi(event, path, { method: 'POST', body }, getGatewayBase())
 
-  // 格式转换: 补充 user 缺失字段以匹配前端 User 类型
-  if (result.success && result.data?.user) {
-    const user = result.data.user
+  // Java 返回: { code, message, data: { accessToken, refreshToken, expiresIn, tokenType } }
+  if (result.code === 200 && result.data?.accessToken) {
+    // 登录成功后获取用户信息
+    const userResult = await proxyToApi(event, '/api/auth/me', undefined, getGatewayBase())
+    const userVO = userResult.code === 200 ? userResult.data : null
+
     return {
       success: true,
       data: {
-        token: result.data.token,
+        token: result.data.accessToken,
         user: {
-          ...user,
-          name: user.name || user.username || '',
-          createdAt: user.createdAt || user.created_at || new Date().toISOString(),
-          updatedAt: user.updatedAt || user.updated_at || new Date().toISOString(),
+          id: String(userVO?.id || ''),
+          username: userVO?.username || '',
+          name: userVO?.name || userVO?.username || '',
+          email: userVO?.email,
+          phone: userVO?.phone,
+          role: userVO?.roles?.[0] || 'user',
+          avatar: userVO?.avatar,
+          createdAt: userVO?.createdAt ? String(userVO.createdAt) : new Date().toISOString(),
+          updatedAt: userVO?.updatedAt ? String(userVO.updatedAt) : new Date().toISOString(),
         },
       },
     }
   }
 
-  return result
+  return {
+    success: false,
+    message: result.message || '登录失败',
+    data: null,
+  }
 })
