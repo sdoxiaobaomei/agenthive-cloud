@@ -94,12 +94,13 @@ export default defineNuxtConfig({
     },
     // 开发环境代理 API 请求统一走 Gateway (8080)
     // Gateway 负责路由分发：/api/auth/** → Java，/api/agents/** → Node API
-    devProxy: {
-      '/api': {
-        target: 'http://localhost:8080',
-        changeOrigin: true,
-      },
-    },
+    // NOTE: devProxy 会绕过 BFF 层 (server/api)。如需 BFF 生效，请保持注释。
+    // devProxy: {
+    //   '/api': {
+    //     target: 'http://localhost:8080',
+    //     changeOrigin: true,
+    //   },
+    // },
   },
 
   // 兼容性日期
