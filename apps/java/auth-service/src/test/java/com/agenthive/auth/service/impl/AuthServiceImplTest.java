@@ -6,9 +6,12 @@ import com.agenthive.auth.domain.entity.SysUserRole;
 import com.agenthive.auth.mapper.RoleMapper;
 import com.agenthive.auth.mapper.UserMapper;
 import com.agenthive.auth.mapper.UserRoleMapper;
+import com.agenthive.auth.service.SmsService;
 import com.agenthive.auth.service.dto.LoginRequest;
 import com.agenthive.auth.service.dto.RegisterRequest;
+import com.agenthive.auth.service.dto.SmsLoginRequest;
 import com.agenthive.auth.service.dto.TokenResponse;
+import com.agenthive.auth.service.dto.VerifySmsCodeRequest;
 import com.agenthive.common.core.exception.AgentHiveException;
 import com.agenthive.common.core.result.ResultCode;
 import com.agenthive.common.security.util.JwtUtils;
@@ -49,6 +52,8 @@ class AuthServiceImplTest {
     private StringRedisTemplate stringRedisTemplate;
     @Mock
     private ValueOperations<String, String> valueOperations;
+    @Mock
+    private SmsService smsService;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -230,6 +235,112 @@ class AuthServiceImplTest {
                 });
 
         verify(userMapper, never()).selectByUsername(anyString());
+    }
+
+    @Test
+    void smsLogin_shouldSucceed_whenValidCodeAndExistingUser() {
+        // Arrange
+        SmsLoginRequest request = new SmsLoginRequest();
+        request.setPhone("13800138000");
+        request.setCode("123456");
+
+        SysUser user = new SysUser();
+        user.setId(1L);
+        user.setUsername("testuser");
+        user.setPhone("13800138000");
+        user.setStatus(1);
+
+        when(valueOperations.get("login:rate:127.0.0.1")).thenReturn(null);
+        when(userMapper.selectByPhone("13800138000")).thenReturn(user);
+        when(jwtUtils.generateAccessToken(anyString(), anyMap())).thenReturn("accessToken");
+        when(jwtUtils.generateRefreshToken(anyString())).thenReturn("refreshToken");
+
+        // Act
+        TokenResponse response = authService.smsLogin(request, "127.0.0.1");
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getAccessToken()).isEqualTo("accessToken");
+        verify(smsService).verifyCode(argThat(r ->
+                r.getPhone().equals("13800138000") &&
+                r.getCode().equals("123456") &&
+                r.getTemplateType().equals("LOGIN_REGISTER")
+        ));
+        verify(stringRedisTemplate).delete("login:rate:127.0.0.1");
+    }
+
+    @Test
+    void smsLogin_shouldAutoRegister_whenUserNotExists() {
+        // Arrange
+        SmsLoginRequest request = new SmsLoginRequest();
+        request.setPhone("13800138000");
+        request.setCode("123456");
+
+        when(valueOperations.get("login:rate:127.0.0.1")).thenReturn(null);
+        when(userMapper.selectByPhone("13800138000")).thenReturn(null);
+        when(userMapper.selectByUsername(anyString())).thenReturn(null);
+        when(passwordEncoder.encode(anyString())).thenReturn("encodedPassword");
+        when(jwtUtils.generateAccessToken(anyString(), anyMap())).thenReturn("accessToken");
+        when(jwtUtils.generateRefreshToken(anyString())).thenReturn("refreshToken");
+
+        doAnswer(invocation -> {
+            SysUser user = invocation.getArgument(0);
+            user.setId(99L);
+            return 1;
+        }).when(userMapper).insert(any(SysUser.class));
+
+        // Act
+        TokenResponse response = authService.smsLogin(request, "127.0.0.1");
+
+        // Assert
+        assertThat(response).isNotNull();
+        assertThat(response.getAccessToken()).isEqualTo("accessToken");
+        verify(userMapper).insert(any(SysUser.class));
+        verify(userRoleMapper).insert(any(SysUserRole.class));
+    }
+
+    @Test
+    void smsLogin_shouldThrowException_whenRateLimitExceeded() {
+        // Arrange
+        SmsLoginRequest request = new SmsLoginRequest();
+        request.setPhone("13800138000");
+        request.setCode("123456");
+
+        when(valueOperations.get("login:rate:10.0.0.1")).thenReturn("5");
+
+        // Act & Assert
+        assertThatThrownBy(() -> authService.smsLogin(request, "10.0.0.1"))
+                .isInstanceOf(AgentHiveException.class)
+                .satisfies(ex -> {
+                    AgentHiveException e = (AgentHiveException) ex;
+                    assertThat(e.getCode()).isEqualTo(ResultCode.RATE_LIMIT_EXCEEDED.getCode());
+                });
+
+        verify(smsService, never()).verifyCode(any());
+    }
+
+    @Test
+    void smsLogin_shouldThrowException_whenAccountDisabled() {
+        // Arrange
+        SmsLoginRequest request = new SmsLoginRequest();
+        request.setPhone("13800138000");
+        request.setCode("123456");
+
+        SysUser user = new SysUser();
+        user.setId(1L);
+        user.setPhone("13800138000");
+        user.setStatus(0); // disabled
+
+        when(valueOperations.get("login:rate:127.0.0.1")).thenReturn(null);
+        when(userMapper.selectByPhone("13800138000")).thenReturn(user);
+
+        // Act & Assert
+        assertThatThrownBy(() -> authService.smsLogin(request, "127.0.0.1"))
+                .isInstanceOf(AgentHiveException.class)
+                .satisfies(ex -> {
+                    AgentHiveException e = (AgentHiveException) ex;
+                    assertThat(e.getCode()).isEqualTo(ResultCode.FORBIDDEN.getCode());
+                });
     }
 
     @Test

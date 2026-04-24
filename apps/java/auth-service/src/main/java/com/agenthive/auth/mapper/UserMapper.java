@@ -9,4 +9,7 @@ public interface UserMapper extends BaseMapper<SysUser> {
 
     @Select("SELECT * FROM sys_user WHERE username = #{username} AND deleted = 0")
     SysUser selectByUsername(@Param("username") String username);
+
+    @Select("SELECT * FROM sys_user WHERE phone = #{phone} AND deleted = 0")
+    SysUser selectByPhone(@Param("phone") String phone);
 }

@@ -4,6 +4,7 @@ import com.agenthive.auth.domain.vo.UserVO;
 import com.agenthive.auth.service.AuthService;
 import com.agenthive.auth.service.dto.LoginRequest;
 import com.agenthive.auth.service.dto.RegisterRequest;
+import com.agenthive.auth.service.dto.SmsLoginRequest;
 import com.agenthive.auth.service.dto.TokenResponse;
 import com.agenthive.common.core.exception.AgentHiveException;
 import com.agenthive.common.core.result.ResultCode;
@@ -130,6 +131,46 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.username").value("testuser"))
                 .andExpect(jsonPath("$.data.id").value(1))
                 .andExpect(jsonPath("$.data.email").value("test@example.com"));
+    }
+
+    @Test
+    void smsLogin_shouldReturn200AndToken_whenSuccess() throws Exception {
+        TokenResponse tokenResponse = new TokenResponse();
+        tokenResponse.setAccessToken("accessTokenSms");
+        tokenResponse.setRefreshToken("refreshTokenSms");
+        tokenResponse.setExpiresIn(3600L);
+        tokenResponse.setTokenType("Bearer");
+
+        SmsLoginRequest request = new SmsLoginRequest();
+        request.setPhone("13800138000");
+        request.setCode("123456");
+
+        when(authService.smsLogin(any(SmsLoginRequest.class), any())).thenReturn(tokenResponse);
+
+        mockMvc.perform(post("/auth/login/sms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.accessToken").value("accessTokenSms"))
+                .andExpect(jsonPath("$.data.tokenType").value("Bearer"));
+    }
+
+    @Test
+    void smsLogin_shouldReturnError_whenInvalidCode() throws Exception {
+        SmsLoginRequest request = new SmsLoginRequest();
+        request.setPhone("13800138000");
+        request.setCode("000000");
+
+        when(authService.smsLogin(any(SmsLoginRequest.class), any()))
+                .thenThrow(new AgentHiveException(ResultCode.INVALID_CREDENTIALS));
+
+        mockMvc.perform(post("/auth/login/sms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCode.INVALID_CREDENTIALS.getCode()))
+                .andExpect(jsonPath("$.data").doesNotExist());
     }
 
     @Test
