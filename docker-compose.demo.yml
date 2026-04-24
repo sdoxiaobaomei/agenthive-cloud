@@ -1,6 +1,5 @@
 # AgentHive 演示配置
 # 适用场景：8C16G 抢占式实例跑业务层，2C2G ECS(172.24.146.165)跑数据层
-# 通过 Cloudflare Tunnel 暴露给面试官
 #
 # 启动命令：
 #   基础版（Node.js 全栈）：

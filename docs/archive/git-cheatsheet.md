@@ -1,4 +1,4 @@
-# Git 分支管理速查表
+﻿# Git 分支管理速查表
 
 > 快速参考指南 - AI DevOps Platform
 

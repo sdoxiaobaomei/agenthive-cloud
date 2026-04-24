@@ -1,4 +1,4 @@
-# K8s 本地集群架构详解
+﻿# K8s 本地集群架构详解
 
 > 解释 Docker Desktop、Kind、Kubeadm 的本质区别
 
@@ -325,7 +325,7 @@ Docker Desktop:
 |------|---------|------|
 | 快速验证 AgentHive | Docker Desktop | 5分钟搞定 |
 | 学习 K8s 多节点概念 | Kind | 轻量多节点 |
-| 准备 K8s 面试 | Kubeadm | 深入理解原理 |
+| 准备 K8s 演示 | Kubeadm | 深入理解原理 |
 | CI/CD 测试 | Kind | 快速启动销毁 |
 | 生产环境预演 | Kubeadm | 最接近真实环境 |
 
@@ -343,4 +343,4 @@ Docker Desktop:
 **建议**: 
 - **新手**: Docker Desktop → 简单上手
 - **进阶**: Kind → 练习多节点
-- **面试准备**: Kubeadm → 深入理解
+- **演示准备**: Kubeadm → 深入理解

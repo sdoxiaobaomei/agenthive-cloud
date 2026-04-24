@@ -178,15 +178,15 @@ ingress:
 
 ---
 
-## 面试专用脚本
+## 演示环境脚本
 
 ### start-interview.sh
 
 ```bash
 #!/bin/bash
-# 面试前运行
+# 演示前运行
 
-echo "🚀 启动面试环境..."
+echo "🚀 启动演示环境..."
 
 # 1. 启动 Kind 集群（如果已存在则跳过）
 if ! kind get clusters | grep -q "agenthive"; then
@@ -208,16 +208,16 @@ echo "✅ 服务状态:"
 kubectl get pods
 echo ""
 echo "🌐 访问地址: https://agenthive.yourdomain.com"
-echo "⏱️  请在面试结束后运行 ./stop-interview.sh"
+echo "⏱️  请在演示结束后运行 ./stop-demo.sh"
 ```
 
 ### stop-interview.sh
 
 ```bash
 #!/bin/bash
-# 面试后运行
+# 演示后运行
 
-echo "🛑 关闭面试环境..."
+echo "🛑 关闭演示环境..."
 
 # 停止 Tunnel
 docker stop cloudflared
@@ -237,14 +237,14 @@ echo "✅ 已关闭，成本为 ¥0"
 |------|------|----------|
 | 电脑关机 | 服务中断 | 保持电脑开机 |
 | IP 变化 | Tunnel 断开 | 自动重连 |
-| 带宽限制 | 上行 20-50Mbps | 足够面试演示 |
+| 带宽限制 | 上行 20-50Mbps | 足够演示使用 |
 | 安全风险 | 本地电脑暴露 | 使用 Cloudflare Access 身份验证 |
 
 ---
 
 ## 成本总结
 
-| 架构 | 月成本 | 面试 2h 成本 | 稳定性 | 复杂度 |
+| 架构 | 月成本 | 演示 2h 成本 | 稳定性 | 复杂度 |
 |------|--------|-------------|--------|--------|
 | **纯云端 EKS** | ~¥580 | ~¥1.6 | ⭐⭐⭐⭐⭐ | 低 |
 | **混合 (Cloudflare)** | **~¥15** | **¥0** | ⭐⭐⭐⭐ | 中 |

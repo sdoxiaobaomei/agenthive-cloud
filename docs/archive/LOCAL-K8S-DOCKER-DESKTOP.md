@@ -1,4 +1,4 @@
-# Docker Desktop Kubernetes 本地部署方案
+﻿# Docker Desktop Kubernetes 本地部署方案
 
 > **目标**: 在 Docker Desktop 内置 K8s 上部署完整 AgentHive 架构  
 > **适用场景**: 本地开发、功能测试、单机演示  

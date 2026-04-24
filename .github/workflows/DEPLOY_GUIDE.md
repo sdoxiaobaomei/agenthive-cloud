@@ -86,7 +86,7 @@ LLM_API_KEY=sk-你的KimiCodeAPIKey
 LLM_BASE_URL=https://api.kimi.com/coding/v1
 LLM_MODEL=kimi-code
 
-# === Cloudflare Tunnel（可选，给面试官访问用）===
+# === Cloudflare Tunnel（可选，外部访客访问用）===
 # https://one.dash.cloudflare.com/ -> Networks -> Tunnels
 CF_TUNNEL_TOKEN=你的CloudflareTunnelToken
 
