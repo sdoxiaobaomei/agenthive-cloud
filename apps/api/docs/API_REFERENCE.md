@@ -1,9 +1,9 @@
 # AgentHive Cloud API 文档
 
-> 版本: 1.0.0  
-> 基础地址: `http://localhost:3001/api`  
-> 更新时间: 2026-04-06
-> 状态: ✅ Backend Server Running on Port 3001
+> 版本: 1.1.0  
+> 基础地址: `http://localhost:8080/api` (Gateway 统一入口)  
+> 更新时间: 2026-04-25
+> 状态: ✅ 短信验证已接入阿里云 SMS
 
 ---
 
@@ -93,6 +93,7 @@ interface ApiResponse<T> {
 除以下接口外，其他接口都需要携带 JWT Token：
 
 - `POST /api/auth/sms/send` - 发送短信验证码
+- `POST /api/auth/sms/verify` - 验证短信验证码
 - `POST /api/auth/login/sms` - 短信登录
 - `POST /api/auth/login` - 用户名密码登录
 - `POST /api/auth/register` - 用户注册
@@ -103,9 +104,7 @@ interface ApiResponse<T> {
 
 ## 认证模块 (/auth)
 
-> ⚠️ **注意**: 短信服务尚未完全实现，详见 [API_TODO.md#1-短信验证码服务](./API_TODO.md#1-短信验证码服务)
-
-### 1. 发送短信验证码 `[TODO]`
+### 1. 发送短信验证码
 
 ```http
 POST /api/auth/sms/send
@@ -115,17 +114,26 @@ Content-Type: application/json
 **请求体:**
 ```json
 {
-  "phone": "13800138000"
+  "phone": "13800138000",
+  "type": "login"
 }
 ```
+
+**参数说明:**
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `phone` | string | ✅ | 手机号，格式 `1[3-9]\d{9}` |
+| `type` | string | ❌ | 业务类型：`login`(默认) / `register` / `reset` |
+| `templateType` | string | ❌ | 模板类型枚举，如 `LOGIN_REGISTER`。与 `type` 二选一 |
+| `signName` | string | ❌ | 短信签名，不传则使用默认签名 |
 
 **响应 (成功):**
 ```json
 {
   "success": true,
-  "message": "验证码发送成功",
-  "requestId": "sms-abc123",
-  "devCode": "123456"
+  "data": {
+    "expiresIn": 300
+  }
 }
 ```
 
@@ -133,19 +141,60 @@ Content-Type: application/json
 ```json
 {
   "success": false,
-  "message": "验证码服务暂不可用"
+  "message": "短信发送过于频繁，请稍后再试"
 }
 ```
 
-**状态**: 🟡 开发中 - 当前返回固定验证码 `123456`  
 **说明:**
-- `devCode` 仅在开发环境返回，用于测试
-- 同一手机号 1 分钟内只能发送一次
-- 验证码 5 分钟有效，最多尝试 3 次
+- 已接入阿里云 SMS 真实短信服务
+- 同一手机号 60 秒间隔限制
+- 验证码 5 分钟有效
+- 每日单手机号上限 10 条
+- 支持的签名：云渚科技验证平台/服务、速通互联验证码/平台/服务
+- 支持的模板：100001(登录/注册) / 100002(修改手机号) / 100003(重置密码) / 100004(绑定手机号) / 100005(验证手机号)
 
 ---
 
-### 2. 短信验证码登录
+### 2. 验证短信验证码
+
+```http
+POST /api/auth/sms/verify
+Content-Type: application/json
+```
+
+**请求体:**
+```json
+{
+  "phone": "13800138000",
+  "code": "123456"
+}
+```
+
+**参数说明:**
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `phone` | string | ✅ | 手机号 |
+| `code` | string | ✅ | 6 位数字验证码 |
+| `templateType` | string | ❌ | 模板类型，默认 `LOGIN_REGISTER` |
+
+**响应 (成功):**
+```json
+{
+  "success": true
+}
+```
+
+**响应 (失败):**
+```json
+{
+  "success": false,
+  "message": "验证码已过期或不存在"
+}
+```
+
+---
+
+### 3. 短信验证码登录
 
 ```http
 POST /api/auth/login/sms
@@ -159,6 +208,12 @@ Content-Type: application/json
   "code": "123456"
 }
 ```
+
+**参数说明:**
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `phone` | string | ✅ | 手机号 |
+| `code` | string | ✅ | 6 位数字验证码 |
 
 **响应:**
 ```json
@@ -179,12 +234,14 @@ Content-Type: application/json
 ```
 
 **说明:**
-- 如果是新用户，会自动注册
+- 短信验证码通过阿里云 SMS 真实发送和验证
+- 如果是新用户，会自动注册（用户名自动生成：`phone_XXXX`）
+- 继承登录限流：同一 IP 5 次/分钟
 - Token 有效期 24 小时
 
 ---
 
-### 3. 用户名密码登录
+### 4. 用户名密码登录
 
 ```http
 POST /api/auth/login
@@ -207,7 +264,7 @@ Content-Type: application/json
 
 ---
 
-### 4. 用户注册
+### 5. 用户注册
 
 ```http
 POST /api/auth/register
@@ -233,7 +290,7 @@ Content-Type: application/json
 
 ---
 
-### 5. 用户登出
+### 6. 用户登出
 
 ```http
 POST /api/auth/logout
@@ -253,7 +310,7 @@ Authorization: Bearer <token>
 
 ---
 
-### 6. 刷新 Token
+### 7. 刷新 Token
 
 ```http
 POST /api/auth/refresh
@@ -273,7 +330,7 @@ Authorization: Bearer <token>
 
 ---
 
-### 7. 获取当前用户
+### 8. 获取当前用户
 
 ```http
 GET /api/auth/me
