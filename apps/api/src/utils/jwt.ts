@@ -2,11 +2,13 @@
 import crypto from 'crypto'
 import { SignJWT, jwtVerify, decodeJwt } from 'jose'
 
-const DEFAULT_SECRET = 'agenthive-secret-key-change-in-production'
-const JWT_SECRET = process.env.JWT_SECRET || DEFAULT_SECRET
+const JWT_SECRET = process.env.JWT_SECRET
 
-if (JWT_SECRET === DEFAULT_SECRET) {
-  console.warn('[SECURITY WARNING] JWT_SECRET is using the default value. Please set a strong secret in production.')
+if (!JWT_SECRET) {
+  throw new Error(
+    '[SECURITY] JWT_SECRET environment variable is required but not set. ' +
+    'Please set a strong random secret (min 32 chars) and restart the application.'
+  )
 }
 
 const secret = new TextEncoder().encode(JWT_SECRET)

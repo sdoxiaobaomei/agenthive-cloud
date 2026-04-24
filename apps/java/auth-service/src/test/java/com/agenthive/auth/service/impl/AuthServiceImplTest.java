@@ -2,6 +2,7 @@ package com.agenthive.auth.service.impl;
 
 import com.agenthive.auth.domain.entity.SysRole;
 import com.agenthive.auth.domain.entity.SysUser;
+import com.agenthive.auth.domain.entity.SysUserRole;
 import com.agenthive.auth.mapper.RoleMapper;
 import com.agenthive.auth.mapper.UserMapper;
 import com.agenthive.auth.mapper.UserRoleMapper;

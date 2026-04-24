@@ -7,13 +7,15 @@ import com.agenthive.auth.service.dto.RegisterRequest;
 import com.agenthive.auth.service.dto.TokenResponse;
 import com.agenthive.common.core.exception.AgentHiveException;
 import com.agenthive.common.core.result.ResultCode;
-import com.agenthive.common.web.advice.GlobalExceptionHandler;
+import com.agenthive.common.security.util.JwtUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -26,22 +28,27 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AuthController.class)
-@Import(GlobalExceptionHandler.class)
+@SpringBootTest(classes = TestMvcConfig.class)
+@AutoConfigureMockMvc
+@Import(AuthController.class)
 class AuthControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @MockBean
     private AuthService authService;
 
+    @MockBean
+    private StringRedisTemplate stringRedisTemplate;
+
+    @MockBean
+    private JwtUtils jwtUtils;
+
     @Test
     void register_shouldReturn200AndToken_whenSuccess() throws Exception {
-        // Arrange
         TokenResponse tokenResponse = new TokenResponse();
         tokenResponse.setAccessToken("accessToken123");
         tokenResponse.setRefreshToken("refreshToken123");
@@ -55,7 +62,6 @@ class AuthControllerTest {
 
         when(authService.register(any(RegisterRequest.class))).thenReturn(tokenResponse);
 
-        // Act & Assert
         mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -68,7 +74,6 @@ class AuthControllerTest {
 
     @Test
     void login_shouldReturn200AndToken_whenSuccess() throws Exception {
-        // Arrange
         TokenResponse tokenResponse = new TokenResponse();
         tokenResponse.setAccessToken("accessToken456");
         tokenResponse.setRefreshToken("refreshToken456");
@@ -81,7 +86,6 @@ class AuthControllerTest {
 
         when(authService.login(any(LoginRequest.class), any())).thenReturn(tokenResponse);
 
-        // Act & Assert
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -93,7 +97,6 @@ class AuthControllerTest {
 
     @Test
     void login_shouldReturnError_whenInvalidCredentials() throws Exception {
-        // Arrange
         LoginRequest request = new LoginRequest();
         request.setUsername("testuser");
         request.setPassword("wrongPassword");
@@ -101,7 +104,6 @@ class AuthControllerTest {
         when(authService.login(any(LoginRequest.class), any()))
                 .thenThrow(new AgentHiveException(ResultCode.INVALID_CREDENTIALS));
 
-        // Act & Assert
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -113,7 +115,6 @@ class AuthControllerTest {
 
     @Test
     void me_shouldReturnCurrentUser_whenValidToken() throws Exception {
-        // Arrange
         UserVO userVO = new UserVO();
         userVO.setId(1L);
         userVO.setUsername("testuser");
@@ -122,7 +123,6 @@ class AuthControllerTest {
 
         when(authService.getCurrentUser("validToken")).thenReturn(userVO);
 
-        // Act & Assert
         mockMvc.perform(get("/auth/me")
                         .header("Authorization", "Bearer validToken"))
                 .andExpect(status().isOk())
@@ -134,10 +134,8 @@ class AuthControllerTest {
 
     @Test
     void getUserRoles_shouldReturnRoleList_whenUserExists() throws Exception {
-        // Arrange
         when(authService.getUserRoles(1L)).thenReturn(List.of("ADMIN", "USER"));
 
-        // Act & Assert
         mockMvc.perform(get("/auth/users/1/roles"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))

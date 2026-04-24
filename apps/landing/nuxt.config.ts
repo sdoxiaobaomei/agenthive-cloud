@@ -83,7 +83,7 @@ export default defineNuxtConfig({
   // 运行时配置
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3001',
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
     },
   },
   
@@ -92,14 +92,12 @@ export default defineNuxtConfig({
     output: {
       dir: '.output',
     },
-    // 开发环境代理 API 请求到后端服务器 (3001)
-    // 注意：后端路由没有 /api 前缀，所以代理时去掉 /api
+    // 开发环境代理 API 请求统一走 Gateway (8080)
+    // Gateway 负责路由分发：/api/auth/** → Java，/api/agents/** → Node API
     devProxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8080',
         changeOrigin: true,
-        // @ts-ignore rewrite is supported by http-proxy but not in types
-        rewrite: (path: string) => path.replace(/^\/api/, ''),
       },
     },
   },

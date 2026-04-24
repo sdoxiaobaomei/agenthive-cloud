@@ -5,7 +5,7 @@ const { Pool } = pg
 // 数据库连接配置
 export const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5433'),
+  port: parseInt(process.env.DB_PORT || '5432'),
   database: process.env.DB_NAME || 'agenthive',
   user: process.env.DB_USER || 'agenthive',
   password: process.env.DB_PASSWORD || 'dev',

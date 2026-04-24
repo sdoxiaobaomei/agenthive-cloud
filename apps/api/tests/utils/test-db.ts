@@ -1,6 +1,6 @@
 // 测试数据库工具
 import bcrypt from 'bcrypt'
-import { agentDb, taskDb, userDb, codeDb, smsDb } from '../../src/utils/database.js'
+import { agentDb, taskDb, userDb, codeDb } from '../../src/utils/database.js'
 
 // 清理所有数据
 export async function clearAllData() {
@@ -20,8 +20,7 @@ export async function clearAllData() {
   const files = await codeDb.findAll()
   for (const f of files) await codeDb.delete(f.path)
   
-  // 清理 SMS codes
-  await smsDb.cleanExpired()
+  // SMS service removed - delegated to Java auth-service
 }
 
 // 初始化默认测试数据

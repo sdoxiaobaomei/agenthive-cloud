@@ -111,49 +111,6 @@ describe('Redis Cache Service', () => {
     })
   })
 
-  describe('SMS 验证码缓存', () => {
-    it('应该保存短信验证码', async () => {
-      mockRedis.setex.mockResolvedValue('OK')
-      
-      await redisCache.setSmsCode('13800138000', '123456', 0)
-      
-      expect(mockRedis.setex).toHaveBeenCalledWith(
-        'agenthive:sms:13800138000',
-        300,
-        expect.stringContaining('123456')
-      )
-    })
-
-    it('应该获取短信验证码', async () => {
-      const codeData = JSON.stringify({ code: '123456', attempts: 1, createdAt: Date.now() })
-      mockRedis.get.mockResolvedValue(codeData)
-      
-      const result = await redisCache.getSmsCode('13800138000')
-      
-      expect(result?.code).toBe('123456')
-      expect(result?.attempts).toBe(1)
-    })
-
-    it('应该删除短信验证码', async () => {
-      mockRedis.del.mockResolvedValue(1)
-      
-      await redisCache.delSmsCode('13800138000')
-      
-      expect(mockRedis.del).toHaveBeenCalledWith('agenthive:sms:13800138000')
-    })
-
-    it('应该增加尝试次数', async () => {
-      const initialData = JSON.stringify({ code: '123456', attempts: 0, createdAt: Date.now() })
-      mockRedis.get.mockResolvedValue(initialData)
-      mockRedis.ttl.mockResolvedValue(250)
-      mockRedis.setex.mockResolvedValue('OK')
-      
-      const result = await redisCache.incrementSmsAttempts('13800138000')
-      
-      expect(result).toBe(1)
-    })
-  })
-
   describe('会话缓存', () => {
     it('应该保存会话', async () => {
       mockRedis.setex.mockResolvedValue('OK')

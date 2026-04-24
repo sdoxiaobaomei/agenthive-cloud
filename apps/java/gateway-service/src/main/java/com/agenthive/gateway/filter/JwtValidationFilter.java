@@ -34,7 +34,8 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
             "/api/auth/register",
             "/api/auth/login",
             "/api/auth/refresh",
-            "/health",
+            "/api/demo/**",
+            "/api/health",
             "/actuator/**"
     );
 
@@ -60,8 +61,13 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
                     .parseSignedClaims(token)
                     .getPayload();
 
+            String username = claims.get("username", String.class);
+            String roles = claims.get("roles", String.class);
+
             ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                     .header("X-User-Id", claims.getSubject())
+                    .header("X-User-Name", username != null ? username : "")
+                    .header("X-User-Role", roles != null ? roles : "")
                     .build();
             return chain.filter(exchange.mutate().request(mutatedRequest).build());
         } catch (Exception e) {

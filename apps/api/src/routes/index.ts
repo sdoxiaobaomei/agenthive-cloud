@@ -1,6 +1,5 @@
 // 路由配置
 import { Router } from 'express'
-import authRoutes from './auth.js'
 import agentRoutes from './agents.js'
 import taskRoutes from './tasks.js'
 import codeRoutes from './code.js'
@@ -49,7 +48,6 @@ router.get('/health', async (_req, res) => {
 })
 
 // 各模块路由
-router.use('/auth', authRoutes)
 router.use('/agents', agentRoutes)
 router.use('/tasks', taskRoutes)
 router.use('/code', codeRoutes)

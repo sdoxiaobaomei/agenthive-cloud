@@ -50,7 +50,7 @@ public class AuthController {
     }
 
     @GetMapping("/users/{id}/roles")
-    public Result<List<String>> getUserRoles(@PathVariable Long id) {
+    public Result<List<String>> getUserRoles(@PathVariable("id") Long id) {
         return Result.success(authService.getUserRoles(id));
     }
 
