@@ -946,9 +946,9 @@ kubectl get endpoints -n agenthive
 
 ---
 
-## 🚀 下一步学习
+## 🚀 后续方向
 
-1. **Helm 包管理**: 学习用 Helm Chart 管理应用
+1. **Helm 包管理**: 使用 Helm Chart 管理应用
 2. **HPA 自动扩缩容**: `kubectl autoscale deployment api --min=2 --max=10 --cpu-percent=80`
 3. **监控**: 部署 Prometheus + Grafana
 4. **CI/CD**: 配置 GitHub Actions 自动部署到 K8s

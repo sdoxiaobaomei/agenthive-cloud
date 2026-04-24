@@ -1,4 +1,4 @@
-# Kubernetes 快速参考卡片
+﻿# Kubernetes 快速参考卡片
 
 打印出来放显示器旁边!
 

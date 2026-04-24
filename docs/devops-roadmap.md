@@ -27,17 +27,17 @@
 
 **核心目标**: 让 `terraform apply` 不再在本地手动执行。
 
-| 技能点 | 具体内容 | 面试价值 |
+| 技能点 | 具体内容 | 技术价值 |
 |--------|---------|----------|
-| **GitHub Actions / GitLab CI** | PR 触发 `terraform plan` → 输出贴到 PR 评论 → Code Review → Merge → 自动 `terraform apply` | 100% 会问：你的 CI/CD 流程是什么？ |
-| **OIDC 认证** | GitHub Actions 通过 OIDC 获取阿里云临时 STS Token，**彻底抛弃 AccessKey** | 安全红线，高级岗必问 |
+| **GitHub Actions / GitLab CI** | PR 触发 `terraform plan` → 输出贴到 PR 评论 → Code Review → Merge → 自动 `terraform apply` | 核心考察点：CI/CD 流程设计 |
+| **OIDC 认证** | GitHub Actions 通过 OIDC 获取阿里云临时 STS Token，**彻底抛弃 AccessKey** | 安全红线，高级岗重点考察 |
 | **预发环境流水线** | staging 自动部署，prod 人工审批（approval gate） | 生产安全 |
 | **安全扫描接入 CI** | tfsec / checkov 在构建阶段拦截高危配置 | 左移安全 |
 
 **AgentHive 实操项目**:
 > 编写 `.github/workflows/terraform.yml`：每次提交到 `iac/` 目录时，自动对 `demo-ask` 执行 `terraform plan`，结果作为 PR 评论。
 
-**面试话术**:
+**技术要点**:
 > "我在 AgentHive 中实现了完整 GitOps 流水线：PR 自动触发 Terraform Plan 并评论，合并后通过 OIDC 临时凭证自动 Apply，完全不需要本地 AccessKey。"
 
 ---
@@ -56,7 +56,7 @@
 **AgentHive 实操项目**:
 > 在 ACK 部署 `kube-prometheus-stack`，创建 Dashboard 展示 API QPS/延迟/错误率。配置告警：Pod 重启 > 3 次/5分钟时发钉钉通知。
 
-**面试话术**:
+**技术要点**:
 > "我们部署了 kube-prometheus-stack，定义了 99.9% SLO，通过 AlertManager 接入钉钉，平均故障发现时间从 30 分钟降到 2 分钟。"
 
 ---
@@ -75,7 +75,7 @@
 **AgentHive 实操项目**:
 > 创建 `iac/helm-charts/agenthive/` Helm Chart（API + Web + Landing），用 Terraform `helm_release` 部署到 ACK，最后用 ArgoCD 做 GitOps 同步。
 
-**面试话术**:
+**技术要点**:
 > "应用层使用 Helm 打包，Terraform 统一部署，ArgoCD 持续交付，回滚只需要一次 Git revert。"
 
 ---
@@ -95,7 +95,7 @@
 **AgentHive 实操项目**:
 > CI 集成 tfsec 扫描 Terraform 代码（OSS Bucket 是否公开、安全组是否开放 0.0.0.0/0）。Trivy 扫描 API 镜像。
 
-**面试话术**:
+**技术要点**:
 > "CI 阶段就跑 tfsec 和 Trivy，镜像漏洞在构建阶段就拦截，没有高危漏洞才允许推送到 Harbor。"
 
 ---
@@ -112,7 +112,7 @@
 | **多集群管理** | 一个控制面管理多 ACK 集群 | Karmada、Fleet |
 | **服务网格** | Istio 流量治理、灰度发布、熔断 | Istio / Linkerd |
 
-**面试话术**:
+**技术要点**:
 > "我们正在建设内部开发者平台，业务团队通过 Backstage 自助申请 Redis/MySQL/K8s 资源，申请单自动转成 Terraform PR。"
 
 ---

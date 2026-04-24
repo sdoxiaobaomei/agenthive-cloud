@@ -51,7 +51,12 @@ jobs:
             set -e
             cd /opt/agenthive-cloud
 
-            echo "=== [1/6] 拉取最新代码 ==="
+            echo "=== [1/6] 修复 Git 代理配置并拉取最新代码 ==="
+            # 清除失效的 ghp.ci 代理配置
+            git config --global --unset-regexp url."https://ghp.ci/" 2>/dev/null || true
+            git config --local --unset-regexp url."https://ghp.ci/" 2>/dev/null || true
+            # 确保 remote 使用官方 GitHub 地址
+            git remote set-url origin https://github.com/sdoxiaobaomei/agenthive-cloud.git 2>/dev/null || true
             git fetch origin
             # 兼容 main 和 master 分支
             DEFAULT_BRANCH=$(git rev-parse --abbrev-ref HEAD)

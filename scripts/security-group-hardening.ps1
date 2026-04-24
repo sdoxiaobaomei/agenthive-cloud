@@ -90,7 +90,7 @@ foreach ($rule in $dangerousRules8C) {
 
 # 2.2 添加最小权限规则
 $minRules8C = @(
-    # HTTP/HTTPS 对外（面试官访问）
+    # HTTP/HTTPS 对外（访客访问）
     @{ IpProtocol="tcp"; PortRange="80/80"; SourceCidrIp="0.0.0.0/0"; Desc="HTTP public" },
     @{ IpProtocol="tcp"; PortRange="443/443"; SourceCidrIp="0.0.0.0/0"; Desc="HTTPS public" },
     # SSH 只允许你的 IP

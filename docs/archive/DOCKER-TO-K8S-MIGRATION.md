@@ -1,4 +1,4 @@
-# Docker 转 Kubernetes 迁移方案
+﻿# Docker 转 Kubernetes 迁移方案
 
 > **目标**: 将当前的 Docker Compose 部署迁移到 Kubernetes  
 > **预计时间**: 2-3 天  
@@ -792,4 +792,4 @@ kubectl exec -it deployment/api -n agenthive -- nc -zv postgres 5432
 **建议**: 
 - 开发/演示：保持 Docker Compose
 - 生产部署：使用 Kubernetes
-- 面试展示：使用 **本地 K8s (Kind) + 云端域名穿透**（见 HYBRID-K8S-ARCHITECTURE.md）
+- 演示展示：使用 **本地 K8s (Kind) + 云端域名穿透**（见 HYBRID-K8S-ARCHITECTURE.md）
