@@ -391,13 +391,18 @@ export function useApi() {
         }
       }
 
-      // 处理业务错误（即使 HTTP 200，但业务逻辑错误）
-      if (result.success === false) {
+      // 兼容 Java Result (code) 和 Node Result (success)
+      const isJavaResult = result.code !== undefined && result.success === undefined
+      const isBusinessError = isJavaResult
+        ? result.code !== 200
+        : result.success === false
+
+      if (isBusinessError) {
         return {
           success: false,
           data: null,
           error: {
-            code: result.code || 'BUSINESS_ERROR',
+            code: isJavaResult ? String(result.code) : (result.code || 'BUSINESS_ERROR'),
             message: result.message || '业务处理失败',
             details: result.details,
           },

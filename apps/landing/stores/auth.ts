@@ -12,20 +12,43 @@ export const useAuthStore = defineStore(
     const currentUser = computed(() => user.value)
     const userInitial = computed(() => user.value?.name?.charAt(0) || 'U')
 
+    function mapUserVO(vo: any): User {
+      return {
+        id: String(vo.id ?? ''),
+        username: vo.username ?? '',
+        name: vo.name ?? vo.username ?? '',
+        email: vo.email,
+        phone: vo.phone,
+        role: vo.roles?.[0] ?? vo.role ?? 'user',
+        avatar: vo.avatar,
+        createdAt: vo.createdAt ? String(vo.createdAt) : '',
+        updatedAt: vo.updatedAt ? String(vo.updatedAt) : '',
+      }
+    }
+
     async function login(phone: string, code: string): Promise<User> {
       const { auth } = useApi()
       const response = await auth.loginBySms({ phone, code })
       if (!response.success || !response.data) {
         throw new Error(response.message || '登录失败')
       }
-      const { token: t, user: u } = response.data
-      token.value = t
-      user.value = u
-      // 同步到 useApi/useAuth 兼容的 localStorage key
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('agenthive:auth-token', t)
+      // Java 返回 { accessToken, refreshToken, expiresIn, tokenType }
+      const accessToken = response.data.accessToken || response.data.token
+      if (!accessToken) {
+        throw new Error('登录失败：未返回 Token')
       }
-      return u
+      token.value = accessToken
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('agenthive:auth-token', accessToken)
+      }
+      // 登录成功后获取用户信息
+      const userResponse = await auth.me()
+      if (!userResponse.success || !userResponse.data) {
+        throw new Error(userResponse.message || '获取用户信息失败')
+      }
+      const userData = mapUserVO(userResponse.data)
+      user.value = userData
+      return userData
     }
 
     async function loginByPassword(username: string, password: string): Promise<User> {
@@ -34,13 +57,21 @@ export const useAuthStore = defineStore(
       if (!response.success || !response.data) {
         throw new Error(response.message || '登录失败')
       }
-      const { token: t, user: u } = response.data
-      token.value = t
-      user.value = u
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('agenthive:auth-token', t)
+      const accessToken = response.data.accessToken || response.data.token
+      if (!accessToken) {
+        throw new Error('登录失败：未返回 Token')
       }
-      return u
+      token.value = accessToken
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('agenthive:auth-token', accessToken)
+      }
+      const userResponse = await auth.me()
+      if (!userResponse.success || !userResponse.data) {
+        throw new Error(userResponse.message || '获取用户信息失败')
+      }
+      const userData = mapUserVO(userResponse.data)
+      user.value = userData
+      return userData
     }
 
     async function sendSmsCode(
@@ -73,8 +104,9 @@ export const useAuthStore = defineStore(
       if (!response.success || !response.data) {
         throw new Error(response.message || '获取用户信息失败')
       }
-      user.value = response.data
-      return response.data
+      const userData = mapUserVO(response.data)
+      user.value = userData
+      return userData
     }
 
     function setToken(t: string): void {
