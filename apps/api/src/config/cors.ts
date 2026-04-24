@@ -1,6 +1,6 @@
 export const corsConfig = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost,http://localhost:3000,http://localhost:5173'
+    const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost,http://localhost:3000,http://localhost:5173,http://xiaochaitian.asia,https://xiaochaitian.asia'
     const allowedOrigins = rawOrigins
       .split(',')
       .map((o) => o.trim())

@@ -69,6 +69,7 @@ services:
       - LLM_USER_AGENT=${LLM_USER_AGENT:-claude-code/0.1.0}
       # ===== 其他 =====
       - JWT_SECRET=${JWT_SECRET:-demo-jwt-secret-change-me}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://xiaochaitian.asia,https://xiaochaitian.asia}
       - UV_THREADPOOL_SIZE=4
     restart: unless-stopped
     deploy:
