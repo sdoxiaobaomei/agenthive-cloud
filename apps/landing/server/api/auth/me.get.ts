@@ -4,19 +4,28 @@ import { proxyToApi, getGatewayBase } from '../../utils/apiProxy'
 export default defineEventHandler(async (event) => {
   const result = await proxyToApi(event, '/api/auth/me', undefined, getGatewayBase())
 
-  // 格式转换: 补充 user 缺失字段以匹配前端 User 类型
-  if (result.success && result.data) {
+  // Java 返回: { code, message, data: UserVO }
+  if (result.code === 200 && result.data) {
     const user = result.data
     return {
       success: true,
       data: {
-        ...user,
+        id: String(user.id || ''),
+        username: user.username || '',
         name: user.name || user.username || '',
-        createdAt: user.createdAt || user.created_at || new Date().toISOString(),
-        updatedAt: user.updatedAt || user.updated_at || new Date().toISOString(),
+        email: user.email,
+        phone: user.phone,
+        role: user.roles?.[0] || 'user',
+        avatar: user.avatar,
+        createdAt: user.createdAt ? String(user.createdAt) : new Date().toISOString(),
+        updatedAt: user.updatedAt ? String(user.updatedAt) : new Date().toISOString(),
       },
     }
   }
 
-  return result
+  return {
+    success: false,
+    message: result.message || '获取用户信息失败',
+    data: null,
+  }
 })

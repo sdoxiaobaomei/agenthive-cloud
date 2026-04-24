@@ -4,9 +4,8 @@ import { proxyToApi, getGatewayBase } from '../../../utils/apiProxy'
 export default defineEventHandler(async (event) => {
   const result = await proxyToApi(event, '/api/auth/sms/send', { method: 'POST' }, getGatewayBase())
 
-  // 格式转换: 后端返回 { success, message, requestId, devCode? }
-  // 前端期望 { success, data: { expiresIn } }
-  if (result.success) {
+  // Java 返回: { code, message, data: null }
+  if (result.code === 200) {
     return {
       success: true,
       data: {
@@ -15,5 +14,9 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  return result
+  return {
+    success: false,
+    message: result.message || '发送验证码失败',
+    data: null,
+  }
 })
