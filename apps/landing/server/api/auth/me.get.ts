@@ -1,8 +1,8 @@
-// 获取当前用户信息 API - 代理到后端真实服务
-import { proxyToApi } from '../../utils/apiProxy'
+// 获取当前用户信息 API - 代理到 Gateway（Java auth-service）
+import { proxyToApi, getGatewayBase } from '../../utils/apiProxy'
 
 export default defineEventHandler(async (event) => {
-  const result = await proxyToApi(event, '/api/auth/me')
+  const result = await proxyToApi(event, '/api/auth/me', undefined, getGatewayBase())
 
   // 格式转换: 补充 user 缺失字段以匹配前端 User 类型
   if (result.success && result.data) {

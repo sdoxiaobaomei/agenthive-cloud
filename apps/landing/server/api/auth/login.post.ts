@@ -1,5 +1,5 @@
-// 登录 API - 代理到后端真实服务
-import { proxyToApi } from '../../utils/apiProxy'
+// 登录 API - 代理到 Gateway（Java auth-service）
+import { proxyToApi, getGatewayBase } from '../../utils/apiProxy'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   // 判断是短信登录还是用户名密码登录
   const path = body.phone && body.code ? '/api/auth/login/sms' : '/api/auth/login'
 
-  const result = await proxyToApi(event, path, { method: 'POST', body })
+  const result = await proxyToApi(event, path, { method: 'POST', body }, getGatewayBase())
 
   // 格式转换: 补充 user 缺失字段以匹配前端 User 类型
   if (result.success && result.data?.user) {

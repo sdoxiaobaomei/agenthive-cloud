@@ -3,7 +3,6 @@ import redis, { key } from '../config/redis.js'
 
 // 默认 TTL (秒)
 const DEFAULT_TTL = 300 // 5 分钟
-const SMS_TTL = 300     // 5 分钟
 const SESSION_TTL = 86400 // 24 小时
 const AGENT_STATUS_TTL = 60 // 1 分钟
 
@@ -50,46 +49,6 @@ export const redisCache = {
   expire: async (namespace: string, id: string, ttl: number): Promise<void> => {
     const k = key(namespace, id)
     await redis.expire(k, ttl)
-  },
-
-  // ============ SMS 验证码缓存 ============
-  
-  /**
-   * 保存短信验证码
-   */
-  setSmsCode: async (phone: string, code: string, attempts: number = 0): Promise<void> => {
-    const data = { code, attempts, createdAt: Date.now() }
-    await redis.setex(key('sms', phone), SMS_TTL, JSON.stringify(data))
-  },
-
-  /**
-   * 获取短信验证码
-   */
-  getSmsCode: async (phone: string): Promise<{ code: string; attempts: number; createdAt: number } | null> => {
-    const data = await redis.get(key('sms', phone))
-    return data ? JSON.parse(data) : null
-  },
-
-  /**
-   * 删除短信验证码
-   */
-  delSmsCode: async (phone: string): Promise<void> => {
-    await redis.del(key('sms', phone))
-  },
-
-  /**
-   * 增加尝试次数
-   */
-  incrementSmsAttempts: async (phone: string): Promise<number> => {
-    const k = key('sms', phone)
-    const data = await redis.get(k)
-    if (!data) return 0
-    
-    const parsed = JSON.parse(data)
-    parsed.attempts += 1
-    const ttl = await redis.ttl(k)
-    await redis.setex(k, ttl > 0 ? ttl : SMS_TTL, JSON.stringify(parsed))
-    return parsed.attempts
   },
 
   // ============ 会话缓存 ============

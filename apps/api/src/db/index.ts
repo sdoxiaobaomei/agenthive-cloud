@@ -1,6 +1,6 @@
 // PostgreSQL 数据访问层
 import { pool } from '../config/database.js'
-import type { Agent, Task, User, CodeFile, SmsCode } from '../types/index.js'
+import type { Agent, Task, User, CodeFile } from '../types/index.js'
 
 // 模拟延迟（保持与原来一致的 API 响应时间体验）
 export const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms))
@@ -31,10 +31,15 @@ export const userDb = {
     return result.rows[0] || undefined
   },
 
+  findByExternalId: async (externalId: string): Promise<User | undefined> => {
+    const result = await pool.query('SELECT * FROM users WHERE external_user_id = $1', [externalId])
+    return result.rows[0] || undefined
+  },
+
   create: async (data: Partial<User>): Promise<User> => {
     const result = await pool.query(
-      `INSERT INTO users (username, phone, email, role, avatar, password_hash) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
+      `INSERT INTO users (username, phone, email, role, avatar, password_hash, external_user_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
       [
         data.username || `user_${Math.random().toString(36).substring(2, 8)}`,
@@ -43,6 +48,7 @@ export const userDb = {
         data.role || 'user',
         data.avatar,
         data.password_hash,
+        data.external_user_id,
       ]
     )
     return result.rows[0]
@@ -331,41 +337,6 @@ export const codeDb = {
       [limit]
     )
     return result.rows
-  },
-}
-
-// ============ SMS Codes ============
-export const smsDb = {
-  findByPhone: async (phone: string): Promise<SmsCode | undefined> => {
-    const result = await pool.query(
-      'SELECT * FROM sms_codes WHERE phone = $1 ORDER BY created_at DESC LIMIT 1',
-      [phone]
-    )
-    return result.rows[0] || undefined
-  },
-
-  save: async (data: SmsCode): Promise<void> => {
-    await pool.query(
-      `INSERT INTO sms_codes (phone, code, expires_at, attempts) 
-       VALUES ($1, $2, $3, $4)`,
-      [data.phone, data.code, new Date(data.expiresAt), data.attempts || 0]
-    )
-  },
-
-  updateAttempts: async (phone: string, attempts: number): Promise<void> => {
-    await pool.query(
-      'UPDATE sms_codes SET attempts = $1 WHERE phone = $2',
-      [attempts, phone]
-    )
-  },
-
-  delete: async (phone: string): Promise<boolean> => {
-    const result = await pool.query('DELETE FROM sms_codes WHERE phone = $1', [phone])
-    return result.rowCount ? result.rowCount > 0 : false
-  },
-
-  cleanExpired: async (): Promise<void> => {
-    await pool.query('DELETE FROM sms_codes WHERE expires_at < CURRENT_TIMESTAMP')
   },
 }
 

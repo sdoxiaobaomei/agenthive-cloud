@@ -144,8 +144,10 @@ public class AuthServiceImpl implements AuthService {
 
     private TokenResponse generateTokens(SysUser user) {
         TokenResponse response = new TokenResponse();
+        List<String> roles = roleMapper.selectRolesByUserId(user.getId())
+                .stream().map(SysRole::getRoleCode).toList();
         String accessToken = jwtUtils.generateAccessToken(String.valueOf(user.getId()),
-                Map.of("username", user.getUsername()));
+                Map.of("username", user.getUsername(), "roles", String.join(",", roles)));
         String refreshToken = jwtUtils.generateRefreshToken(String.valueOf(user.getId()));
         response.setAccessToken(accessToken);
         response.setRefreshToken(refreshToken);

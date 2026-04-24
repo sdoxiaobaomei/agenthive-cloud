@@ -54,6 +54,12 @@ spring:
             - Path=/api/logistics/**
           filters:
             - StripPrefix=0
+        - id: api-service
+          uri: ${API_SERVICE_URL:http://localhost:3001}
+          predicates:
+            - Path=/api/agents/**,/api/tasks/**,/api/code/**,/api/projects/**,/api/chat/**,/api/demo/**,/api/health
+          filters:
+            - StripPrefix=0
 
   redis:
     host: ${REDIS_HOST:localhost}

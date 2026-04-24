@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255),
     role VARCHAR(20) DEFAULT 'user',
     avatar TEXT,
+    external_user_id VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -116,19 +117,10 @@ CREATE TABLE IF NOT EXISTS agent_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 短信验证码表
-CREATE TABLE IF NOT EXISTS sms_codes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    phone VARCHAR(20) NOT NULL,
-    code VARCHAR(10) NOT NULL,
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    attempts INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 -- 创建索引
 CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_external_id ON users(external_user_id);
 CREATE INDEX IF NOT EXISTS idx_projects_owner_id ON projects(owner_id);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);
@@ -144,7 +136,6 @@ CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to ON tasks(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_tasks_parent_id ON tasks(parent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_agent_id ON agent_logs(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_created_at ON agent_logs(created_at);
-CREATE INDEX IF NOT EXISTS idx_sms_codes_phone ON sms_codes(phone);
 CREATE INDEX IF NOT EXISTS idx_code_files_path ON code_files(path);
 
 -- 创建更新时间触发器函数

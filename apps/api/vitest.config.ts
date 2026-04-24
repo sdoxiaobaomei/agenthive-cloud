@@ -9,6 +9,7 @@ export default defineConfig({
     environment: 'node',
     fileParallelism: false,
     include: ['tests/**/*.test.ts'],
+    setupFiles: ['tests/setup.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

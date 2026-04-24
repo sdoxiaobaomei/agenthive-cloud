@@ -9,6 +9,7 @@ export interface User {
   password_hash?: string
   role: string
   avatar?: string
+  external_user_id?: string
   created_at: string
   updated_at: string
 }
@@ -103,17 +104,6 @@ export interface CodeFile {
   is_directory?: boolean
   isDirectory?: boolean
   last_modified?: string
-}
-
-// 短信验证码类型
-export interface SmsCode {
-  id?: string
-  phone: string
-  code: string
-  expiresAt: number
-  expires_at?: string
-  attempts: number
-  created_at?: string
 }
 
 // API 响应类型

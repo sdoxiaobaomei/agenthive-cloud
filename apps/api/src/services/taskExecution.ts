@@ -37,7 +37,7 @@ const DEFAULT_CONFIG: Partial<TaskExecutionConfig> = {
   timeoutMs: 10 * 60 * 1000,
 }
 
-class TaskExecutionService {
+export class TaskExecutionService {
   private config: TaskExecutionConfig
   private runningTasks: Map<string, AbortController> = new Map()
   private taskResults: Map<string, TaskInfo> = new Map()

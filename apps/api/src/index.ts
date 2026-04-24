@@ -83,14 +83,6 @@ const startServer = async () => {
 📚 API Docs: http://localhost:${PORT}/api/health
 
 Available endpoints:
-  - POST /api/auth/sms/send      发送短信验证码
-  - POST /api/auth/login/sms     短信验证码登录
-  - POST /api/auth/login         用户名密码登录
-  - POST /api/auth/register      用户注册
-  - POST /api/auth/logout        用户登出
-  - POST /api/auth/refresh       刷新 Token
-  - GET  /api/auth/me            获取当前用户
-  
   - GET  /api/agents             Agent 列表
   - POST /api/agents             创建 Agent
   - GET  /api/agents/:id         Agent 详情

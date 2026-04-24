@@ -5,6 +5,7 @@ import { trace, SpanStatusCode } from '@opentelemetry/api'
 import { AI_ATTRIBUTES, AI_SPAN_NAMES, extractTraceContextFromPayload } from '@agenthive/observability'
 import { redisCache } from '../services/redis-cache.js'
 import { jwt } from '../utils/jwt.js'
+import { resolveLocalUser } from '../services/userMapping.js'
 import { initChatNamespace } from '../chat-controller/websocket.js'
 
 // 访客房间管理
@@ -29,38 +30,52 @@ export function initWebSocket(server: HttpServer): SocketIOServer {
   // 中间件：身份验证 + Trace Context 提取
   io.use(async (socket: Socket, next) => {
     try {
-      const token = socket.handshake.auth.token
-      
       // 从 HTTP handshake headers 提取 traceparent
       const traceparent = socket.handshake.headers['traceparent'] as string | undefined
       if (traceparent) {
         socket.data.traceContext = { traceparent }
       }
-      
+
+      // 模式 A：Gateway 透传（生产环境）
+      const gatewayUserId = socket.handshake.headers['x-user-id'] as string | undefined
+      if (gatewayUserId) {
+        const localUser = await resolveLocalUser({
+          externalId: gatewayUserId,
+          username: socket.handshake.headers['x-user-name'] as string | undefined,
+          role: socket.handshake.headers['x-user-role'] as string | undefined,
+        })
+        socket.data.isVisitor = false
+        socket.data.userId = localUser.id
+        socket.data.username = localUser.username
+        socket.data.externalUserId = gatewayUserId
+        return next()
+      }
+
+      // 模式 B：本地 JWT 验证（开发直连模式）
+      const token = socket.handshake.auth.token
       if (!token) {
         // 访客模式
         socket.data.isVisitor = true
         socket.data.userId = `visitor-${socket.id}`
         return next()
       }
-      
-      // 验证 Token
+
       const payload = await jwt.verify(token)
       if (!payload) {
         return next(new Error('Invalid token'))
       }
-      
+
       // 检查会话是否在 Redis 中
       const session = await redisCache.getSession(token)
       if (!session) {
         return next(new Error('Session expired'))
       }
-      
+
       socket.data.isVisitor = false
       socket.data.userId = payload.userId
       socket.data.username = payload.username
       socket.data.token = token
-      
+
       next()
     } catch (error) {
       next(new Error('Authentication error'))
