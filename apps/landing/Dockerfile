@@ -16,7 +16,7 @@ RUN npm install -g pnpm@9
 COPY . .
 
 # Inject public API base (build-time env for Nuxt runtimeConfig.public)
-ARG NUXT_PUBLIC_API_BASE=https://api.xiaochaitian.asia
+ARG NUXT_PUBLIC_API_BASE=/api
 ENV NUXT_PUBLIC_API_BASE=${NUXT_PUBLIC_API_BASE}
 
 # Install dependencies and build

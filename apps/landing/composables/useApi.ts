@@ -259,7 +259,7 @@ export function useApi() {
   // - 客户端: 生产环境访问公网 API，开发环境访问本地端口
   // - SSR 服务端: 访问容器内 API 服务
   const baseUrl = import.meta.client
-    ? (config.public.apiBase || 'https://api.xiaochaitian.asia')
+    ? (config.public.apiBase || '/api')
     : 'http://api:3001'
 
   // 默认超时时间（毫秒）
