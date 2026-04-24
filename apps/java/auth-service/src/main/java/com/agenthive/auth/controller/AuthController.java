@@ -4,6 +4,7 @@ import com.agenthive.auth.domain.vo.UserVO;
 import com.agenthive.auth.service.AuthService;
 import com.agenthive.auth.service.dto.LoginRequest;
 import com.agenthive.auth.service.dto.RegisterRequest;
+import com.agenthive.auth.service.dto.SmsLoginRequest;
 import com.agenthive.auth.service.dto.TokenResponse;
 import com.agenthive.common.core.result.Result;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +30,12 @@ public class AuthController {
     public Result<TokenResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         String clientIp = getClientIp(httpRequest);
         return Result.success(authService.login(request, clientIp));
+    }
+
+    @PostMapping("/login/sms")
+    public Result<TokenResponse> smsLogin(@Valid @RequestBody SmsLoginRequest request, HttpServletRequest httpRequest) {
+        String clientIp = getClientIp(httpRequest);
+        return Result.success(authService.smsLogin(request, clientIp));
     }
 
     @PostMapping("/refresh")

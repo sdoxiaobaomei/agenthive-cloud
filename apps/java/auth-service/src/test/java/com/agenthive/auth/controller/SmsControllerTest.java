@@ -15,7 +15,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.argThat;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -36,14 +35,14 @@ class SmsControllerTest {
     private SmsService smsService;
 
     @Test
-    @DisplayName("POST /sms/send 应调用 smsService 并返回 200")
+    @DisplayName("POST /auth/sms/send 应调用 smsService 并返回 200")
     void sendVerifyCode_shouldCallServiceAndReturn200() throws Exception {
         SendSmsVerifyCodeRequest request = new SendSmsVerifyCodeRequest();
         request.setPhone("13800138000");
-        request.setTemplateType("LOGIN");
-        request.setSignName("AgentHive");
+        request.setTemplateType("LOGIN_REGISTER");
+        request.setSignName("云渚科技验证平台");
 
-        mockMvc.perform(post("/sms/send")
+        mockMvc.perform(post("/auth/sms/send")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -51,19 +50,38 @@ class SmsControllerTest {
 
         verify(smsService).sendVerifyCode(argThat(r ->
                 r.getPhone().equals("13800138000") &&
-                r.getTemplateType().equals("LOGIN") &&
-                r.getSignName().equals("AgentHive")
+                r.getTemplateType().equals("LOGIN_REGISTER") &&
+                r.getSignName().equals("云渚科技验证平台")
         ));
     }
 
     @Test
-    @DisplayName("POST /sms/send 手机号格式错误时应返回 400")
+    @DisplayName("POST /auth/sms/send 前端 type 映射应正确转换为 templateType")
+    void sendVerifyCode_shouldMapTypeToTemplateType() throws Exception {
+        SendSmsVerifyCodeRequest request = new SendSmsVerifyCodeRequest();
+        request.setPhone("13800138000");
+        request.setType("login");
+
+        mockMvc.perform(post("/auth/sms/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        verify(smsService).sendVerifyCode(argThat(r ->
+                r.getPhone().equals("13800138000") &&
+                r.getTemplateType().equals("LOGIN_REGISTER")
+        ));
+    }
+
+    @Test
+    @DisplayName("POST /auth/sms/send 手机号格式错误时应返回 400")
     void sendVerifyCode_shouldReturn400_whenPhoneInvalid() throws Exception {
         SendSmsVerifyCodeRequest request = new SendSmsVerifyCodeRequest();
         request.setPhone("12345678901"); // 不以 1[3-9] 开头
-        request.setTemplateType("LOGIN");
+        request.setType("login");
 
-        mockMvc.perform(post("/sms/send")
+        mockMvc.perform(post("/auth/sms/send")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -71,13 +89,13 @@ class SmsControllerTest {
     }
 
     @Test
-    @DisplayName("POST /sms/send 缺少必填字段时应返回 400")
-    void sendVerifyCode_shouldReturn400_whenRequiredFieldMissing() throws Exception {
+    @DisplayName("POST /auth/sms/send 缺少手机号时应返回 400")
+    void sendVerifyCode_shouldReturn400_whenPhoneMissing() throws Exception {
         SendSmsVerifyCodeRequest request = new SendSmsVerifyCodeRequest();
-        request.setPhone("13800138000");
-        // templateType is missing
+        // phone is missing
+        request.setType("login");
 
-        mockMvc.perform(post("/sms/send")
+        mockMvc.perform(post("/auth/sms/send")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -85,14 +103,14 @@ class SmsControllerTest {
     }
 
     @Test
-    @DisplayName("POST /sms/verify 应调用 smsService 并返回 200")
+    @DisplayName("POST /auth/sms/verify 应调用 smsService 并返回 200")
     void verifyCode_shouldCallServiceAndReturn200() throws Exception {
         VerifySmsCodeRequest request = new VerifySmsCodeRequest();
         request.setPhone("13800138000");
-        request.setTemplateType("LOGIN");
+        request.setTemplateType("LOGIN_REGISTER");
         request.setCode("123456");
 
-        mockMvc.perform(post("/sms/verify")
+        mockMvc.perform(post("/auth/sms/verify")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -100,20 +118,41 @@ class SmsControllerTest {
 
         verify(smsService).verifyCode(argThat(r ->
                 r.getPhone().equals("13800138000") &&
-                r.getTemplateType().equals("LOGIN") &&
+                r.getTemplateType().equals("LOGIN_REGISTER") &&
                 r.getCode().equals("123456")
         ));
     }
 
     @Test
-    @DisplayName("POST /sms/verify 验证码不是6位数字时应返回 400")
+    @DisplayName("POST /auth/sms/verify 未传 templateType 时应使用默认 LOGIN_REGISTER")
+    void verifyCode_shouldUseDefaultTemplateType() throws Exception {
+        VerifySmsCodeRequest request = new VerifySmsCodeRequest();
+        request.setPhone("13800138000");
+        request.setCode("123456");
+        // templateType not set
+
+        mockMvc.perform(post("/auth/sms/verify")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        verify(smsService).verifyCode(argThat(r ->
+                r.getPhone().equals("13800138000") &&
+                r.getTemplateType().equals("LOGIN_REGISTER") &&
+                r.getCode().equals("123456")
+        ));
+    }
+
+    @Test
+    @DisplayName("POST /auth/sms/verify 验证码不是6位数字时应返回 400")
     void verifyCode_shouldReturn400_whenCodeNotSixDigits() throws Exception {
         VerifySmsCodeRequest request = new VerifySmsCodeRequest();
         request.setPhone("13800138000");
-        request.setTemplateType("LOGIN");
+        request.setTemplateType("LOGIN_REGISTER");
         request.setCode("abc123");
 
-        mockMvc.perform(post("/sms/verify")
+        mockMvc.perform(post("/auth/sms/verify")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())

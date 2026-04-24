@@ -8,9 +8,12 @@ import com.agenthive.auth.mapper.RoleMapper;
 import com.agenthive.auth.mapper.UserMapper;
 import com.agenthive.auth.mapper.UserRoleMapper;
 import com.agenthive.auth.service.AuthService;
+import com.agenthive.auth.service.SmsService;
 import com.agenthive.auth.service.dto.LoginRequest;
 import com.agenthive.auth.service.dto.RegisterRequest;
+import com.agenthive.auth.service.dto.SmsLoginRequest;
 import com.agenthive.auth.service.dto.TokenResponse;
+import com.agenthive.auth.service.dto.VerifySmsCodeRequest;
 import com.agenthive.common.core.exception.AgentHiveException;
 import com.agenthive.common.core.result.ResultCode;
 import com.agenthive.common.security.util.JwtUtils;
@@ -39,6 +42,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final StringRedisTemplate stringRedisTemplate;
+    private final SmsService smsService;
 
     @Value("${jwt.access-expiration:3600000}")
     private long accessExpiration;
@@ -89,6 +93,37 @@ public class AuthServiceImpl implements AuthService {
             stringRedisTemplate.opsForValue().increment(rateKey);
             stringRedisTemplate.expire(rateKey, 1, TimeUnit.MINUTES);
             throw new AgentHiveException(ResultCode.INVALID_CREDENTIALS);
+        }
+
+        if (user.getStatus() != 1) {
+            throw new AgentHiveException(ResultCode.FORBIDDEN.getCode(), "Account is disabled");
+        }
+
+        stringRedisTemplate.delete(rateKey);
+        return generateTokens(user);
+    }
+
+    @Override
+    public TokenResponse smsLogin(SmsLoginRequest request, String clientIp) {
+        String rateKey = "login:rate:" + clientIp;
+        String attemptsStr = stringRedisTemplate.opsForValue().get(rateKey);
+        int attempts = attemptsStr == null ? 0 : Integer.parseInt(attemptsStr);
+        if (attempts >= 5) {
+            throw new AgentHiveException(ResultCode.RATE_LIMIT_EXCEEDED.getCode(),
+                    "Too many login attempts. Please try again later.");
+        }
+
+        // 验证短信验证码
+        VerifySmsCodeRequest verifyRequest = new VerifySmsCodeRequest();
+        verifyRequest.setPhone(request.getPhone());
+        verifyRequest.setCode(request.getCode());
+        verifyRequest.setTemplateType("LOGIN_REGISTER");
+        smsService.verifyCode(verifyRequest);
+
+        SysUser user = userMapper.selectByPhone(request.getPhone());
+        if (user == null) {
+            // 短信登录即注册：自动创建用户
+            user = autoRegisterByPhone(request.getPhone());
         }
 
         if (user.getStatus() != 1) {
@@ -154,6 +189,29 @@ public class AuthServiceImpl implements AuthService {
         response.setExpiresIn(accessExpiration / 1000);
         response.setTokenType("Bearer");
         return response;
+    }
+
+    private SysUser autoRegisterByPhone(String phone) {
+        SysUser user = new SysUser();
+        String username = "phone_" + phone.substring(phone.length() - 4);
+        int suffix = 1;
+        while (userMapper.selectByUsername(username) != null) {
+            username = "phone_" + phone.substring(phone.length() - 4) + "_" + suffix++;
+        }
+        user.setUsername(username);
+        // 随机生成临时密码（用户后续可通过重置密码修改）
+        user.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString().substring(0, 12)));
+        user.setPhone(phone);
+        user.setStatus(1);
+        userMapper.insert(user);
+
+        SysUserRole userRole = new SysUserRole();
+        userRole.setUserId(user.getId());
+        userRole.setRoleId(2L);
+        userRoleMapper.insert(userRole);
+
+        log.info("Auto-registered user by phone: {}, username: {}", phone, username);
+        return user;
     }
 
     private UserVO toUserVO(SysUser user) {
