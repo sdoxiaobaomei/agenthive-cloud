@@ -135,9 +135,8 @@ services:
       - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
       - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
       # ===== Redis =====
-      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
     depends_on:
       nacos:
         condition: service_healthy
@@ -183,9 +182,8 @@ services:
       - DB_NAME=${DB_NAME:-agenthive}
       - DB_USER=${DB_USER:-agenthive}
       - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
       # ===== Auth / SMS =====
       - JWT_SECRET=${JWT_SECRET}
       - ALIYUN_SMS_ENABLED=${ALIYUN_SMS_ENABLED:-false}
@@ -236,9 +234,8 @@ services:
       - DB_NAME=${DB_NAME:-agenthive}
       - DB_USER=${DB_USER:-agenthive}
       - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
     depends_on:
       nacos:
         condition: service_healthy
@@ -284,9 +281,8 @@ services:
       - DB_NAME=payment_db
       - DB_USER=${DB_USER:-agenthive}
       - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
       # ===== RabbitMQ =====
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
@@ -337,9 +333,8 @@ services:
       - DB_NAME=order_db
       - DB_USER=${DB_USER:-agenthive}
       - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
       # ===== RabbitMQ =====
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
@@ -390,11 +385,17 @@ services:
       - DB_NAME=cart_db
       - DB_USER=${DB_USER:-agenthive}
       - DB_PASSWORD=${DB_PASSWORD}
-      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+      # ===== RabbitMQ =====
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-agenthive}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-agenthive-secret}
     depends_on:
       nacos:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -444,9 +445,8 @@ services:
       - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-agenthive}
       - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-agenthive-secret}
       # ===== Redis =====
-      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
     depends_on:
       nacos:
         condition: service_healthy

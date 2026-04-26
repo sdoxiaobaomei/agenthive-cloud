@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8081
 
 spring:
@@ -18,9 +18,9 @@ spring:
       max-lifetime: 1800000
   data:
     redis:
-      # 通过 host.docker.internal 访问宿主机上的 Redis 容器
-      host: ${REDIS_HOST:redis}
-      port: ${REDIS_PORT:6379}
+      # 閫氳繃 host.docker.internal 璁块棶瀹夸富鏈轰笂鐨?Redis 瀹瑰櫒
+      host: ${SPRING_DATA_REDIS_HOST:redis}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
       lettuce:
         pool:
           max-active: 20
@@ -47,17 +47,16 @@ aliyun:
   sms:
     enabled: ${ALIYUN_SMS_ENABLED:false}
     region-id: ${ALIYUN_SMS_REGION_ID:cn-hangzhou}
-    default-sign-name: ${ALIYUN_SMS_DEFAULT_SIGN_NAME:云渚科技验证平台}
+    default-sign-name: ${ALIYUN_SMS_DEFAULT_SIGN_NAME:浜戞笟绉戞妧楠岃瘉骞冲彴}
     code-expire-minutes: ${ALIYUN_SMS_CODE_EXPIRE_MINUTES:5}
     daily-limit: ${ALIYUN_SMS_DAILY_LIMIT:10}
     interval-seconds: ${ALIYUN_SMS_INTERVAL_SECONDS:60}
-    # 短信模板 CODE（从阿里云控制台 → 短信服务 → 模板管理 获取）
-    template-code-login-register: ${ALIYUN_SMS_TEMPLATE_CODE_LOGIN_REGISTER:100001}
+    # 鐭俊妯℃澘 CODE锛堜粠闃块噷浜戞帶鍒跺彴 鈫?鐭俊鏈嶅姟 鈫?妯℃澘绠＄悊 鑾峰彇锛?    template-code-login-register: ${ALIYUN_SMS_TEMPLATE_CODE_LOGIN_REGISTER:100001}
     template-code-modify-phone: ${ALIYUN_SMS_TEMPLATE_CODE_MODIFY_PHONE:100002}
     template-code-reset-password: ${ALIYUN_SMS_TEMPLATE_CODE_RESET_PASSWORD:100003}
     template-code-bind-phone: ${ALIYUN_SMS_TEMPLATE_CODE_BIND_PHONE:100004}
     template-code-verify-phone: ${ALIYUN_SMS_TEMPLATE_CODE_VERIFY_PHONE:100005}
-    # Docker 环境下默认关闭 OIDC（需 K8s），通过环境变量注入 STS/AccessKey
+    # Docker 鐜涓嬮粯璁ゅ叧闂?OIDC锛堥渶 K8s锛夛紝閫氳繃鐜鍙橀噺娉ㄥ叆 STS/AccessKey
     oidc-enabled: ${ALIYUN_SMS_OIDC_ENABLED:false}
     oidc-role-arn: ${ALIYUN_SMS_OIDC_ROLE_ARN:}
     oidc-provider-arn: ${ALIYUN_SMS_OIDC_PROVIDER_ARN:}
