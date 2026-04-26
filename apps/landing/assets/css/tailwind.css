@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global Design Tokens */
+:root {
+  --ah-primary: #4267ff;
+  --ah-primary-dark: #3151cc;
+  --ah-primary-light: #e8edff;
+
+  --ah-text-primary: #171717;
+  --ah-text-secondary: #58585a;
+
+  --ah-grey-500: #6b7280;
+  --ah-grey-400: #9ca3af;
+  --ah-grey-300: #d1d5db;
+  --ah-grey-200: #e5e7eb;
+
+  --ah-beige-50: #f9f8f6;
+  --ah-beige-100: #f2f1ed;
+  --ah-beige-200: #e8e6e1;
+  --ah-beige-300: #dcd9d3;
+
+  --ah-bg-page: #f9f8f6;
+
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+/* Element Plus overrides */
+:root {
+  --el-color-primary: var(--ah-primary);
+  --el-color-primary-light-3: var(--ah-primary-light);
+  --el-color-primary-light-5: #f0f3ff;
+  --el-color-primary-light-7: #f5f7ff;
+  --el-color-primary-light-8: #fafbff;
+  --el-color-primary-light-9: #f8f9ff;
+  --el-color-primary-dark-2: var(--ah-primary-dark);
+}
+
+/* Agent status colors */
+:root {
+  --agent-working: #4267ff;
+  --agent-idle: #22c55e;
+  --agent-error: #ef4444;
+  --agent-completed: #22c55e;
+}
+
+/* Global animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility classes */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ah-beige-100);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ah-grey-300);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ah-grey-400);
+}
+
+/* Selection styling */
+::selection {
+  background: var(--ah-primary-light);
+  color: var(--ah-primary-dark);
+}

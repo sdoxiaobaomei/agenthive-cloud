@@ -2,7 +2,8 @@
 import { proxyToApi, getGatewayBase } from '../../../utils/apiProxy'
 
 export default defineEventHandler(async (event) => {
-  const result = await proxyToApi(event, '/api/auth/sms/send', { method: 'POST' }, getGatewayBase())
+  const body = await readBody(event)
+  const result = await proxyToApi(event, '/api/auth/sms/send', { method: 'POST', body }, getGatewayBase())
 
   // Java 返回: { code, message, data: null }
   if (result.code === 200) {

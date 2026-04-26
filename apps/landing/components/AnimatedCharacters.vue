@@ -57,6 +57,11 @@ const containerRef = ref<HTMLElement | null>(null)
 const mouseRef = reactive({ x: 0, y: 0 })
 const rafIdRef = ref<number>(0)
 
+const onMove = (e: MouseEvent) => {
+  mouseRef.x = e.clientX
+  mouseRef.y = e.clientY
+}
+
 const blueRef = ref<HTMLElement | null>(null)
 const darkRef = ref<HTMLElement | null>(null)
 const yellowRef = ref<HTMLElement | null>(null)
@@ -357,18 +362,8 @@ onMounted(() => {
     rafIdRef.value = requestAnimationFrame(tick)
   }
 
-  const onMove = (e: MouseEvent) => {
-    mouseRef.x = e.clientX
-    mouseRef.y = e.clientY
-  }
-
   window.addEventListener('mousemove', onMove, { passive: true })
   rafIdRef.value = requestAnimationFrame(tick)
-
-  onBeforeUnmount(() => {
-    window.removeEventListener('mousemove', onMove)
-    cancelAnimationFrame(rafIdRef.value)
-  })
 })
 
 // Blue character blink
@@ -392,7 +387,6 @@ onMounted(() => {
   }
 
   scheduleBlink()
-  onBeforeUnmount(() => clearTimeout(blueBlinkTimerRef.value))
 })
 
 // Dark character blink
@@ -416,7 +410,6 @@ onMounted(() => {
   }
 
   scheduleBlink()
-  onBeforeUnmount(() => clearTimeout(darkBlinkTimerRef.value))
 })
 
 const applyLookAtEachOther = () => {
@@ -525,7 +518,6 @@ watch(
     }
 
     schedulePeek()
-    onBeforeUnmount(() => clearTimeout(bluePeekTimerRef.value))
   }
 )
 
@@ -565,4 +557,14 @@ watch(
     }
   }
 )
+
+// Cleanup on unmount (must be at top level of setup)
+onBeforeUnmount(() => {
+  cancelAnimationFrame(rafIdRef.value)
+  window.removeEventListener('mousemove', onMove)
+  clearTimeout(blueBlinkTimerRef.value)
+  clearTimeout(darkBlinkTimerRef.value)
+  clearTimeout(bluePeekTimerRef.value)
+  clearTimeout(lookingTimerRef.value)
+})
 </script>

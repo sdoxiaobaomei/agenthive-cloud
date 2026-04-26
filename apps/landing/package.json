@@ -10,6 +10,7 @@
         "preview": "nuxt preview",
         "typecheck": "nuxt typecheck",
         "postinstall": "nuxt prepare",
+        "clean": "node -e \"require('fs').rmSync('.nuxt-build/dist',{recursive:true,force:true}); require('fs').rmSync('.nuxt-build/dev',{recursive:true,force:true}); require('fs').rmSync('.output',{recursive:true,force:true}); require('fs').rmSync('.vite-cache',{recursive:true,force:true}); console.log('Cleaned build artifacts')\"",
         "test": "vitest run --passWithNoTests",
         "test:e2e": "playwright test",
         "lint": "echo 'No linter configured for Landing yet'"
