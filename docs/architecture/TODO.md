@@ -28,9 +28,9 @@
   3. 开发环境增加 `NODE_ENV=development` 模拟用户头开关
   4. Gateway 白名单补充 `/api/health`、`/api/demo/**`
 - **验收标准**:
-  - [ ] 生产环境 Node API 拒绝无 `X-User-Id` 的请求，返回 401
-  - [ ] 开发环境可通过配置模拟用户身份
-  - [ ] 删除所有与本地 JWT verify 相关的代码和依赖
+  - [x] 生产环境 Node API 拒绝无 `X-User-Id` 的请求，返回 401 ✅ 2026-04-26
+  - [x] 开发环境可通过配置模拟用户身份 ✅ `injectDevUser()` + `DEV_USER_*` env
+  - [x] 删除所有与本地 JWT verify 相关的代码和依赖 ✅ jwt.ts 已删除，jose 已移除
 - **依赖**: 无
 - **负责人**: Node 团队
 - **工时**: 2-3 天
@@ -44,9 +44,9 @@
   2. 为每个缺失服务创建最小可编译骨架（Application 类 + application.yml + pom.xml）
   3. 验证 `mvn clean install` 成功构建所有 7 个服务
 - **验收标准**:
-  - [ ] `mvn clean install -pl '!gateway-service'` 跳过网关也能编译
-  - [ ] 所有服务均能通过 `spring-boot:run` 启动
-  - [ ] Nacos 控制台能看到所有服务注册
+  - [x] `mvn clean install -pl '!gateway-service'` 跳过网关也能编译 ✅ 2026-04-26（9/9 SUCCESS）
+  - [ ] 所有服务均能通过 `spring-boot:run` 启动（待运行时验证）
+  - [ ] Nacos 控制台能看到所有服务注册（待运行时验证）
 - **依赖**: 无
 - **负责人**: Java 团队
 - **工时**: 2-3 天
@@ -62,10 +62,10 @@
   4. Agent Runtime 执行完成后通过 Redis Pub/Sub 推送进度
   5. Node API WebSocket 订阅进度频道，实时推送给前端
 - **验收标准**:
-  - [ ] 任务提交后 API 立即返回，不等待执行完成
-  - [ ] Agent Runtime 独立进程消费队列并执行任务
-  - [ ] 任务崩溃不影响 API 服务（可通过 `kill -9` 模拟测试）
-  - [ ] WebSocket 能正常接收任务进度更新
+  - [x] 任务提交后 API 立即返回，不等待执行完成 ✅ `enqueueTask` 异步提交已实现
+  - [x] Agent Runtime 独立进程消费队列并执行任务 ✅ `TaskConsumer` + `pnpm consumer` 已实现
+  - [ ] 任务崩溃不影响 API 服务（可通过 `kill -9` 模拟测试，待运行时验证）
+  - [x] WebSocket 能正常接收任务进度更新 ✅ `task:subscribe` + Pub/Sub 已对接
 - **依赖**: Redis Stream 配置
 - **负责人**: Node 团队 + Agent 团队
 - **工时**: 5-7 天
