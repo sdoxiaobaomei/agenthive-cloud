@@ -42,29 +42,35 @@ public class SmsServiceImpl implements SmsService {
         checkRateLimit(phone, templateType);
 
         String code = generateCode();
-        String templateParam = String.format("{\"code\":\"%s\",\"min\":\"%d\"}",
-                code, templateType.getDefaultExpireMinutes());
 
-        SendSmsRequest sendSmsRequest = new SendSmsRequest();
-        sendSmsRequest.setPhoneNumbers(phone);
-        sendSmsRequest.setSignName(signName);
-        sendSmsRequest.setTemplateCode(templateType.getTemplateCode());
-        sendSmsRequest.setTemplateParam(templateParam);
+        if (!smsProperties.isEnabled()) {
+            log.warn("[LOCAL DEV] 阿里云 SMS 已禁用，跳过真实发送。验证码 {} 已存入 Redis（phone={}，template={}）",
+                    code, phone, templateType.getTemplateCode());
+        } else {
+            String templateParam = String.format("{\"code\":\"%s\",\"min\":\"%d\"}",
+                    code, templateType.getDefaultExpireMinutes());
 
-        try {
-            SendSmsResponse response = acsClient.getAcsResponse(sendSmsRequest);
-            if (response.getCode() != null && "OK".equals(response.getCode())) {
-                log.info("SMS sent successfully to {}, template: {}, bizId: {}",
-                        phone, templateType.getTemplateCode(), response.getBizId());
-            } else {
-                log.error("SMS send failed to {}, code: {}, message: {}",
-                        phone, response.getCode(), response.getMessage());
-                throw new AgentHiveException(7102, "短信发送失败: " + response.getMessage());
+            SendSmsRequest sendSmsRequest = new SendSmsRequest();
+            sendSmsRequest.setPhoneNumbers(phone);
+            sendSmsRequest.setSignName(signName);
+            sendSmsRequest.setTemplateCode(templateType.getTemplateCode());
+            sendSmsRequest.setTemplateParam(templateParam);
+
+            try {
+                SendSmsResponse response = acsClient.getAcsResponse(sendSmsRequest);
+                if (response.getCode() != null && "OK".equals(response.getCode())) {
+                    log.info("SMS sent successfully to {}, template: {}, bizId: {}",
+                            phone, templateType.getTemplateCode(), response.getBizId());
+                } else {
+                    log.error("SMS send failed to {}, code: {}, message: {}",
+                            phone, response.getCode(), response.getMessage());
+                    throw new AgentHiveException(7102, "短信发送失败: " + response.getMessage());
+                }
+            } catch (ClientException e) {
+                log.error("SMS send exception to {}, errCode: {}, errMsg: {}",
+                        phone, e.getErrCode(), e.getErrMsg(), e);
+                throw new AgentHiveException(7102, "短信发送失败: " + e.getErrMsg());
             }
-        } catch (ClientException e) {
-            log.error("SMS send exception to {}, errCode: {}, errMsg: {}",
-                    phone, e.getErrCode(), e.getErrMsg(), e);
-            throw new AgentHiveException(7102, "短信发送失败: " + e.getErrMsg());
         }
 
         String codeKey = buildCodeKey(phone, templateType);

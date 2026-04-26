@@ -4,6 +4,7 @@ import com.agenthive.auth.service.dto.LoginRequest;
 import com.agenthive.auth.service.dto.RegisterRequest;
 import com.agenthive.auth.service.dto.SmsLoginRequest;
 import com.agenthive.auth.service.dto.TokenResponse;
+import com.agenthive.auth.service.dto.UpdateProfileRequest;
 import com.agenthive.auth.domain.vo.UserVO;
 
 import java.util.List;
@@ -23,4 +24,6 @@ public interface AuthService {
     UserVO getCurrentUser(String token);
 
     List<String> getUserRoles(Long userId);
+
+    UserVO updateProfile(Long userId, UpdateProfileRequest request);
 }

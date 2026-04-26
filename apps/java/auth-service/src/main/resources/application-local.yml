@@ -1,0 +1,30 @@
+server:
+  port: 8081
+
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+        import-check:
+          enabled: false
+  datasource:
+    url: jdbc:postgresql://localhost:5432/auth_db
+    username: postgres
+    password: admin
+    driver-class-name: org.postgresql.Driver
+  redis:
+    host: localhost
+    port: 6379
+    password:
+
+jwt:
+  secret: agenthive-local-development-key-2026-agenthive-cloud
+  access-token-expiration: 86400000
+  refresh-token-expiration: 604800000
+
+aliyun:
+  sms:
+    enabled: false

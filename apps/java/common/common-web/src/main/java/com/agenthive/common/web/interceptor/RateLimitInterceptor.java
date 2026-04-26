@@ -4,12 +4,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -19,6 +21,7 @@ import java.util.List;
 public class RateLimitInterceptor implements HandlerInterceptor {
 
     private final StringRedisTemplate stringRedisTemplate;
+    private final Environment environment;
 
     private static final String LUA_SCRIPT =
             "local key = KEYS[1]; " +
@@ -46,6 +49,12 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        // 本地/开发环境跳过限流（避免 Windows + Redisson Lua 脚本兼容问题）
+        if (Arrays.asList(environment.getActiveProfiles()).contains("local")
+                || Arrays.asList(environment.getActiveProfiles()).contains("dev")) {
+            return true;
+        }
+
         String clientIp = getClientIp(request);
         String key = "rate_limit:" + clientIp + ":" + request.getRequestURI();
         int limit = 100;

@@ -3,9 +3,11 @@ package com.agenthive.auth.controller;
 import com.agenthive.auth.domain.vo.UserVO;
 import com.agenthive.auth.service.AuthService;
 import com.agenthive.auth.service.dto.LoginRequest;
+import com.agenthive.auth.service.dto.RefreshTokenRequest;
 import com.agenthive.auth.service.dto.RegisterRequest;
 import com.agenthive.auth.service.dto.SmsLoginRequest;
 import com.agenthive.auth.service.dto.TokenResponse;
+import com.agenthive.auth.service.dto.UpdateProfileRequest;
 import com.agenthive.common.core.result.Result;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -39,8 +41,8 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public Result<TokenResponse> refresh(@RequestBody String refreshToken) {
-        return Result.success(authService.refresh(refreshToken));
+    public Result<TokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return Result.success(authService.refresh(request.getRefreshToken()));
     }
 
     @PostMapping("/logout")
@@ -54,6 +56,15 @@ public class AuthController {
     public Result<UserVO> me(@RequestHeader("Authorization") String authHeader) {
         String token = authHeader != null && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
         return Result.success(authService.getCurrentUser(token));
+    }
+
+    @PatchMapping("/profile")
+    public Result<UserVO> updateProfile(
+            @RequestHeader("Authorization") String authHeader,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        String token = authHeader != null && authHeader.startsWith("Bearer ") ? authHeader.substring(7) : null;
+        UserVO currentUser = authService.getCurrentUser(token);
+        return Result.success(authService.updateProfile(currentUser.getId(), request));
     }
 
     @GetMapping("/users/{id}/roles")
