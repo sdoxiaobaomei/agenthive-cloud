@@ -4,7 +4,6 @@ import { Server as HttpServer } from 'http'
 import { trace, SpanStatusCode } from '@opentelemetry/api'
 import { AI_ATTRIBUTES, AI_SPAN_NAMES, extractTraceContextFromPayload } from '@agenthive/observability'
 import { redisCache } from '../services/redis-cache.js'
-import { jwt } from '../utils/jwt.js'
 import { resolveLocalUser } from '../services/userMapping.js'
 import { initChatNamespace } from '../chat-controller/websocket.js'
 
@@ -51,31 +50,20 @@ export function initWebSocket(server: HttpServer): SocketIOServer {
         return next()
       }
 
-      // 模式 B：本地 JWT 验证（开发直连模式）
-      const token = socket.handshake.auth.token
-      if (!token) {
-        // 访客模式
-        socket.data.isVisitor = true
-        socket.data.userId = `visitor-${socket.id}`
+      // 开发环境：注入模拟用户
+      if (process.env.NODE_ENV === 'development') {
+        const devUserId = process.env.DEV_USER_ID || 'dev-user-id'
+        const devUserName = process.env.DEV_USER_NAME || 'Developer'
+        socket.data.isVisitor = false
+        socket.data.userId = devUserId
+        socket.data.username = devUserName
+        socket.data.externalUserId = devUserId
         return next()
       }
 
-      const payload = await jwt.verify(token)
-      if (!payload) {
-        return next(new Error('Invalid token'))
-      }
-
-      // 检查会话是否在 Redis 中
-      const session = await redisCache.getSession(token)
-      if (!session) {
-        return next(new Error('Session expired'))
-      }
-
-      socket.data.isVisitor = false
-      socket.data.userId = payload.userId
-      socket.data.username = payload.username
-      socket.data.token = token
-
+      // 无认证 → 访客模式
+      socket.data.isVisitor = true
+      socket.data.userId = `visitor-${socket.id}`
       next()
     } catch (error) {
       next(new Error('Authentication error'))
