@@ -134,6 +134,10 @@ services:
       - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_PASSWORD:-nacos}
       - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
       - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
+      # ===== Redis =====
+      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       nacos:
         condition: service_healthy
@@ -439,6 +443,10 @@ services:
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-agenthive}
       - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-agenthive-secret}
+      # ===== Redis =====
+      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       nacos:
         condition: service_healthy
