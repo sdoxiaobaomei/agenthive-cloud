@@ -89,7 +89,7 @@ jobs:
         run: |
           cd apps/java
           echo "Building gateway-service, auth-service, user-service..."
-          mvn clean package -pl gateway-service,auth-service,user-service -am -DskipTests
+          mvn clean package -pl gateway-service,auth-service,user-service,payment-service,order-service,cart-service,logistics-service -am -DskipTests
 
       # ---------- Setup Docker ----------
       - name: Set up QEMU
@@ -172,6 +172,50 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
 
+      - name: Extract metadata for Payment Service
+        id: meta-payment
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/payment-service
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Extract metadata for Order Service
+        id: meta-order
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/order-service
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Extract metadata for Cart Service
+        id: meta-cart
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/cart-service
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Extract metadata for Logistics Service
+        id: meta-logistics
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/logistics-service
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
       # ---------- Build & Push ----------
       - name: Build and push API image
         uses: docker/build-push-action@v5
@@ -244,6 +288,50 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push Payment Service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/java/payment-service
+          file: ./apps/java/payment-service/Dockerfile
+          push: true
+          tags: ${{ steps.meta-payment.outputs.tags }}
+          labels: ${{ steps.meta-payment.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Order Service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/java/order-service
+          file: ./apps/java/order-service/Dockerfile
+          push: true
+          tags: ${{ steps.meta-order.outputs.tags }}
+          labels: ${{ steps.meta-order.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Cart Service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/java/cart-service
+          file: ./apps/java/cart-service/Dockerfile
+          push: true
+          tags: ${{ steps.meta-cart.outputs.tags }}
+          labels: ${{ steps.meta-cart.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Logistics Service image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/java/logistics-service
+          file: ./apps/java/logistics-service/Dockerfile
+          push: true
+          tags: ${{ steps.meta-logistics.outputs.tags }}
+          labels: ${{ steps.meta-logistics.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       # ---------- Summary ----------
       - name: Build Summary
         if: always()
@@ -258,6 +346,10 @@ jobs:
           echo "| **Gateway Service** | ${{ steps.meta-gateway.outputs.tags }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Auth Service** | ${{ steps.meta-auth.outputs.tags }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **User Service** | ${{ steps.meta-user.outputs.tags }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Payment Service** | ${{ steps.meta-payment.outputs.tags }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Order Service** | ${{ steps.meta-order.outputs.tags }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Cart Service** | ${{ steps.meta-cart.outputs.tags }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Logistics Service** | ${{ steps.meta-logistics.outputs.tags }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "ECS 部署命令:" >> $GITHUB_STEP_SUMMARY
           echo '\`\`\`bash' >> $GITHUB_STEP_SUMMARY
