@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
 import cjsGuard from './plugins/vite-cjs-guard'
+import dayjsEsmPlugin from './vite-plugins/dayjs-esm'
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
 
@@ -76,6 +77,8 @@ export default defineNuxtConfig({
   vite: {
     cacheDir: '.vite-cache',
     plugins: [
+      // dayjs UMD → ESM 重定向（必须在 CJS Guard 之前）
+      dayjsEsmPlugin(currentDir),
       // CJS Guard：dev 模式下监控未预构建的 CJS 模块，提前预警
       // 防止 "does not provide an export named 'default'" 类错误
       // 详见 plugins/vite-cjs-guard.ts
@@ -95,18 +98,13 @@ export default defineNuxtConfig({
       },
     },
     optimizeDeps: {
+      // dayjs 及其插件已交给 dayjs-esm 插件处理（UMD → ESM 绝对路径），
+      // 不需要 Vite 预构建。保留 element-plus 确保其 ESM 版本被正确打包。
       include: [
+        'element-plus',
+      ],
+      exclude: [
         'dayjs',
-        // Element Plus ESM builds import dayjs plugins with .js extension
-        // Vite treats 'dayjs/plugin/xxx' and 'dayjs/plugin/xxx.js' as different modules
-        'dayjs/plugin/customParseFormat.js',
-        'dayjs/plugin/localeData.js',
-        'dayjs/plugin/advancedFormat.js',
-        'dayjs/plugin/weekOfYear.js',
-        'dayjs/plugin/weekYear.js',
-        'dayjs/plugin/dayOfYear.js',
-        'dayjs/plugin/isSameOrAfter.js',
-        'dayjs/plugin/isSameOrBefore.js',
       ],
     },
   },
@@ -120,7 +118,7 @@ export default defineNuxtConfig({
   // 运行时配置
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api',
     },
   },
   

@@ -192,11 +192,7 @@ interface ChatMessage {
   }
 }
 
-interface Project {
-  id: string
-  name: string
-  description: string
-}
+import type { Project } from '~/stores/project'
 
 const props = defineProps<{
   isCollapsed?: boolean
