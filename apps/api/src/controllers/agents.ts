@@ -40,13 +40,11 @@ export const getAgents = async (req: Request, res: Response) => {
   try {
     await delay(300)
     const agents = await agentDb.findAll()
-    res.json({
-      success: true,
-      data: { agents, total: agents.length },
+    res.json({ code: 200, message: 'success', data: { agents, total: agents.length },
     })
   } catch (error) {
     logger.error('Get agents error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取 Agent 列表失败' })
+    res.status(500).json({ code: 500, message: '获取 Agent 列表失败' , data: null })
   }
 }
 
@@ -60,15 +58,13 @@ export const getAgent = async (req: Request, res: Response) => {
     const { id } = req.params
     const agent = await agentDb.findById(id)
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
     const tasks = await taskDb.findAll({ assignedTo: id })
     const totalTasks = tasks.length
     const completedTasks = tasks.filter((t: any) => t.status === 'completed').length
     const failedTasks = tasks.filter((t: any) => t.status === 'failed').length
-    res.json({
-      success: true,
-      data: {
+    res.json({ code: 200, message: 'success', data: {
         agent,
         tasks,
         stats: { totalTasks, completedTasks, failedTasks, avgCompletionTime: 0 },
@@ -76,7 +72,7 @@ export const getAgent = async (req: Request, res: Response) => {
     })
   } catch (error) {
     logger.error('Get agent error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取 Agent 详情失败' })
+    res.status(500).json({ code: 500, message: '获取 Agent 详情失败' , data: null })
   }
 }
 
@@ -89,17 +85,15 @@ export const createAgent = async (req: Request, res: Response) => {
     await delay(300)
     const parseResult = createAgentSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
     const agent = await agentDb.create(parseResult.data as any)
-    res.status(201).json({ success: true, data: agent })
+    res.status(201).json({ code: 201, message: 'success', data: agent })
   } catch (error) {
     logger.error('Create agent error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '创建 Agent 失败' })
+    res.status(500).json({ code: 500, message: '创建 Agent 失败' , data: null })
   }
 }
 
@@ -113,21 +107,19 @@ export const updateAgent = async (req: Request, res: Response) => {
     const { id } = req.params
     const parseResult = updateAgentSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
     const agent = await agentDb.findById(id)
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
     const updated = await agentDb.update(id, parseResult.data)
-    res.json({ success: true, data: updated })
+    res.json({ code: 200, message: 'success', data: updated })
   } catch (error) {
     logger.error('Update agent error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '更新 Agent 失败' })
+    res.status(500).json({ code: 500, message: '更新 Agent 失败' , data: null })
   }
 }
 
@@ -141,13 +133,13 @@ export const deleteAgent = async (req: Request, res: Response) => {
     const { id } = req.params
     const agent = await agentDb.findById(id)
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
     await agentDb.delete(id)
-    res.json({ success: true, message: 'Agent 已删除' })
+    res.json({ code: 200, message: 'Agent 已删除', data: null })
   } catch (error) {
     logger.error('Delete agent error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '删除 Agent 失败' })
+    res.status(500).json({ code: 500, message: '删除 Agent 失败' , data: null })
   }
 }
 
@@ -161,14 +153,14 @@ export const startAgent = async (req: Request, res: Response) => {
     const { id } = req.params
     const agent = await agentDb.findById(id)
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
     const updated = await agentDb.update(id, { status: 'working' })
     await logDb.addLog(id, 'Agent started')
-    res.json({ success: true, data: updated })
+    res.json({ code: 200, message: 'success', data: updated })
   } catch (error) {
     logger.error('Start agent error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '启动 Agent 失败' })
+    res.status(500).json({ code: 500, message: '启动 Agent 失败' , data: null })
   }
 }
 
@@ -182,14 +174,14 @@ export const stopAgent = async (req: Request, res: Response) => {
     const { id } = req.params
     const agent = await agentDb.findById(id)
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
     const updated = await agentDb.update(id, { status: 'idle' })
     await logDb.addLog(id, 'Agent stopped')
-    res.json({ success: true, data: updated })
+    res.json({ code: 200, message: 'success', data: updated })
   } catch (error) {
     logger.error('Stop agent error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '停止 Agent 失败' })
+    res.status(500).json({ code: 500, message: '停止 Agent 失败' , data: null })
   }
 }
 
@@ -203,14 +195,14 @@ export const pauseAgent = async (req: Request, res: Response) => {
     const { id } = req.params
     const agent = await agentDb.findById(id)
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
     const updated = await agentDb.update(id, { status: 'paused' })
     await logDb.addLog(id, 'Agent paused')
-    res.json({ success: true, data: updated })
+    res.json({ code: 200, message: 'success', data: updated })
   } catch (error) {
     logger.error('Pause agent error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '暂停 Agent 失败' })
+    res.status(500).json({ code: 500, message: '暂停 Agent 失败' , data: null })
   }
 }
 
@@ -224,14 +216,14 @@ export const resumeAgent = async (req: Request, res: Response) => {
     const { id } = req.params
     const agent = await agentDb.findById(id)
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
     const updated = await agentDb.update(id, { status: 'working' })
     await logDb.addLog(id, 'Agent resumed')
-    res.json({ success: true, data: updated })
+    res.json({ code: 200, message: 'success', data: updated })
   } catch (error) {
     logger.error('Resume agent error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '恢复 Agent 失败' })
+    res.status(500).json({ code: 500, message: '恢复 Agent 失败' , data: null })
   }
 }
 
@@ -245,21 +237,16 @@ export const sendCommand = async (req: Request, res: Response) => {
     const { id } = req.params
     const parseResult = commandSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
     const agent = await agentDb.findById(id)
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
     await logDb.addLog(id, `Command received: ${parseResult.data.type}`)
-    res.json({
-      success: true,
-      message: '命令已发送',
-      data: {
+    res.json({ code: 200, message: '命令已发送', data: {
         commandId: `cmd-${Date.now()}`,
         type: parseResult.data.type,
         status: 'executing',
@@ -267,7 +254,7 @@ export const sendCommand = async (req: Request, res: Response) => {
     })
   } catch (error) {
     logger.error('Send command error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '发送命令失败' })
+    res.status(500).json({ code: 500, message: '发送命令失败' , data: null })
   }
 }
 
@@ -282,13 +269,13 @@ export const getAgentLogs = async (req: Request, res: Response) => {
     const lines = parseInt(req.query.lines as string) || 100
     const agent = await agentDb.findById(id)
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
     const logs = await logDb.getLogs(id, lines)
-    res.json({ success: true, data: { logs, total: logs.length } })
+    res.json({ code: 200, message: 'success', data: { logs, total: logs.length } })
   } catch (error) {
     logger.error('Get agent logs error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取日志失败' })
+    res.status(500).json({ code: 500, message: '获取日志失败' , data: null })
   }
 }
 
@@ -304,11 +291,9 @@ export const getAgentStatus = async (req: Request, res: Response) => {
       redisCache.getAgentStatus(id),
     ])
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
-    res.json({
-      success: true,
-      data: {
+    res.json({ code: 200, message: 'success', data: {
         agentId: id,
         dbStatus: agent.status,
         redisStatus: redisStatus?.status || 'unknown',
@@ -318,7 +303,7 @@ export const getAgentStatus = async (req: Request, res: Response) => {
     })
   } catch (error) {
     logger.error('Get agent status error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取 Agent 状态失败' })
+    res.status(500).json({ code: 500, message: '获取 Agent 状态失败' , data: null })
   }
 }
 
@@ -331,16 +316,14 @@ export const createAgentTask = async (req: Request, res: Response) => {
     const { id } = req.params
     const parseResult = createTaskSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
 
     const agent = await agentDb.findById(id)
     if (!agent) {
-      return res.status(404).json({ success: false, error: 'Agent 不存在' })
+      return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
 
     const userId = (req as any).userId || 'anonymous'
@@ -377,13 +360,10 @@ export const createAgentTask = async (req: Request, res: Response) => {
       logger.error(`Agent task ${task.id} execution error`, err)
     })
 
-    res.status(201).json({
-      success: true,
-      message: '任务已创建并开始执行',
-      data: { task, agentId: id },
+    res.status(201).json({ code: 201, message: '任务已创建并开始执行', data: { task, agentId: id },
     })
   } catch (error) {
     logger.error('Create agent task error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '创建任务失败' })
+    res.status(500).json({ code: 500, message: '创建任务失败' , data: null })
   }
 }
