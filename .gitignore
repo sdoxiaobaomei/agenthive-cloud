@@ -101,3 +101,4 @@ cert-manager.yaml
 **/BOOT-INF/
 **/target/classes/
 
+.env.dev
