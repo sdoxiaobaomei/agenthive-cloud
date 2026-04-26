@@ -59,3 +59,52 @@
 ---
 
 _最后更新: 2026-04-22_
+
+
+### 本地 Docker 全栈启动踩坑 (2026-04-26)
+
+#### 1. Nuxt runtimeConfig 构建时内联陷阱
+- **现象**: Docker 中 `apiBase` 仍硬编码为 `http://localhost:3001`，浏览器直连后端触发 CORS
+- **原因**: `NUXT_PUBLIC_API_BASE` 通过 `build.args` 在构建阶段内联到 HTML，运行时 `environment` 同名变量**无法覆盖**
+- **解决**: 修改 `docker-compose.dev.yml` build args → 重新构建 Landing 镜像
+- **教训**: Nuxt public runtimeConfig 是"构建时决定，运行时只读"，改环境变量必须 rebuild
+
+#### 2. Spring CORS `allowCredentials=true` + `allowedOrigins("*")` 不兼容
+- **现象**: Gateway 对所有 `/api/auth/*` 请求返回 500，`IllegalArgumentException`
+- **原因**: Spring 6.1+ 不允许 `allowedOrigins` 含 `*` 同时 `allowCredentials=true`
+- **解决**: `setAllowedOrigins("*")` → `setAllowedOriginPatterns("*")`
+- **教训**: Spring 的 CORS 配置升级后行为变化，开发环境用 `allowedOriginPatterns` 更安全
+
+#### 3. JWT Secret 跨服务不一致 → 401
+- **现象**: 登录成功，但 `/api/auth/me` 返回 401，`JWT signature does not match`
+- **原因**: auth-service 使用 `.env.dev` 的 `JWT_SECRET`，Gateway 使用默认值 `agenthive-default-secret-key-2024`
+- **解决**: `docker-compose.dev.yml` gateway-service 添加 `JWT_SECRET: ${JWT_SECRET}`
+- **教训**: 任何参与 JWT 签/验的服务必须共享同一个 secret，默认值是安全隐患
+
+#### 4. Docker 容器内 `localhost` 自我指涉陷阱
+- **现象**: Landing BFF 注册接口 500，内部调用 Gateway 失败
+- **原因**: Landing BFF 中 `getGatewayBase()` 默认 `http://localhost:8080`，在容器内指向自己
+- **解决**: `docker-compose.dev.yml` landing 添加 `GATEWAY_URL: http://gateway-service:8080`
+- **教训**: 容器内绝不能用 `localhost` 访问其他服务，必须用 Docker Compose service name
+
+#### 5. nginx `location` 前缀匹配跳过了 BFF
+- **现象**: `/api/auth/me` 直接打到 Gateway，Landing BFF 的格式转换、错误处理未生效
+- **原因**: nginx.conf 中 `location /api/auth` 优先级高于 `location /api`，请求被直接代理到 Gateway
+- **解决**: 移除单独的 `location /api/auth`，统一走 Landing BFF；单独保留 `location /api/chat` 走 Node API
+- **教训**: 引入 BFF 后，nginx 的 API 路由需要重新梳理，避免"直连后端"和"走 BFF"混用
+
+#### 6. Spring 标准环境变量名
+- **现象**: Java 服务 RabbitMQ 连接失败、Nacos 认证失败
+- **原因**: 使用了自定义变量名如 `RABBITMQ_HOST`、`NACOS_SERVER`，Spring 不认识
+- **解决**: 统一使用 `SPRING_RABBITMQ_HOST`、`SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR` 等标准名
+- **教训**: Spring Boot 只认标准属性名，自定义名必须通过 `@Value` 显式读取
+
+#### 7. Nacos 2.x gRPC 延迟就绪
+- **现象**: Java 服务启动报 `Connection refused: nacos/9848`
+- **原因**: Nacos HTTP 端口 8848 ready 不代表 gRPC 端口 9848 ready
+- **解决**: Nacos healthcheck 同时检查 `nc -z localhost 9848`
+- **教训**: Nacos 2.x 引入 gRPC，healthcheck 不能只测 HTTP 端口
+
+---
+
+_最后更新: 2026-04-26_
