@@ -13,7 +13,40 @@ import logger from '../utils/logger.js'
 
 const router = Router()
 
-// 健康检查 - 返回完整系统状态
+/**
+ * @openapi
+ * /api/health:
+ *   get:
+ *     summary: 健康检查
+ *     description: 返回 API 服务器及依赖服务（数据库、Redis、LLM）的健康状态
+ *     tags:
+ *       - System
+ *     responses:
+ *       200:
+ *         description: 所有服务健康
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 code:
+ *                   type: integer
+ *                   example: 200
+ *                 message:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     ok:
+ *                       type: boolean
+ *                     timestamp:
+ *                       type: string
+ *                     services:
+ *                       type: object
+ *       503:
+ *         description: 部分服务不可用
+ */
 router.get('/health', async (_req, res) => {
   try {
     const checks = await Promise.allSettled([
@@ -28,7 +61,7 @@ router.get('/health', async (_req, res) => {
 
     const dbHealthy = dbCheck.status === 'fulfilled'
     const redisHealthy = redisCheck.status === 'fulfilled' && redisCheck.value === 'PONG'
-    const llmResult = llmCheck.status === 'fulfilled' ? llmCheck.value : { ok: false, error: 'Check failed' }
+    const llmResult = llmCheck.status === 'fulfilled' ? llmCheck.value : { ok: false, message: 'Check failed' , data: null }
 
     const allHealthy = dbHealthy && redisHealthy
 
@@ -38,12 +71,12 @@ router.get('/health', async (_req, res) => {
       services: {
         database: { ok: dbHealthy, latencyMs: dbHealthy ? 0 : undefined },
         redis: { ok: redisHealthy },
-        llm: { ok: llmResult.ok, provider: (llmResult as any).provider, error: llmResult.error },
+        llm: { ok: llmResult.ok, provider: (llmResult as any).provider, error: (llmResult as any).error },
       },
     })
   } catch (error) {
     logger.error('Health check failed', error instanceof Error ? error : undefined)
-    res.status(503).json({ ok: false, error: 'Health check failed' })
+    res.status(503).json({ ok: false, message: 'Health check failed', data: null })
   }
 })
 

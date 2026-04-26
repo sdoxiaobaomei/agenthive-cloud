@@ -7,6 +7,9 @@ const PUBLIC_PATHS = [
   '/health',
   '/visitor-status',
   '/demo/',
+  '/api-docs',
+  '/swagger-ui',
+  '/api-docs.json',
 ]
 
 /**
@@ -82,7 +85,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     if (resolved) {
       return next()
     }
-    return res.status(401).json({ success: false, error: 'Invalid gateway user identity' })
+    return res.status(401).json({ code: 401, message: 'Invalid gateway user identity', data: null })
   }
 
   // 模式 B：本地 JWT 验证（开发直连模式）
@@ -91,7 +94,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     return next()
   }
 
-  return res.status(401).json({ success: false, error: 'Unauthorized' })
+  return res.status(401).json({ code: 401, message: 'Unauthorized', data: null })
 }
 
 export async function optionalAuthMiddleware(req: Request, res: Response, next: NextFunction) {

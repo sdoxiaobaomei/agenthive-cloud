@@ -43,13 +43,11 @@ export const getTasks = async (req: Request, res: Response) => {
     const size = parseInt(pageSize as string)
     const start = (pageNum - 1) * size
     tasks = tasks.slice(start, start + size)
-    res.json({
-      success: true,
-      data: { tasks, total, page: pageNum, pageSize: size },
+    res.json({ code: 200, message: 'success', data: { tasks, total, page: pageNum, pageSize: size },
     })
   } catch (error) {
     logger.error('Get tasks error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取任务列表失败' })
+    res.status(500).json({ code: 500, message: '获取任务列表失败' , data: null })
   }
 }
 
@@ -63,7 +61,7 @@ export const getTask = async (req: Request, res: Response) => {
     const { id } = req.params
     const task = await taskDb.findById(id)
     if (!task) {
-      return res.status(404).json({ success: false, error: '任务不存在' })
+      return res.status(404).json({ code: 404, message: '任务不存在' , data: null })
     }
     let executionStatus = null
     try {
@@ -72,13 +70,11 @@ export const getTask = async (req: Request, res: Response) => {
     } catch {
       // TaskExecutionService not initialized, ignore
     }
-    res.json({
-      success: true,
-      data: { ...task, execution: executionStatus || null },
+    res.json({ code: 200, message: 'success', data: { ...task, execution: executionStatus || null },
     })
   } catch (error) {
     logger.error('Get task error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取任务详情失败' })
+    res.status(500).json({ code: 500, message: '获取任务详情失败' , data: null })
   }
 }
 
@@ -91,9 +87,7 @@ export const createTask = async (req: Request, res: Response) => {
     await delay(300)
     const parseResult = createTaskSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
@@ -104,11 +98,11 @@ export const createTask = async (req: Request, res: Response) => {
       status: 'pending',
       progress: 0,
     })
-    res.status(201).json({ success: true, data: task })
+    res.status(201).json({ code: 201, message: 'success', data: task })
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     logger.error('Create task error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '创建任务失败: ' + errorMessage })
+    res.status(500).json({ code: 500, message: '创建任务失败: ' + errorMessage , data: null })
   }
 }
 
@@ -121,10 +115,10 @@ export const executeTask = async (req: Request, res: Response) => {
     const { id } = req.params
     const task = await taskDb.findById(id)
     if (!task) {
-      return res.status(404).json({ success: false, error: '任务不存在' })
+      return res.status(404).json({ code: 404, message: '任务不存在' , data: null })
     }
     if (task.status === 'running') {
-      return res.status(400).json({ success: false, error: '任务正在执行中' })
+      return res.status(400).json({ code: 400, message: '任务正在执行中' , data: null })
     }
     const executionService = getTaskExecutionService()
     const taskInfo: TaskInfo = {
@@ -148,14 +142,11 @@ export const executeTask = async (req: Request, res: Response) => {
     }).catch((error) => {
       logger.error(`Task ${id} execution error`, error)
     })
-    res.json({
-      success: true,
-      message: '任务开始执行',
-      data: { taskId: id, status: 'running' },
+    res.json({ code: 200, message: '任务开始执行', data: { taskId: id, status: 'running' },
     })
   } catch (error) {
     logger.error('Execute task error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '执行任务失败' })
+    res.status(500).json({ code: 500, message: '执行任务失败' , data: null })
   }
 }
 
@@ -169,21 +160,19 @@ export const updateTask = async (req: Request, res: Response) => {
     const { id } = req.params
     const parseResult = updateTaskSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
     const task = await taskDb.findById(id)
     if (!task) {
-      return res.status(404).json({ success: false, error: '任务不存在' })
+      return res.status(404).json({ code: 404, message: '任务不存在' , data: null })
     }
     const updated = await taskDb.update(id, parseResult.data as any)
-    res.json({ success: true, data: updated })
+    res.json({ code: 200, message: 'success', data: updated })
   } catch (error) {
     logger.error('Update task error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '更新任务失败' })
+    res.status(500).json({ code: 500, message: '更新任务失败' , data: null })
   }
 }
 
@@ -197,13 +186,13 @@ export const deleteTask = async (req: Request, res: Response) => {
     const { id } = req.params
     const task = await taskDb.findById(id)
     if (!task) {
-      return res.status(404).json({ success: false, error: '任务不存在' })
+      return res.status(404).json({ code: 404, message: '任务不存在' , data: null })
     }
     await taskDb.delete(id)
-    res.json({ success: true, message: '任务已删除' })
+    res.json({ code: 200, message: '任务已删除', data: null })
   } catch (error) {
     logger.error('Delete task error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '删除任务失败' })
+    res.status(500).json({ code: 500, message: '删除任务失败' , data: null })
   }
 }
 
@@ -216,7 +205,7 @@ export const cancelTask = async (req: Request, res: Response) => {
     const { id } = req.params
     const task = await taskDb.findById(id)
     if (!task) {
-      return res.status(404).json({ success: false, error: '任务不存在' })
+      return res.status(404).json({ code: 404, message: '任务不存在' , data: null })
     }
     let cancelled = false
     try {
@@ -227,13 +216,13 @@ export const cancelTask = async (req: Request, res: Response) => {
     }
     // Allow cancelling tasks that are not running (just update DB status)
     if (!cancelled && task.status === 'running') {
-      return res.status(400).json({ success: false, error: '任务未在执行中' })
+      return res.status(400).json({ code: 400, message: '任务未在执行中' , data: null })
     }
     const updated = await taskDb.update(id, { status: 'cancelled' })
-    res.json({ success: true, data: updated })
+    res.json({ code: 200, message: 'success', data: updated })
   } catch (error) {
     logger.error('Cancel task error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '取消任务失败' })
+    res.status(500).json({ code: 500, message: '取消任务失败' , data: null })
   }
 }
 
@@ -247,13 +236,13 @@ export const getSubtasks = async (req: Request, res: Response) => {
     const { id } = req.params
     const task = await taskDb.findById(id)
     if (!task) {
-      return res.status(404).json({ success: false, error: '任务不存在' })
+      return res.status(404).json({ code: 404, message: '任务不存在' , data: null })
     }
     const subtasks = await taskDb.findSubtasks(id)
-    res.json({ success: true, data: { subtasks, total: subtasks.length } })
+    res.json({ code: 200, message: 'success', data: { subtasks, total: subtasks.length } })
   } catch (error) {
     logger.error('Get subtasks error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取子任务失败' })
+    res.status(500).json({ code: 500, message: '获取子任务失败' , data: null })
   }
 }
 
@@ -267,11 +256,9 @@ export const getTaskProgress = async (req: Request, res: Response) => {
     const executionService = getTaskExecutionService()
     const status = executionService.getTaskStatus(id)
     if (!status) {
-      return res.status(404).json({ success: false, error: '未找到任务执行状态' })
+      return res.status(404).json({ code: 404, message: '未找到任务执行状态' , data: null })
     }
-    res.json({
-      success: true,
-      data: {
+    res.json({ code: 200, message: 'success', data: {
         taskId: id,
         status: status.status,
         progress: status.progress,
@@ -282,7 +269,7 @@ export const getTaskProgress = async (req: Request, res: Response) => {
     })
   } catch (error) {
     logger.error('Get task progress error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取任务进度失败' })
+    res.status(500).json({ code: 500, message: '获取任务进度失败' , data: null })
   }
 }
 
@@ -295,9 +282,9 @@ export const getTaskLogs = async (req: Request, res: Response) => {
     const { id } = req.params
     const limit = Math.min(500, parseInt(req.query.limit as string) || 100)
     const logs = await redisCache.getLogs(id, limit)
-    res.json({ success: true, data: { taskId: id, logs, total: logs.length } })
+    res.json({ code: 200, message: 'success', data: { taskId: id, logs, total: logs.length } })
   } catch (error) {
     logger.error('Get task logs error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取任务日志失败' })
+    res.status(500).json({ code: 500, message: '获取任务日志失败' , data: null })
   }
 }

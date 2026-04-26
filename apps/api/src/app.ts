@@ -6,6 +6,7 @@ import { corsConfig } from './config/cors.js'
 import { authMiddleware } from './middleware/auth.js'
 import routes from './routes/index.js'
 import logger from './utils/logger.js'
+import { setupSwagger } from './swagger.js'
 
 const app = express()
 
@@ -17,6 +18,9 @@ app.use(cookieParser())
 // 请求日志（结构化，含 trace_id）
 app.use(requestLogger())
 
+// Swagger API 文档（需在认证中间件之前挂载，避免被拦截）
+setupSwagger(app)
+
 // 认证中间件
 app.use(authMiddleware)
 
@@ -26,8 +30,9 @@ app.use('/api', routes)
 // 404 处理
 app.use((_req, res) => {
   res.status(404).json({
-    success: false,
-    error: 'API 不存在',
+    code: 404,
+    message: 'API 不存在',
+    data: null,
   })
 })
 
@@ -35,8 +40,9 @@ app.use((_req, res) => {
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logger.error('Unhandled server error', err)
   res.status(500).json({
-    success: false,
-    error: '服务器内部错误',
+    code: 500,
+    message: '服务器内部错误',
+    data: null,
   })
 })
 

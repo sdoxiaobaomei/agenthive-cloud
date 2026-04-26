@@ -95,7 +95,7 @@ export class TaskExecutionService {
       const result = await this.executeWithLLM(task, workspacePath, abortController.signal)
 
       // 更新任务结果
-      task.status = result.success ? 'completed' : 'failed'
+      task.status = result.code === 200 ? 'completed' : 'failed'
       task.result = result
       task.completedAt = new Date()
       task.progress = 100
@@ -103,8 +103,8 @@ export class TaskExecutionService {
       // 广播完成
       broadcast.taskProgress(task.id, 100, {
         status: task.status,
-        result: result.success ? 'success' : 'failed',
-        output: result.output,
+        result: result.code === 200 ? 'success' : 'failed',
+        output: result.data,
       })
 
       console.log(`[TaskExecution] Task ${task.id} completed: ${task.status}`)
@@ -138,7 +138,7 @@ export class TaskExecutionService {
     task: TaskInfo, 
     workspacePath: string,
     signal: AbortSignal
-  ): Promise<{ success: boolean; output?: any; error?: string }> {
+  ): Promise<{ code: number; message: string; data?: any }> {
     
     try {
       // 获取 LLM 服务
@@ -197,8 +197,9 @@ export class TaskExecutionService {
       await writeFile(resultPath, fullContent, 'utf-8')
 
       return {
-        success: true,
-        output: {
+        code: 200,
+        message: 'success',
+        data: {
           content: fullContent,
           resultPath,
           workspace: workspacePath,
@@ -210,8 +211,9 @@ export class TaskExecutionService {
     } catch (error) {
       console.error('[TaskExecution] LLM execution failed:', error)
       return {
-        success: false,
-        error: error instanceof Error ? error.message : 'LLM execution failed'
+        code: 500,
+        message: error instanceof Error ? error.message : 'LLM execution failed',
+        data: null
       }
     }
   }
