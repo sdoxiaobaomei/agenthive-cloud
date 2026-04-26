@@ -1,5 +1,4 @@
 import type { Request, Response, NextFunction } from 'express'
-import { jwt } from '../utils/jwt.js'
 import { resolveLocalUser } from '../services/userMapping.js'
 import logger from '../utils/logger.js'
 
@@ -13,10 +12,23 @@ const PUBLIC_PATHS = [
 ]
 
 /**
- * 生产模式（Gateway 透传）判断
+ * 开发环境模拟用户注入（用于本地直连调试，不走 Gateway）
  */
-function isGatewayMode(req: Request): boolean {
-  return !!req.headers['x-user-id']
+function injectDevUser(req: Request): boolean {
+  if (process.env.NODE_ENV !== 'development') return false
+
+  const devUserId = process.env.DEV_USER_ID || 'dev-user-id'
+  const devUserName = process.env.DEV_USER_NAME || 'Developer'
+  const devUserRole = process.env.DEV_USER_ROLE || 'admin'
+
+  ;(req as any).userId = devUserId
+  ;(req as any).externalUserId = devUserId
+  ;(req as any).user = {
+    userId: devUserId,
+    username: devUserName,
+    role: devUserRole,
+  }
+  return true
 }
 
 /**
@@ -47,25 +59,6 @@ async function resolveGatewayUser(req: Request): Promise<boolean> {
   }
 }
 
-/**
- * 从本地 JWT 解析用户身份（开发直连模式）
- */
-async function resolveLocalToken(req: Request): Promise<boolean> {
-  const token = req.headers.authorization?.replace('Bearer ', '') || req.cookies?.token
-  if (!token) return false
-
-  try {
-    const payload = await jwt.verify(token)
-    if (!payload) return false
-
-    ;(req as any).userId = payload.userId
-    ;(req as any).user = payload
-    return true
-  } catch {
-    return false
-  }
-}
-
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
   // 白名单路径直接放行
   if (PUBLIC_PATHS.some((p) => req.path.includes(p))) {
@@ -79,32 +72,56 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     return next()
   }
 
-  // 模式 A：Gateway 透传（生产环境）
-  if (isGatewayMode(req)) {
-    const resolved = await resolveGatewayUser(req)
-    if (resolved) {
-      return next()
-    }
-    return res.status(401).json({ code: 401, message: 'Invalid gateway user identity', data: null })
+  // 开发环境：注入模拟用户（仅本地开发使用）
+  if (injectDevUser(req)) {
+    return next()
   }
 
-  // 模式 B：本地 JWT 验证（开发直连模式）
-  const resolved = await resolveLocalToken(req)
+  // 生产环境：强制 Gateway 透传认证
+  const resolved = await resolveGatewayUser(req)
   if (resolved) {
     return next()
   }
 
-  return res.status(401).json({ code: 401, message: 'Unauthorized', data: null })
+  return res.status(401).json({
+    code: 401,
+    message: 'Missing gateway authentication header (X-User-Id)',
+    data: null,
+  })
 }
 
 export async function optionalAuthMiddleware(req: Request, res: Response, next: NextFunction) {
-  // 模式 A：Gateway 透传
-  if (isGatewayMode(req)) {
-    await resolveGatewayUser(req)
+  // 测试环境
+  if (process.env.NODE_ENV === 'test') {
+    ;(req as any).userId = 'test-user-id'
+    ;(req as any).user = { userId: 'test-user-id', role: 'admin' }
     return next()
   }
 
-  // 模式 B：本地 JWT 验证
-  await resolveLocalToken(req)
+  // 开发环境模拟
+  if (injectDevUser(req)) {
+    return next()
+  }
+
+  // Gateway 透传（可选，失败不阻断）
+  const externalId = req.headers['x-user-id'] as string | undefined
+  if (externalId) {
+    try {
+      const localUser = await resolveLocalUser({
+        externalId,
+        username: req.headers['x-user-name'] as string | undefined,
+        role: req.headers['x-user-role'] as string | undefined,
+      })
+      ;(req as any).userId = localUser.id
+      ;(req as any).user = {
+        userId: localUser.id,
+        username: localUser.username,
+        role: localUser.role,
+      }
+    } catch (error) {
+      logger.warn('Optional auth: gateway user resolution failed', error instanceof Error ? error : undefined)
+    }
+  }
+
   next()
 }
