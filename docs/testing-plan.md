@@ -29,8 +29,7 @@
 ### 2.1 本地开发环境
 ```bash
 # 启动所有基础设施
-docker compose -f docker-compose.yml up -d
-docker compose -f docker-compose.java.yml up -d
+docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 docker compose -f monitoring/docker-compose.yml up -d
 
 # 启动 Node.js 服务

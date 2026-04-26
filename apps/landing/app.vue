@@ -1,15 +1,14 @@
 <template>
-  <Transition name="page" mode="out-in">
-    <NuxtLayout>
-      <NuxtPage />
-    </NuxtLayout>
-  </Transition>
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
   
   <!-- 全局 Loading 遮罩层 -->
   <GlobalLoading />
 </template>
 
 <script setup>
+import '~/assets/css/tailwind.css'
 // SEO 元数据
 useHead({
   htmlAttrs: {

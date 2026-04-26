@@ -17,7 +17,7 @@
 ### 1. 启动基础设施
 
 ```bash
-docker compose -f docker-compose.java.yml up -d
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d
 ```
 
 这会启动：
@@ -48,7 +48,7 @@ cd auth-service && mvn spring-boot:run
 
 或使用 Docker Compose：
 ```bash
-docker compose -f docker-compose.java.yml up -d gateway-service auth-service user-service
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d gateway-service auth-service user-service
 ```
 
 ## 技术栈

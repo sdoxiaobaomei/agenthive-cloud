@@ -36,7 +36,7 @@ Write-Host ""
 # 启动服务
 Write-Host "[3/3] 启动全容器化服务..." -ForegroundColor Yellow
 Write-Host "⚠️ 首次启动需要安装 pnpm 和依赖，可能需要 3-5 分钟" -ForegroundColor Yellow
-docker compose -f docker-compose.full.yml up -d
+docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 
 # 等待初始化
 Write-Host ""
@@ -88,12 +88,12 @@ if ($landingReady -and $apiReady) {
     Write-Host "  🔗 Ollama:  http://localhost:11434 (宿主机)" -ForegroundColor Gray
     Write-Host ""
     Write-Host "查看日志:" -ForegroundColor Yellow
-    Write-Host "  docker compose -f docker-compose.full.yml logs -f landing" -ForegroundColor Gray
-    Write-Host "  docker compose -f docker-compose.full.yml logs -f api" -ForegroundColor Gray
+    Write-Host "  docker compose -f docker-compose.dev.yml --env-file .env.dev logs -f landing" -ForegroundColor Gray
+    Write-Host "  docker compose -f docker-compose.dev.yml --env-file .env.dev logs -f api" -ForegroundColor Gray
 } else {
     Write-Host "⚠️ 部分服务启动较慢，请查看日志:" -ForegroundColor Yellow
-    Write-Host "  docker compose -f docker-compose.full.yml logs landing" -ForegroundColor Gray
+    Write-Host "  docker compose -f docker-compose.dev.yml --env-file .env.dev logs landing" -ForegroundColor Gray
 }
 Write-Host ""
 Write-Host "停止服务:" -ForegroundColor Yellow
-Write-Host "  docker compose -f docker-compose.full.yml down" -ForegroundColor Gray
+Write-Host "  docker compose -f docker-compose.dev.yml --env-file .env.dev down" -ForegroundColor Gray

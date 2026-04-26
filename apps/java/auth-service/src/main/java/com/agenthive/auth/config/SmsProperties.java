@@ -38,6 +38,18 @@ public class SmsProperties {
     /** 是否启用 SMS */
     private boolean enabled = true;
 
+    // ========== 短信模板 CODE 配置（从阿里云控制台获取） ==========
+    /** 登录/注册模板 TemplateCode */
+    private String templateCodeLoginRegister = "100001";
+    /** 修改绑定手机号模板 TemplateCode */
+    private String templateCodeModifyPhone = "100002";
+    /** 重置密码模板 TemplateCode */
+    private String templateCodeResetPassword = "100003";
+    /** 绑定新手机号模板 TemplateCode */
+    private String templateCodeBindPhone = "100004";
+    /** 验证绑定手机号模板 TemplateCode */
+    private String templateCodeVerifyPhone = "100005";
+
     // ========== OIDC 联邦身份配置（K8s 生产环境推荐） ==========
 
     /**

@@ -8,9 +8,7 @@ const router = Router()
 router.get('/plan', async (_req, res) => {
   await delay(200)
   
-  res.json({
-    success: true,
-    data: {
+  res.json({ code: 200, message: 'success', data: {
       id: 'demo-plan-1',
       name: '示例 SaaS 项目',
       summary: '一个带会员系统的博客平台',
@@ -29,9 +27,7 @@ router.get('/agents', async (_req, res) => {
   
   const agents = agentDb.findAll()
   
-  res.json({
-    success: true,
-    data: agents,
+  res.json({ code: 200, message: 'success', data: agents,
   })
 })
 
@@ -41,9 +37,7 @@ router.get('/tasks', async (_req, res) => {
   
   const tasks = taskDb.findAll()
   
-  res.json({
-    success: true,
-    data: tasks,
+  res.json({ code: 200, message: 'success', data: tasks,
   })
 })
 
@@ -51,9 +45,7 @@ router.get('/tasks', async (_req, res) => {
 router.get('/visitor-status', async (_req, res) => {
   await delay(200)
   
-  res.json({
-    success: true,
-    data: {
+  res.json({ code: 200, message: 'success', data: {
       visitorId: `visitor-${Date.now()}`,
       mode: 'visitor',
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),

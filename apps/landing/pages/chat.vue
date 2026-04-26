@@ -7,6 +7,28 @@
 
     <!-- Center Content Area -->
     <div class="center-area">
+      <!-- Project Header -->
+      <div v-if="currentProject" class="project-header">
+        <div class="project-header-info">
+          <span class="project-header-name">{{ currentProject.name }}</span>
+          <span class="project-header-desc">{{ currentProject.description || '暂无描述' }}</span>
+        </div>
+        <div class="project-header-actions">
+          <el-button size="small" text @click="goHome">
+            <el-icon><HomeFilled /></el-icon>
+            <span>返回首页</span>
+          </el-button>
+          <el-button size="small" text @click="switchProject">
+            <el-icon><Switch /></el-icon>
+            <span>切换项目</span>
+          </el-button>
+        </div>
+      </div>
+      <div v-else class="project-header project-header--empty">
+        <span class="project-header-placeholder">未选择项目</span>
+        <el-button size="small" type="primary" @click="goHome">选择或创建项目</el-button>
+      </div>
+
       <!-- Tab Navigation -->
       <div class="center-tabs">
         <button 
@@ -233,6 +255,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   Document,
@@ -243,7 +266,9 @@ import {
   Monitor,
   View,
   Edit,
-  Delete
+  Delete,
+  HomeFilled,
+  Switch
 } from '@element-plus/icons-vue'
 import ChatPanel from '~/components/ChatPanel.vue'
 import FileTreeNode from '~/components/FileTreeNode.vue'
@@ -264,6 +289,7 @@ interface Project {
   description: string
 }
 
+const router = useRouter()
 const chatStore = useChatStore()
 const currentProject = ref<Project | null>(null)
 const activeTab = ref<'files' | 'editor' | 'preview'>('editor')
@@ -345,6 +371,18 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', hideContextMenu)
 })
+
+// Navigate back to home page
+function goHome() {
+  router.push('/')
+}
+
+// Switch project - go to home and open project dialog
+function switchProject() {
+  sessionStorage.removeItem('pending-project')
+  currentProject.value = null
+  router.push('/')
+}
 
 // Load file content from API
 async function loadFileContent(path: string) {
@@ -534,6 +572,58 @@ async function confirmDelete() {
   flex-direction: column;
   min-width: 0;
   background: #ffffff;
+}
+
+/* Project Header */
+.project-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.project-header-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.project-header-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-header-desc {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.project-header-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.project-header--empty {
+  justify-content: center;
+  gap: 12px;
+  color: #6b7280;
+}
+
+.project-header-placeholder {
+  font-size: 13px;
 }
 
 /* Center Tabs */

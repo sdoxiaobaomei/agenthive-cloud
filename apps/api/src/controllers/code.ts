@@ -31,13 +31,11 @@ export const getFileList = async (req: Request, res: Response) => {
   try {
     await delay(300)
     const files = await codeDb.findAll()
-    res.json({
-      success: true,
-      data: { files, total: files.length, path: (req.query.path as string) || '/' },
+    res.json({ code: 200, message: 'success', data: { files, total: files.length, path: (req.query.path as string) || '/' },
     })
   } catch (error) {
     logger.error('Get file list error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取文件列表失败' })
+    res.status(500).json({ code: 500, message: '获取文件列表失败' , data: null })
   }
 }
 
@@ -51,11 +49,9 @@ export const getFileContent = async (req: Request, res: Response) => {
     const filePath = '/' + req.params[0]
     const file = await codeDb.findByPath(filePath)
     if (!file) {
-      return res.status(404).json({ success: false, error: '文件不存在' })
+      return res.status(404).json({ code: 404, message: '文件不存在' , data: null })
     }
-    res.json({
-      success: true,
-      data: {
+    res.json({ code: 200, message: 'success', data: {
         path: file.path,
         content: file.content,
         language: file.language,
@@ -64,7 +60,7 @@ export const getFileContent = async (req: Request, res: Response) => {
     })
   } catch (error) {
     logger.error('Get file content error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取文件内容失败' })
+    res.status(500).json({ code: 500, message: '获取文件内容失败' , data: null })
   }
 }
 
@@ -82,9 +78,7 @@ export const updateFile = async (req: Request, res: Response) => {
     const filePath = '/' + req.params[0]
     const parseResult = updateFileSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
@@ -102,9 +96,7 @@ export const updateFile = async (req: Request, res: Response) => {
         language,
       })
     }
-    res.json({
-      success: true,
-      data: {
+    res.json({ code: 200, message: 'success', data: {
         path: file!.path,
         content: file!.content,
         language: file!.language,
@@ -113,7 +105,7 @@ export const updateFile = async (req: Request, res: Response) => {
     })
   } catch (error) {
     logger.error('Update file error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '更新文件失败' })
+    res.status(500).json({ code: 500, message: '更新文件失败' , data: null })
   }
 }
 
@@ -127,13 +119,13 @@ export const deleteFile = async (req: Request, res: Response) => {
     const filePath = '/' + req.params[0]
     const file = await codeDb.findByPath(filePath)
     if (!file) {
-      return res.status(404).json({ success: false, error: '文件不存在' })
+      return res.status(404).json({ code: 404, message: '文件不存在' , data: null })
     }
     await codeDb.delete(filePath)
-    res.json({ success: true, message: '文件已删除' })
+    res.json({ code: 200, message: '文件已删除', data: null })
   } catch (error) {
     logger.error('Delete file error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '删除文件失败' })
+    res.status(500).json({ code: 500, message: '删除文件失败' , data: null })
   }
 }
 
@@ -146,16 +138,14 @@ export const searchFiles = async (req: Request, res: Response) => {
     await delay(500)
     const { query } = req.query
     if (!query) {
-      return res.status(400).json({ success: false, error: '搜索关键词不能为空' })
+      return res.status(400).json({ code: 400, message: '搜索关键词不能为空' , data: null })
     }
     const files = await codeDb.search(query as string)
-    res.json({
-      success: true,
-      data: { files, total: files.length, query: query as string },
+    res.json({ code: 200, message: 'success', data: { files, total: files.length, query: query as string },
     })
   } catch (error) {
     logger.error('Search files error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '搜索文件失败' })
+    res.status(500).json({ code: 500, message: '搜索文件失败' , data: null })
   }
 }
 
@@ -168,13 +158,11 @@ export const getRecentFiles = async (req: Request, res: Response) => {
     await delay(300)
     const limit = parseInt(req.query.limit as string) || 10
     const files = await codeDb.getRecent(limit)
-    res.json({
-      success: true,
-      data: { files, total: files.length },
+    res.json({ code: 200, message: 'success', data: { files, total: files.length },
     })
   } catch (error) {
     logger.error('Get recent files error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取最近文件失败' })
+    res.status(500).json({ code: 500, message: '获取最近文件失败' , data: null })
   }
 }
 
@@ -189,10 +177,7 @@ export const getWorkspaceFiles = async (req: Request, res: Response) => {
     const workspacePath = getUserWorkspace(userId, projectId as string)
     const targetPath = join(workspacePath, path as string)
     if (!isPathSafe(workspacePath, targetPath)) {
-      return res.status(403).json({
-        success: false,
-        error: '访问被拒绝：路径超出工作区范围',
-      })
+      return res.status(403).json({ code: 403, message: '访问被拒绝：路径超出工作区范围', data: null })
     }
     const entries = await readdir(targetPath, { withFileTypes: true })
     const files = await Promise.all(
@@ -209,13 +194,11 @@ export const getWorkspaceFiles = async (req: Request, res: Response) => {
         }
       })
     )
-    res.json({
-      success: true,
-      data: { files, path: path as string, workspace: workspacePath },
+    res.json({ code: 200, message: 'success', data: { files, path: path as string, workspace: workspacePath },
     })
   } catch (error) {
     logger.error('Get workspace files error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取工作区文件失败' })
+    res.status(500).json({ code: 500, message: '获取工作区文件失败' , data: null })
   }
 }
 
@@ -228,23 +211,18 @@ export const getWorkspaceFileContent = async (req: Request, res: Response) => {
     const { projectId, filePath } = req.query
     const userId = (req as any).userId || 'anonymous'
     if (!filePath) {
-      return res.status(400).json({ success: false, error: '文件路径不能为空' })
+      return res.status(400).json({ code: 400, message: '文件路径不能为空' , data: null })
     }
     const workspacePath = getUserWorkspace(userId, projectId as string)
     const targetPath = join(workspacePath, filePath as string)
     if (!isPathSafe(workspacePath, targetPath)) {
-      return res.status(403).json({
-        success: false,
-        error: '访问被拒绝：路径超出工作区范围',
-      })
+      return res.status(403).json({ code: 403, message: '访问被拒绝：路径超出工作区范围', data: null })
     }
     const content = await readFile(targetPath, 'utf-8')
     const stats = await stat(targetPath)
     const fileName = (filePath as string).split('/').pop() || ''
     const language = getLanguageFromFilename(fileName)
-    res.json({
-      success: true,
-      data: {
+    res.json({ code: 200, message: 'success', data: {
         path: filePath,
         content,
         language,
@@ -254,10 +232,10 @@ export const getWorkspaceFileContent = async (req: Request, res: Response) => {
     })
   } catch (error: any) {
     if (error.code === 'ENOENT') {
-      return res.status(404).json({ success: false, error: '文件不存在' })
+      return res.status(404).json({ code: 404, message: '文件不存在' , data: null })
     }
     logger.error('Get workspace file content error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取文件内容失败' })
+    res.status(500).json({ code: 500, message: '获取文件内容失败' , data: null })
   }
 }
 
@@ -275,9 +253,7 @@ export const saveWorkspaceFile = async (req: Request, res: Response) => {
   try {
     const parseResult = saveWorkspaceFileSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
@@ -286,18 +262,13 @@ export const saveWorkspaceFile = async (req: Request, res: Response) => {
     const workspacePath = getUserWorkspace(userId, projectId)
     const targetPath = join(workspacePath, filePath)
     if (!isPathSafe(workspacePath, targetPath)) {
-      return res.status(403).json({
-        success: false,
-        error: '访问被拒绝：路径超出工作区范围',
-      })
+      return res.status(403).json({ code: 403, message: '访问被拒绝：路径超出工作区范围', data: null })
     }
     await mkdir(dirname(targetPath), { recursive: true })
     await writeFile(targetPath, content, 'utf-8')
     const stats = await stat(targetPath)
     const fileName = filePath.split('/').pop() || ''
-    res.json({
-      success: true,
-      data: {
+    res.json({ code: 200, message: 'success', data: {
         path: filePath,
         size: stats.size,
         modifiedAt: stats.mtime,
@@ -306,7 +277,7 @@ export const saveWorkspaceFile = async (req: Request, res: Response) => {
     })
   } catch (error) {
     logger.error('Save workspace file error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '保存文件失败' })
+    res.status(500).json({ code: 500, message: '保存文件失败' , data: null })
   }
 }
 
@@ -319,24 +290,21 @@ export const deleteWorkspaceFile = async (req: Request, res: Response) => {
     const { projectId, filePath } = req.query
     const userId = (req as any).userId || 'anonymous'
     if (!filePath) {
-      return res.status(400).json({ success: false, error: '文件路径不能为空' })
+      return res.status(400).json({ code: 400, message: '文件路径不能为空' , data: null })
     }
     const workspacePath = getUserWorkspace(userId, projectId as string)
     const targetPath = join(workspacePath, filePath as string)
     if (!isPathSafe(workspacePath, targetPath)) {
-      return res.status(403).json({
-        success: false,
-        error: '访问被拒绝：路径超出工作区范围',
-      })
+      return res.status(403).json({ code: 403, message: '访问被拒绝：路径超出工作区范围', data: null })
     }
     await rm(targetPath, { recursive: true, force: true })
-    res.json({ success: true, message: '文件已删除' })
+    res.json({ code: 200, message: '文件已删除', data: null })
   } catch (error: any) {
     if (error.code === 'ENOENT') {
-      return res.status(404).json({ success: false, error: '文件不存在' })
+      return res.status(404).json({ code: 404, message: '文件不存在' , data: null })
     }
     logger.error('Delete workspace file error', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '删除文件失败' })
+    res.status(500).json({ code: 500, message: '删除文件失败' , data: null })
   }
 }
 

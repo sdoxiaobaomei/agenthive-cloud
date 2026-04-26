@@ -16,6 +16,8 @@ out/
 .env.local
 .env.development
 .env.production
+.env.prod
+.env.prod.local
 *.env
 
 # IDE
@@ -95,3 +97,8 @@ kubeconfig-*
 # Keep these out of git; documented in deployment notes
 ingress-nginx-deploy.yaml
 cert-manager.yaml
+# Java build artifacts
+**/BOOT-INF/
+**/target/classes/
+
+.env.dev

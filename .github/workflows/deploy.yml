@@ -24,8 +24,8 @@ on:
 
 env:
   REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
-  COMPOSE_FILE: docker-compose.demo.yml
-  ENV_FILE: .env.demo.local
+  COMPOSE_FILE: docker-compose.prod.yml
+  ENV_FILE: .env.prod
 
 jobs:
   deploy:
@@ -51,6 +51,9 @@ jobs:
             set -e
             cd /opt/agenthive-cloud
 
+            echo "=== [0/6] 停止现有 prod 容器 ==="
+            docker compose -f docker-compose.prod.yml down 2>/dev/null || true
+
             echo "=== [1/6] 修复 Git 代理配置并拉取最新代码 ==="
             # 清除失效的 ghp.ci 代理配置
             git config --global --unset-regexp url."https://ghp.ci/" 2>/dev/null || true
@@ -63,13 +66,15 @@ jobs:
             git reset --hard origin/${DEFAULT_BRANCH}
             echo "当前 commit: $(git rev-parse --short HEAD)"
 
-            echo "=== [1.5/6] 检查环境配置文件 ==="
-            if [ ! -f .env.demo.local ]; then
-                cp .env.demo .env.demo.local
-                echo "⚠️  .env.demo.local 不存在，已从 .env.demo 自动创建"
-                echo "⚠️  请手动编辑 .env.demo.local，将占位符密码替换为真实密码"
+            echo "=== [1.5/6] 检查生产环境配置 ==="
+            if [ ! -f .env.prod ]; then
+                echo "❌ .env.prod 不存在，请手动在 ECS 上创建该文件"
+                echo "示例位置: /opt/agenthive-cloud/.env.prod"
+                echo "必须包含: DB_PASSWORD, REDIS_PASSWORD, JWT_SECRET, NACOS_PASSWORD 等"
+                exit 1
             fi
-            echo "环境文件: .env.demo.local"
+            chmod 600 .env.prod
+            echo "✅ .env.prod 已存在，继续部署"
 
             echo "=== [2/6] 登录阿里云 ACR ==="
             # 尝试登录 ACR（ECS 可能已登录，失败不阻塞）

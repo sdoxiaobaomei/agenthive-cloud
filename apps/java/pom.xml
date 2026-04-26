@@ -26,6 +26,7 @@
         <lombok.version>1.18.30</lombok.version>
         <jjwt.version>0.12.5</jjwt.version>
         <fastjson2.version>2.0.47</fastjson2.version>
+        <springdoc.version>2.6.0</springdoc.version>
     </properties>
 
     <modules>
@@ -40,6 +41,10 @@
         <module>gateway-service</module>
         <module>auth-service</module>
         <module>user-service</module>
+        <module>payment-service</module>
+        <module>order-service</module>
+        <module>cart-service</module>
+        <module>logistics-service</module>
     </modules>
 
     <dependencyManagement>
@@ -104,6 +109,16 @@
                 <groupId>com.alibaba.fastjson2</groupId>
                 <artifactId>fastjson2</artifactId>
                 <version>${fastjson2.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webflux-ui</artifactId>
+                <version>${springdoc.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

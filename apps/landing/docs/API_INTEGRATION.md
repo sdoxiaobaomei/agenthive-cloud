@@ -39,9 +39,9 @@
 | 1 | `auth.sendSms` | POST | `/api/auth/sms/send` | `{ phone, type }` | `Void` | `SmsController.sendVerifyCode()` | ✅ 已适配 |
 | 2 | `auth.loginBySms` | POST | `/api/auth/login/sms` | `{ phone, code }` | `TokenResponse` | `AuthController.smsLogin()` | ✅ 已适配 |
 | 3 | `auth.login` | POST | `/api/auth/login` | `{ username, password }` | `TokenResponse` | `AuthController.login()` | ✅ 已适配 |
-| 4 | `auth.register` | POST | `/api/auth/register` | `{ name, phone, code, password }` | `TokenResponse` | `AuthController.register()` | ⚠️ 参数不匹配 |
+| 4 | `auth.register` | POST | `/api/auth/register` | `{ username, password, email? }` | `TokenResponse` | `AuthController.register()` | ✅ 已适配 |
 | 5 | `auth.logout` | POST | `/api/auth/logout` | — | `Void` | `AuthController.logout()` | ✅ 已适配 |
-| 6 | `auth.refresh` | POST | `/api/auth/refresh` | — | `{ token }` | `AuthController.refresh()` | ⚠️ 字段待确认 |
+| 6 | `auth.refresh` | POST | `/api/auth/refresh` | `{ refreshToken }` | `{ accessToken, refreshToken }` | `AuthController.refresh()` | ✅ 已适配 |
 | 7 | `auth.me` | GET | `/api/auth/me` | — | `UserVO` | `AuthController.me()` | ✅ 已适配 |
 
 ### 关键差异
@@ -53,15 +53,14 @@
 - Java 返回 `Result<Void>`，**不再返回 devCode**
 
 **登录响应 (login/loginBySms)**
-- Java `TokenResponse` 字段：`accessToken`, `refreshToken`, `expiresIn`, `tokenType`
-- 前端已适配：从 `data.accessToken` 读取 token，然后额外调用 `auth.me()` 获取用户信息
-- Node.js 旧格式返回 `{ token, user }`，已废弃
+- Java `TokenResponse` 字段：`accessToken`, `refreshToken`, `expiresIn`, `tokenType`, `isNewUser`
+- BFF 层已统一转换为前端格式：`{ accessToken, refreshToken, isNewUser, user }`
+- `stores/auth.ts` 直接消费 `accessToken` / `refreshToken` / `isNewUser`
 
 **注册 (register)**
-- 前端参数：`{ name, phone, code, password }`
-- Java `RegisterRequest`：`{ username, password, email }`
-- ⚠️ **不匹配**：前端用手机号+验证码注册，Java 用用户名+密码+邮箱注册
-- **建议**：注册页需改为用户名密码注册，或 Java 后端增加手机号验证码注册接口
+- 前端参数：`{ username, password, email? }`（已适配 Java `RegisterRequest`）
+- 调用路径：`useApi.auth.register()` → Gateway `POST /api/auth/register` → Java `AuthController.register()`
+- 当前注册入口：登录页 SMS 登录自动注册新用户，`isNewUser=true` 时展示欢迎弹窗
 
 **用户信息 (me)**
 - Java `UserVO`：`{ id: Long, username, email, phone, avatar, status, createdAt, roles: string[] }`
@@ -186,6 +185,6 @@
 
 ## 待办事项
 
-- [ ] 注册接口：前端 `name/phone/code/password` ↔ Java `username/password/email` 不匹配
-- [ ] 刷新 Token：`auth.refresh()` 返回结构需确认 Java `TokenResponse` 是否含新 token
+- [x] 注册接口：前端参数已适配 Java `RegisterRequest`（`{ username, password, email? }`）
+- [x] 刷新 Token：BFF 已返回 `{ accessToken, refreshToken }`，`useApi.refresh(refreshToken)` 已适配
 - [ ] 其他 Java 服务（user/payment/order/cart/logistics）尚未对接前端页面

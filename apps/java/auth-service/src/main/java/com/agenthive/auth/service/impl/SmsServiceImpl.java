@@ -7,12 +7,9 @@ import com.agenthive.auth.service.SmsService;
 import com.agenthive.auth.service.dto.SendSmsVerifyCodeRequest;
 import com.agenthive.auth.service.dto.VerifySmsCodeRequest;
 import com.agenthive.common.core.exception.AgentHiveException;
-import com.aliyuncs.IAcsClient;
-import com.aliyuncs.dysmsapi.model.v20170525.SendSmsRequest;
-import com.aliyuncs.dysmsapi.model.v20170525.SendSmsResponse;
-import com.aliyuncs.exceptions.ClientException;
-import lombok.RequiredArgsConstructor;
+import com.aliyun.dypnsapi20170525.Client;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -22,12 +19,19 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SmsServiceImpl implements SmsService {
 
-    private final IAcsClient acsClient;
+    private final Client dypnsClient;
     private final SmsProperties smsProperties;
     private final StringRedisTemplate stringRedisTemplate;
+
+    public SmsServiceImpl(@Autowired(required = false) Client dypnsClient,
+                          SmsProperties smsProperties,
+                          StringRedisTemplate stringRedisTemplate) {
+        this.dypnsClient = dypnsClient;
+        this.smsProperties = smsProperties;
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
 
     private static final String SMS_CODE_KEY_PREFIX = "sms:code:";
     private static final String SMS_DAILY_COUNT_PREFIX = "sms:daily:";
@@ -42,29 +46,57 @@ public class SmsServiceImpl implements SmsService {
         checkRateLimit(phone, templateType);
 
         String code = generateCode();
-        String templateParam = String.format("{\"code\":\"%s\",\"min\":\"%d\"}",
-                code, templateType.getDefaultExpireMinutes());
+        String templateCode = resolveTemplateCode(templateType);
 
-        SendSmsRequest sendSmsRequest = new SendSmsRequest();
-        sendSmsRequest.setPhoneNumbers(phone);
-        sendSmsRequest.setSignName(signName);
-        sendSmsRequest.setTemplateCode(templateType.getTemplateCode());
-        sendSmsRequest.setTemplateParam(templateParam);
-
-        try {
-            SendSmsResponse response = acsClient.getAcsResponse(sendSmsRequest);
-            if (response.getCode() != null && "OK".equals(response.getCode())) {
-                log.info("SMS sent successfully to {}, template: {}, bizId: {}",
-                        phone, templateType.getTemplateCode(), response.getBizId());
-            } else {
-                log.error("SMS send failed to {}, code: {}, message: {}",
-                        phone, response.getCode(), response.getMessage());
-                throw new AgentHiveException(7102, "短信发送失败: " + response.getMessage());
+        if (!smsProperties.isEnabled()) {
+            log.warn("[LOCAL DEV] 阿里云 SMS 已禁用，跳过真实发送。验证码 {} 已存入 Redis（phone={}，template={}）",
+                    code, phone, templateCode);
+        } else {
+            if (dypnsClient == null) {
+                throw new AgentHiveException(7102, "短信发送失败: Dypnsapi Client 未初始化，请检查凭证配置");
             }
-        } catch (ClientException e) {
-            log.error("SMS send exception to {}, errCode: {}, errMsg: {}",
-                    phone, e.getErrCode(), e.getErrMsg(), e);
-            throw new AgentHiveException(7102, "短信发送失败: " + e.getErrMsg());
+
+            String templateParam = String.format("{\"code\":\"%s\",\"min\":\"%d\"}",
+                    code, templateType.getDefaultExpireMinutes());
+
+            try {
+                com.aliyun.dypnsapi20170525.models.SendSmsVerifyCodeRequest aliyunReq =
+                        new com.aliyun.dypnsapi20170525.models.SendSmsVerifyCodeRequest()
+                                .setPhoneNumber(phone)
+                                .setSignName(signName)
+                                .setTemplateCode(templateCode)
+                                .setTemplateParam(templateParam)
+                                .setCodeLength(6L)
+                                .setValidTime((long) templateType.getDefaultExpireMinutes() * 60);
+
+                log.info("SMS API request: phone={}, signName={}, templateCode={}",
+                        phone, signName, templateCode);
+
+                com.aliyun.dypnsapi20170525.models.SendSmsVerifyCodeResponse response =
+                        dypnsClient.sendSmsVerifyCode(aliyunReq);
+
+                com.aliyun.dypnsapi20170525.models.SendSmsVerifyCodeResponseBody body = response.getBody();
+                if (body == null) {
+                    throw new AgentHiveException(7102, "短信发送失败: 空响应");
+                }
+
+                log.info("SMS API response: code={}, message={}, success={}, requestId={}",
+                        body.getCode(), body.getMessage(), body.getSuccess(), body.getRequestId());
+
+                if (!Boolean.TRUE.equals(body.getSuccess())) {
+                    throw new AgentHiveException(7102,
+                            "短信发送失败: " + body.getMessage() + " (RequestId: " + body.getRequestId() + ")");
+                }
+
+                log.info("SMS sent successfully, phone={}, templateCode={}, requestId={}",
+                        phone, templateCode, body.getRequestId());
+
+            } catch (AgentHiveException e) {
+                throw e;
+            } catch (Exception e) {
+                log.error("SMS send exception, phone={}, templateCode={}", phone, templateCode, e);
+                throw new AgentHiveException(7102, "短信发送失败: " + e.getMessage());
+            }
         }
 
         String codeKey = buildCodeKey(phone, templateType);
@@ -149,6 +181,24 @@ public class SmsServiceImpl implements SmsService {
 
     private String buildIntervalKey(String phone) {
         return SMS_INTERVAL_PREFIX + phone;
+    }
+
+    /**
+     * 根据模板类型从 SmsProperties 中解析真实的阿里云 TemplateCode。
+     */
+    private String resolveTemplateCode(SmsTemplateType templateType) {
+        String code = switch (templateType) {
+            case LOGIN_REGISTER -> smsProperties.getTemplateCodeLoginRegister();
+            case MODIFY_PHONE -> smsProperties.getTemplateCodeModifyPhone();
+            case RESET_PASSWORD -> smsProperties.getTemplateCodeResetPassword();
+            case BIND_PHONE -> smsProperties.getTemplateCodeBindPhone();
+            case VERIFY_PHONE -> smsProperties.getTemplateCodeVerifyPhone();
+        };
+        if (code == null || code.isBlank()) {
+            throw new AgentHiveException(7105, "短信模板 Code 未配置: " + templateType.getTemplateKey()
+                    + "，请在 aliyun.sms.template-code-* 配置真实的阿里云 TemplateCode");
+        }
+        return code;
     }
 
     private long getSecondsUntilMidnight() {

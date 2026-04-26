@@ -20,16 +20,14 @@ export const createSession = async (req: Request, res: Response) => {
   try {
     const parseResult = createSessionSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
 
     const userId = (req as any).userId as string | undefined
     if (!userId) {
-      return res.status(401).json({ success: false, error: '未授权' })
+      return res.status(401).json({ code: 401, message: '未授权' , data: null })
     }
 
     const session = await chatService.createSession({
@@ -38,10 +36,10 @@ export const createSession = async (req: Request, res: Response) => {
       title: parseResult.data.title,
     })
 
-    res.status(201).json({ success: true, data: session })
+    res.status(201).json({ code: 201, message: 'success', data: session })
   } catch (error) {
     logger.error('Failed to create chat session', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '创建会话失败' })
+    res.status(500).json({ code: 500, message: '创建会话失败' , data: null })
   }
 }
 
@@ -49,14 +47,14 @@ export const listSessions = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as string | undefined
     if (!userId) {
-      return res.status(401).json({ success: false, error: '未授权' })
+      return res.status(401).json({ code: 401, message: '未授权' , data: null })
     }
 
     const sessions = await chatService.listSessions(userId)
-    res.json({ success: true, data: { items: sessions, total: sessions.length } })
+    res.json({ code: 200, message: 'success', data: { items: sessions, total: sessions.length } })
   } catch (error) {
     logger.error('Failed to list chat sessions', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取会话列表失败' })
+    res.status(500).json({ code: 500, message: '获取会话列表失败' , data: null })
   }
 }
 
@@ -65,12 +63,12 @@ export const getSession = async (req: Request, res: Response) => {
     const { id } = req.params
     const session = await chatService.getSession(id)
     if (!session) {
-      return res.status(404).json({ success: false, error: '会话不存在' })
+      return res.status(404).json({ code: 404, message: '会话不存在' , data: null })
     }
-    res.json({ success: true, data: session })
+    res.json({ code: 200, message: 'success', data: session })
   } catch (error) {
     logger.error('Failed to get chat session', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取会话详情失败' })
+    res.status(500).json({ code: 500, message: '获取会话详情失败' , data: null })
   }
 }
 
@@ -79,16 +77,14 @@ export const sendMessage = async (req: Request, res: Response) => {
     const { id } = req.params
     const parseResult = sendMessageSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
 
     const session = await chatService.getSession(id)
     if (!session) {
-      return res.status(404).json({ success: false, error: '会话不存在' })
+      return res.status(404).json({ code: 404, message: '会话不存在' , data: null })
     }
 
     // Add user message
@@ -100,13 +96,13 @@ export const sendMessage = async (req: Request, res: Response) => {
     // Add system message about detected intent
     await chatService.addMessage(id, 'system', `检测到意图: ${intent}`, { intent })
 
-    // If intent is actionable, spawn agent tasks
+    // Submit Agent tasks asynchronously via queue (does not wait for completion)
     let tasks: Awaited<ReturnType<typeof chatService.executeAgentTask>> = []
     if (intent !== 'chat' && intent !== 'explain') {
       tasks = await chatService.executeAgentTask(id, intent, parseResult.data.content)
     }
 
-    // Generate assistant response via LLM
+    // Generate assistant response (based on created tickets, not execution result)
     const responseContent = await chatService.generateReply(id, intent, parseResult.data.content, tasks)
     const assistantMsg = await chatService.addMessage(id, 'assistant', responseContent, {
       intent,
@@ -118,9 +114,7 @@ export const sendMessage = async (req: Request, res: Response) => {
       })),
     })
 
-    res.json({
-      success: true,
-      data: {
+    res.json({ code: 200, message: 'success', data: {
         message: assistantMsg,
         intent,
         tasks,
@@ -128,7 +122,7 @@ export const sendMessage = async (req: Request, res: Response) => {
     })
   } catch (error) {
     logger.error('Failed to send message', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '发送消息失败' })
+    res.status(500).json({ code: 500, message: '发送消息失败' , data: null })
   }
 }
 
@@ -140,13 +134,11 @@ export const getMessages = async (req: Request, res: Response) => {
 
     const session = await chatService.getSession(id)
     if (!session) {
-      return res.status(404).json({ success: false, error: '会话不存在' })
+      return res.status(404).json({ code: 404, message: '会话不存在' , data: null })
     }
 
     const { messages, total } = await chatService.getSessionMessages(id, page, pageSize)
-    res.json({
-      success: true,
-      data: {
+    res.json({ code: 200, message: 'success', data: {
         messages,
         total,
         page,
@@ -155,7 +147,7 @@ export const getMessages = async (req: Request, res: Response) => {
     })
   } catch (error) {
     logger.error('Failed to get messages', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取消息列表失败' })
+    res.status(500).json({ code: 500, message: '获取消息列表失败' , data: null })
   }
 }
 
@@ -164,25 +156,23 @@ export const executeTask = async (req: Request, res: Response) => {
     const { id } = req.params
     const parseResult = sendMessageSchema.safeParse(req.body)
     if (!parseResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: '参数校验失败',
+      return res.status(400).json({ code: 400, message: '参数校验失败',
         details: parseResult.error.format(),
       })
     }
 
     const session = await chatService.getSession(id)
     if (!session) {
-      return res.status(404).json({ success: false, error: '会话不存在' })
+      return res.status(404).json({ code: 404, message: '会话不存在' , data: null })
     }
 
     const { intent } = await chatService.classifyIntent(parseResult.data.content)
     const tasks = await chatService.executeAgentTask(id, intent, parseResult.data.content)
 
-    res.json({ success: true, data: { intent, tasks } })
+    res.json({ code: 200, message: 'success', data: { intent, tasks } })
   } catch (error) {
     logger.error('Failed to execute task', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '执行任务失败' })
+    res.status(500).json({ code: 500, message: '执行任务失败' , data: null })
   }
 }
 
@@ -191,14 +181,14 @@ export const getTasks = async (req: Request, res: Response) => {
     const { id } = req.params
     const session = await chatService.getSession(id)
     if (!session) {
-      return res.status(404).json({ success: false, error: '会话不存在' })
+      return res.status(404).json({ code: 404, message: '会话不存在' , data: null })
     }
 
     const tasks = await chatService.getSessionTasks(id)
-    res.json({ success: true, data: { tasks, total: tasks.length } })
+    res.json({ code: 200, message: 'success', data: { tasks, total: tasks.length } })
   } catch (error) {
     logger.error('Failed to get tasks', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取任务列表失败' })
+    res.status(500).json({ code: 500, message: '获取任务列表失败' , data: null })
   }
 }
 
@@ -206,10 +196,10 @@ export const getProgress = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
     const progress = await chatService.getTaskProgress(id)
-    res.json({ success: true, data: progress })
+    res.json({ code: 200, message: 'success', data: progress })
   } catch (error) {
     logger.error('Failed to get progress', error instanceof Error ? error : undefined)
-    res.status(500).json({ success: false, error: '获取进度失败' })
+    res.status(500).json({ code: 500, message: '获取进度失败' , data: null })
   }
 }
 

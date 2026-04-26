@@ -3,7 +3,7 @@
  *
  * - Creates and manages chat sessions
  * - Classifies user intent using LLM
- * - Spawns orchestrator for agent tasks
+ * - Submits agent tasks to Redis Stream queue
  * - Tracks task progress via Redis
  */
 
@@ -11,11 +11,8 @@ import { pool } from '../config/database.js'
 import redis, { key } from '../config/redis.js'
 import { getLLMService } from '../services/llm.js'
 import logger from '../utils/logger.js'
-import { spawn } from 'child_process'
 import path from 'path'
-import fs from 'fs'
-import { fileURLToPath } from 'url'
-import { getTraceParentEnv } from '@agenthive/observability'
+import { enqueueTask } from '../services/taskQueue.js'
 import type {
   ChatSession,
   ChatMessage,
@@ -26,8 +23,6 @@ import type {
 } from './types.js'
 import type { LLMMessage } from '../services/llm.js'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const ORCHESTRATOR_PATH = path.resolve(__dirname, '../../../../AGENTS/orchestrator.ts')
 const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/data/workspaces'
 
 // Prompt template for intent classification (from docs/architecture/chat-controller.md)
@@ -49,19 +44,7 @@ function generateId(prefix = 'id'): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
 }
 
-function validateOrchestratorPath(): void {
-  if (!fs.existsSync(ORCHESTRATOR_PATH)) {
-    throw new Error(`Orchestrator file not found: ${ORCHESTRATOR_PATH}`)
-  }
 
-  const projectRoot = path.resolve(__dirname, '../../../../')
-  const resolvedPath = path.resolve(ORCHESTRATOR_PATH)
-  const relative = path.relative(projectRoot, resolvedPath)
-
-  if (relative.startsWith('..') || path.isAbsolute(relative)) {
-    throw new Error(`Orchestrator path is outside project root: ${ORCHESTRATOR_PATH}`)
-  }
-}
 
 export const chatService = {
   // ========== Session Management ==========
@@ -185,60 +168,22 @@ export const chatService = {
     // Create tickets based on intent
     const tickets = await createTicketsForIntent(sessionId, intent, content, workspacePath)
 
-    // Spawn orchestrator with TRACEPARENT env for OTel propagation
-    const traceEnv = getTraceParentEnv()
-    const env = {
-      ...process.env,
-      TARGET_REPO: process.cwd(),
-      ...(traceEnv || {}),
-    }
-
-    // Validate orchestrator path before spawning
-    validateOrchestratorPath()
-
-    logger.info('Spawning orchestrator', { sessionId, intent, ticketCount: tickets.length })
-
-    // Spawn orchestrator as child process
-    const cmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'
-    const child = spawn(cmd, ['tsx', ORCHESTRATOR_PATH, content], {
-      cwd: path.dirname(ORCHESTRATOR_PATH),
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env,
+    // Submit task to Redis Stream queue (async, returns immediately)
+    const taskId = generateId('task')
+    await enqueueTask({
+      taskId,
+      sessionId,
+      intent,
+      content,
+      workspacePath,
+      ticketIds: tickets.map(t => t.ticketId),
+      createdAt: Date.now(),
     })
 
-    // Store child pid in Redis for monitoring
-    if (child.pid) {
-      await redis.setex(key('chat:orchestrator', sessionId), 3600, child.pid.toString())
-    }
+    // Store taskId → sessionId mapping for progress lookups
+    await redis.setex(key('chat:task', sessionId), 86400, taskId)
 
-    // Stream stdout/stderr to Redis for real-time progress
-    child.stdout?.on('data', async (data: Buffer) => {
-      const log = data.toString()
-      await redis.lpush(key('chat:logs', sessionId), log)
-      await redis.ltrim(key('chat:logs', sessionId), 0, 499)
-      await redis.expire(key('chat:logs', sessionId), 86400)
-    })
-
-    child.stderr?.on('data', async (data: Buffer) => {
-      const log = `[ERROR] ${data.toString()}`
-      await redis.lpush(key('chat:logs', sessionId), log)
-      await redis.ltrim(key('chat:logs', sessionId), 0, 499)
-      await redis.expire(key('chat:logs', sessionId), 86400)
-    })
-
-    child.on('close', async (code) => {
-      logger.info('Orchestrator finished', { sessionId, exitCode: code })
-      await redis.setex(key('chat:status', sessionId), 86400, code === 0 ? 'completed' : 'failed')
-
-      // Update all pending tasks for this session
-      await pool.query(
-        `UPDATE agent_tasks
-         SET status = CASE WHEN $1 = 0 THEN 'completed' ELSE 'failed' END,
-             completed_at = CURRENT_TIMESTAMP
-         WHERE session_id = $2 AND status = 'pending'`,
-        [code ?? 1, sessionId]
-      )
-    })
+    logger.info('Task queued', { taskId, sessionId, intent, ticketCount: tickets.length })
 
     return tickets
   },

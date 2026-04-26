@@ -45,3 +45,8 @@ desktop.ini
 dist/
 build/
 *.tsbuildinfo
+
+# ========== Custom Build Dirs ==========
+.nuxt-build/
+.vite-cache/
+

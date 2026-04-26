@@ -1,10 +1,13 @@
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
+import cjsGuard from './plugins/vite-cjs-guard'
+import dayjsEsmPlugin from './vite-plugins/dayjs-esm'
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineNuxtConfig({
   devtools: { enabled: false },
+  buildDir: '.nuxt-build',
   
   // 模块
   modules: [
@@ -56,21 +59,53 @@ export default defineNuxtConfig({
   
   // CSS
   css: [
-    '~/assets/css/main.css',
+    '~/assets/css/tailwind.css',
   ],
   
   // 构建配置
   build: {
-    transpile: ['@element-plus/icons-vue', 'element-plus', '@popperjs/core'],
+    transpile: [
+      '@element-plus/icons-vue',
+      'element-plus',
+      '@popperjs/core',
+      // dayjs 插件是 CJS/UMD 格式，需要 transpile 才能正确转换为 ESM
+      'dayjs',
+    ],
   },
   
   // Vite 配置
   vite: {
+    cacheDir: '.vite-cache',
+    plugins: [
+      // dayjs UMD → ESM 重定向（必须在 CJS Guard 之前）
+      dayjsEsmPlugin(currentDir),
+      // CJS Guard：dev 模式下监控未预构建的 CJS 模块，提前预警
+      // 防止 "does not provide an export named 'default'" 类错误
+      // 详见 plugins/vite-cjs-guard.ts
+      cjsGuard(),
+    ],
     resolve: {
       alias: {
         '@': resolve(currentDir, './'),
         '~': resolve(currentDir, './'),
       },
+    },
+    build: {
+      // cssCodeSplit: false,
+      // 确保生产构建时正确处理混合 ESM/CJS 模块（如 dayjs 插件）
+      commonjsOptions: {
+        transformMixedEsModules: true,
+      },
+    },
+    optimizeDeps: {
+      // dayjs 及其插件已交给 dayjs-esm 插件处理（UMD → ESM 绝对路径），
+      // 不需要 Vite 预构建。保留 element-plus 确保其 ESM 版本被正确打包。
+      include: [
+        'element-plus',
+      ],
+      exclude: [
+        'dayjs',
+      ],
     },
   },
   
@@ -83,15 +118,12 @@ export default defineNuxtConfig({
   // 运行时配置
   runtimeConfig: {
     public: {
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:8080',
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || '/api',
     },
   },
   
   // Nitro 配置
   nitro: {
-    output: {
-      dir: '.output',
-    },
     // 开发环境代理 API 请求统一走 Gateway (8080)
     // Gateway 负责路由分发：/api/auth/** → Java，/api/agents/** → Node API
     // NOTE: devProxy 会绕过 BFF 层 (server/api)。如需 BFF 生效，请保持注释。

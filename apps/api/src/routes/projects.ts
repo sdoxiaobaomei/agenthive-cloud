@@ -11,9 +11,9 @@ router.post('/migrate-visitor', (req, res) => {
   // In production this would create a real project from the snapshot
   const projectId = `proj-${Date.now()}`
   res.json({
-    success: true,
-    projectId,
+    code: 200,
     message: 'Visitor project migrated successfully',
+    data: { projectId },
   })
 })
 

@@ -22,7 +22,7 @@
 
 | 文档 | 说明 |
 |------|------|
-| [Docker Compose 本地部署](./docker-deployment.md) | `docker-compose.local.yml` 使用说明 |
+| [Docker Compose 本地部署](./docker-deployment.md) | `docker-compose.dev.yml` 使用说明 |
 | [Docker Desktop 网络详解](../DOCKER-DESKTOP-NETWORK-EXPLAINED.md) | 网络原理和端口映射 |
 | [Docker Desktop 进程隔离](../DOCKER-DESKTOP-PROCESS-ISOLATION.md) | 容器进程管理 |
 

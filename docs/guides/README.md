@@ -28,7 +28,7 @@ cd ai-digital-twin
 
 # 启动服务
 cd agenthive-cloud
-docker-compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 
 # 验证
 open http://localhost

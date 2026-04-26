@@ -1,6 +1,6 @@
 # ============================================================================
 # PostgreSQL for Java Microservices
-# 3 independent PostgreSQL instances aligned with docker-compose.java.yml
+# 3 independent PostgreSQL instances (legacy architecture, consider using single instance with multi-db)
 # ============================================================================
 
 # ============================================

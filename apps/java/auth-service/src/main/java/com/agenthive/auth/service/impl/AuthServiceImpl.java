@@ -13,6 +13,7 @@ import com.agenthive.auth.service.dto.LoginRequest;
 import com.agenthive.auth.service.dto.RegisterRequest;
 import com.agenthive.auth.service.dto.SmsLoginRequest;
 import com.agenthive.auth.service.dto.TokenResponse;
+import com.agenthive.auth.service.dto.UpdateProfileRequest;
 import com.agenthive.auth.service.dto.VerifySmsCodeRequest;
 import com.agenthive.common.core.exception.AgentHiveException;
 import com.agenthive.common.core.result.ResultCode;
@@ -121,9 +122,11 @@ public class AuthServiceImpl implements AuthService {
         smsService.verifyCode(verifyRequest);
 
         SysUser user = userMapper.selectByPhone(request.getPhone());
+        boolean isNewUser = false;
         if (user == null) {
             // 短信登录即注册：自动创建用户
             user = autoRegisterByPhone(request.getPhone());
+            isNewUser = true;
         }
 
         if (user.getStatus() != 1) {
@@ -131,7 +134,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         stringRedisTemplate.delete(rateKey);
-        return generateTokens(user);
+        return generateTokens(user, isNewUser);
     }
 
     @Override
@@ -177,7 +180,46 @@ public class AuthServiceImpl implements AuthService {
         return roles.stream().map(SysRole::getRoleCode).toList();
     }
 
+    @Override
+    @Transactional
+    public UserVO updateProfile(Long userId, UpdateProfileRequest request) {
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new AgentHiveException(ResultCode.USER_NOT_FOUND);
+        }
+
+        // 检查用户名是否被其他用户占用
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+            SysUser existing = userMapper.selectByUsername(request.getUsername());
+            if (existing != null && !existing.getId().equals(userId)) {
+                throw new AgentHiveException(ResultCode.USER_ALREADY_EXISTS);
+            }
+            user.setUsername(request.getUsername());
+        }
+
+        // 更新密码
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            if (!PASSWORD_PATTERN.matcher(request.getPassword()).matches()) {
+                throw new AgentHiveException(ResultCode.PASSWORD_TOO_WEAK.getCode(),
+                        "Password must contain uppercase, lowercase, digit and special character");
+            }
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        // 更新头像
+        if (request.getAvatar() != null) {
+            user.setAvatar(request.getAvatar());
+        }
+
+        userMapper.updateById(user);
+        return toUserVO(user);
+    }
+
     private TokenResponse generateTokens(SysUser user) {
+        return generateTokens(user, false);
+    }
+
+    private TokenResponse generateTokens(SysUser user, boolean isNewUser) {
         TokenResponse response = new TokenResponse();
         List<String> roles = roleMapper.selectRolesByUserId(user.getId())
                 .stream().map(SysRole::getRoleCode).toList();
@@ -188,6 +230,7 @@ public class AuthServiceImpl implements AuthService {
         response.setRefreshToken(refreshToken);
         response.setExpiresIn(accessExpiration / 1000);
         response.setTokenType("Bearer");
+        response.setIsNewUser(isNewUser);
         return response;
     }
 
