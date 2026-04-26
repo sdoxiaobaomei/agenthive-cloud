@@ -21,7 +21,7 @@
 ### 基础设施层（先启动）
 
 ```bash
-docker compose -f docker-compose.java.yml up -d nacos postgres-auth postgres-user postgres-business redis rabbitmq
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d nacos rabbitmq
 ```
 
 | 服务 | 端口 | 说明 | 健康检查 |
@@ -52,19 +52,19 @@ redis-cli -h localhost -p 6379 ping
 # 建议按依赖顺序分批启动
 
 # 第一批：网关 + 认证服务（核心依赖）
-docker compose -f docker-compose.java.yml up -d gateway-service auth-service
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d gateway-service auth-service
 
 # 第二批：用户服务
-docker compose -f docker-compose.java.yml up -d user-service
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d user-service
 
 # 第三批：业务服务（彼此通过 MQ 解耦，可并行启动）
-docker compose -f docker-compose.java.yml up -d payment-service order-service cart-service logistics-service
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d payment-service order-service cart-service logistics-service
 ```
 
 ### 完整一键启动（开发环境）
 
 ```bash
-docker compose -f docker-compose.java.yml up -d
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d
 ```
 
 > **注意**：首次启动需等待数据库初始化完成（自动执行 `init.sql` / `init-business.sql`）。
@@ -75,7 +75,7 @@ docker compose -f docker-compose.java.yml up -d
 
 ### 为 Docker Compose 增加健康检查
 
-建议在 `docker-compose.java.yml` 中为各服务添加 `healthcheck`：
+`docker-compose.dev.yml` 已为各服务添加 `healthcheck`：
 
 ```yaml
 services:
