@@ -10,6 +10,7 @@ import { testRedisConnection } from './config/redis.js'
 import { initWebSocket, getStats } from './websocket/hub.js'
 import { initLLM } from './services/llm.js'
 import { initializeTaskExecution } from './services/taskExecution.js'
+import { initTaskQueue } from './services/taskQueue.js'
 
 const PORT = process.env.PORT || 3001
 const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/data/workspaces'
@@ -42,6 +43,14 @@ const startServer = async () => {
     console.log(`[Server] Workspace directory ready: ${WORKSPACE_BASE}`)
   } catch (error) {
     console.error('[Server] Failed to create workspace directory:', error)
+  }
+
+  // 初始化任务队列（Redis Stream）
+  try {
+    await initTaskQueue()
+    console.log('[Server] Task Queue initialized')
+  } catch (error) {
+    console.error('[Server] Task Queue initialization failed:', error)
   }
 
   // 初始化任务执行服务
