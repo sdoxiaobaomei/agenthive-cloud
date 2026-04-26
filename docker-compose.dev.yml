@@ -1,0 +1,725 @@
+# ============================================================================
+# AgentHive Cloud - Development Stack
+# 本地开发统一配置：Node.js + Java 微服务 + Monitoring
+#
+# 默认启动最简栈（PostgreSQL + Redis + API + Landing）
+# Profile 扩展：
+#   --profile java        → Nacos + RabbitMQ + 7 Java 微服务
+#   --profile monitoring  → Prometheus + Grafana + Tempo + Loki + OTel
+#   --profile with-nginx  → Nginx 反向代理
+#
+# 启动命令：
+#   docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
+# ============================================================================
+
+services:
+  # ============================================
+  # Shared Infrastructure
+  # ============================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: agenthive-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-agenthive}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev}
+      POSTGRES_DB: ${DB_NAME:-agenthive}
+      POSTGRES_MULTIPLE_DATABASES: auth_db,user_db,payment_db,order_db,cart_db,logistics_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./apps/java/scripts/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
+    ports:
+      - "${DB_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-agenthive} -d ${DB_NAME:-agenthive}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  redis:
+    image: redis:7-alpine
+    container_name: agenthive-redis-dev
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --save 60 1000
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # ============================================
+  # Java Infrastructure (profile: java)
+  # ============================================
+
+  nacos:
+    image: nacos/nacos-server:v2.3.0
+    container_name: agenthive-nacos-dev
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "true"
+      NACOS_AUTH_TOKEN: bmFjb3Mtc2VjcmV0LWtleS1hZ2VudGhpdmUtMjAyNC1sb25nZXIta2V5
+      NACOS_AUTH_IDENTITY_KEY: agenthive
+      NACOS_AUTH_IDENTITY_VALUE: agenthive-secret-2024
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    volumes:
+      - nacos_data:/home/nacos/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/v1/console/health/readiness"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+        reservations:
+          memory: 512M
+    profiles:
+      - java
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: agenthive-rabbitmq-dev
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-agenthive}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-agenthive-secret}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 256M
+    profiles:
+      - java
+
+  # ============================================
+  # Node.js Services
+  # ============================================
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: production
+    container_name: agenthive-api-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-agenthive}
+      DB_PASSWORD: ${DB_PASSWORD:-dev}
+      DB_NAME: ${DB_NAME:-agenthive}
+      REDIS_URL: redis://redis:6379
+      REDIS_HOST: redis
+      JWT_SECRET: ${JWT_SECRET:-dev-secret}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.kimi.com/coding/v1}
+      LLM_MODEL: ${LLM_MODEL:-kimi-for-coding}
+      LLM_USER_AGENT: ${LLM_USER_AGENT:-claude-code/0.1.0}
+      OLLAMA_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:14b}
+      OTEL_SDK_DISABLED: "true"
+    ports:
+      - "${API_PORT:-3001}:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  landing:
+    build:
+      context: .
+      dockerfile: apps/landing/Dockerfile
+      target: production
+      args:
+        - NUXT_PUBLIC_API_BASE=http://localhost:3001
+    container_name: agenthive-landing-dev
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:3001
+      OTEL_SDK_DISABLED: "true"
+    ports:
+      - "${LANDING_PORT:-80}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+
+  # ============================================
+  # Java Microservices (profile: java)
+  # ============================================
+
+  gateway-service:
+    build:
+      context: ./apps/java/gateway-service
+      dockerfile: Dockerfile
+    container_name: agenthive-gateway-dev
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
+      JAVA_OPTS: "-Xms128m -Xmx384m"
+    ports:
+      - "8080:8080"
+    depends_on:
+      nacos:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - java
+
+  auth-service:
+    build:
+      context: ./apps/java/auth-service
+      dockerfile: Dockerfile
+    container_name: agenthive-auth-dev
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: auth_db
+      DB_USER: ${DB_USER:-agenthive}
+      DB_PASSWORD: ${DB_PASSWORD:-dev}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JAVA_OPTS: "-Xms128m -Xmx384m"
+    ports:
+      - "8081:8081"
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - java
+
+  user-service:
+    build:
+      context: ./apps/java/user-service
+      dockerfile: Dockerfile
+    container_name: agenthive-user-dev
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: user_db
+      DB_USER: ${DB_USER:-agenthive}
+      DB_PASSWORD: ${DB_PASSWORD:-dev}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JAVA_OPTS: "-Xms128m -Xmx384m"
+    ports:
+      - "8082:8082"
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - java
+
+  payment-service:
+    build:
+      context: ./apps/java/payment-service
+      dockerfile: Dockerfile
+    container_name: agenthive-payment-dev
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: payment_db
+      DB_USER: ${DB_USER:-agenthive}
+      DB_PASSWORD: ${DB_PASSWORD:-dev}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-agenthive}
+      RABBITMQ_PASS: ${RABBITMQ_PASSWORD:-agenthive-secret}
+      JAVA_OPTS: "-Xms128m -Xmx384m"
+    ports:
+      - "8083:8083"
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - java
+
+  order-service:
+    build:
+      context: ./apps/java/order-service
+      dockerfile: Dockerfile
+    container_name: agenthive-order-dev
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: order_db
+      DB_USER: ${DB_USER:-agenthive}
+      DB_PASSWORD: ${DB_PASSWORD:-dev}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-agenthive}
+      RABBITMQ_PASS: ${RABBITMQ_PASSWORD:-agenthive-secret}
+      JAVA_OPTS: "-Xms128m -Xmx384m"
+    ports:
+      - "8084:8084"
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - java
+
+  cart-service:
+    build:
+      context: ./apps/java/cart-service
+      dockerfile: Dockerfile
+    container_name: agenthive-cart-dev
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: cart_db
+      DB_USER: ${DB_USER:-agenthive}
+      DB_PASSWORD: ${DB_PASSWORD:-dev}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JAVA_OPTS: "-Xms128m -Xmx384m"
+    ports:
+      - "8085:8085"
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - java
+
+  logistics-service:
+    build:
+      context: ./apps/java/logistics-service
+      dockerfile: Dockerfile
+    container_name: agenthive-logistics-dev
+    restart: unless-stopped
+    environment:
+      NACOS_SERVER: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: logistics_db
+      DB_USER: ${DB_USER:-agenthive}
+      DB_PASSWORD: ${DB_PASSWORD:-dev}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER:-agenthive}
+      RABBITMQ_PASS: ${RABBITMQ_PASSWORD:-agenthive-secret}
+      JAVA_OPTS: "-Xms128m -Xmx384m"
+    ports:
+      - "8086:8086"
+    depends_on:
+      nacos:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - java
+
+  # ============================================
+  # Monitoring Stack (profile: monitoring)
+  # ============================================
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: agenthive-prometheus-dev
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: agenthive-grafana-dev
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3002:3000"
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - monitoring
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    container_name: agenthive-tempo-dev
+    restart: unless-stopped
+    command: ["-config.file=/etc/tempo.yml"]
+    volumes:
+      - ./monitoring/tempo/tempo.yml:/etc/tempo.yml:ro
+      - tempo_data:/tmp/tempo
+    ports:
+      - "3200:3200"
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    profiles:
+      - monitoring
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: agenthive-loki-dev
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./monitoring/loki/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - monitoring
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: agenthive-otel-collector-dev
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector.yml"]
+    volumes:
+      - ./monitoring/opentelemetry/otel-collector/otel-collector.yml:/etc/otel-collector.yml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - monitoring
+
+  # ============================================
+  # Nginx Reverse Proxy (profile: with-nginx)
+  # ============================================
+
+  nginx:
+    image: nginx:alpine
+    container_name: agenthive-nginx-dev
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      api:
+        condition: service_healthy
+      landing:
+        condition: service_healthy
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+    profiles:
+      - with-nginx
+
+# ============================================
+# Volumes
+# ============================================
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  nacos_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  tempo_data:
+    driver: local
+  loki_data:
+    driver: local
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  agenthive-dev:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
