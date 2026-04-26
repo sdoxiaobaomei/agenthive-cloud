@@ -96,7 +96,7 @@ services:
       - NODE_ENV=production
       - NITRO_PORT=3000
       - API_URL=http://api:3001
-      - GATEWAY_URL=http://gateway-service:8080
+      - GATEWAY_URL=http://java-gateway:8080
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
       interval: 15s
@@ -161,8 +161,9 @@ services:
     image: ${AUTH_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/auth-service:latest}
     pull_policy: always
     container_name: agenthive-java-auth-prod
+    hostname: auth-service
     environment:
-      - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
+      - JAVA_OPTS=-Xms256m -Xmx512m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED=false
       # ===== Nacos（开启认证）=====
@@ -204,7 +205,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
     networks:
       - agenthive-prod
     profiles:
@@ -287,6 +288,7 @@ services:
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
       - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING=true
       # ===== RabbitMQ =====
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
@@ -340,6 +342,7 @@ services:
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
       - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING=true
       # ===== RabbitMQ =====
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
