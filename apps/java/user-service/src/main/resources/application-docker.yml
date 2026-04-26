@@ -6,7 +6,7 @@ spring:
     name: user-service
   data:
     redis:
-      host: agenthive-redis
+      host: redis
       port: 6379
   cloud:
     nacos:
@@ -17,4 +17,4 @@ spring:
       client:
         config:
           auth-service:
-            url: http://agenthive-auth:8081
+            url: http://auth-service:8081

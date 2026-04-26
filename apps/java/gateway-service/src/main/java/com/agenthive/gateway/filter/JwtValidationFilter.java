@@ -33,6 +33,8 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
     private static final List<String> WHITE_LIST = List.of(
             "/api/auth/register",
             "/api/auth/login",
+            "/api/auth/login/sms",
+            "/api/auth/sms/send",
             "/api/auth/refresh",
             "/api/demo/**",
             "/api/health",

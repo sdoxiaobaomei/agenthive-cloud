@@ -23,37 +23,37 @@ spring:
           predicates:
             - Path=/api/auth/**
           filters:
-            - StripPrefix=0
+            - StripPrefix=1
         - id: user-service
           uri: lb://user-service
           predicates:
             - Path=/api/users/**
           filters:
-            - StripPrefix=0
+            - StripPrefix=1
         - id: payment-service
           uri: lb://payment-service
           predicates:
             - Path=/api/payments/**
           filters:
-            - StripPrefix=0
+            - StripPrefix=1
         - id: order-service
           uri: lb://order-service
           predicates:
             - Path=/api/orders/**
           filters:
-            - StripPrefix=0
+            - StripPrefix=1
         - id: cart-service
           uri: lb://cart-service
           predicates:
             - Path=/api/carts/**
           filters:
-            - StripPrefix=0
+            - StripPrefix=1
         - id: logistics-service
           uri: lb://logistics-service
           predicates:
             - Path=/api/logistics/**
           filters:
-            - StripPrefix=0
+            - StripPrefix=1
         - id: api-service
           uri: ${API_SERVICE_URL:http://localhost:3001}
           predicates:
@@ -68,6 +68,23 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET:agenthive-default-secret-key-2024-change-in-production}
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: auth-service
+        url: /auth/v3/api-docs
+      - name: user-service
+        url: /users/v3/api-docs
+      - name: payment-service
+        url: /payments/v3/api-docs
+      - name: order-service
+        url: /orders/v3/api-docs
+      - name: cart-service
+        url: /carts/v3/api-docs
+      - name: logistics-service
+        url: /logistics/v3/api-docs
+    use-root-path: true
 
 logging:
   level:

@@ -4,11 +4,9 @@ server:
 spring:
   application:
     name: auth-service
-  profiles:
-    active: docker
+
   datasource:
-    # 通过 host.docker.internal 访问宿主机上的 PostgreSQL 容器（端口 5433）
-    url: jdbc:postgresql://host.docker.internal:5433/${DB_NAME:auth_db}
+    url: jdbc:postgresql://${DB_HOST:postgres-auth}:${DB_PORT:5432}/${DB_NAME:auth_db}
     username: ${DB_USER:agenthive}
     password: ${DB_PASSWORD:secret}
     driver-class-name: org.postgresql.Driver
@@ -21,9 +19,8 @@ spring:
   data:
     redis:
       # 通过 host.docker.internal 访问宿主机上的 Redis 容器
-      host: host.docker.internal
+      host: ${REDIS_HOST:redis}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
       lettuce:
         pool:
           max-active: 20
