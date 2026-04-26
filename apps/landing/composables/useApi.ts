@@ -232,11 +232,10 @@ export function useApi() {
   const { token } = useAuth()
   const { startLoading, stopLoading } = useLoading()
   // 配置 API Base URL
-  // - 客户端: 生产环境访问公网 API，开发环境访问本地端口
-  // - SSR 服务端: 访问容器内 API 服务
-  const baseUrl = import.meta.client
-    ? (config.public.apiBase || '/api')
-    : 'http://api:3001'
+  // - 默认走相对路径 /api，由 Nuxt BFF (server/api/) 统一代理
+  // - 生产环境可通过 NUXT_PUBLIC_API_BASE 配置为绝对 URL（如 https://api.xxx.com）
+  // - SSR 服务端与客户端使用相同策略，确保 BFF 格式转换逻辑生效
+  const baseUrl = config.public.apiBase || '/api'
 
   // 默认超时时间（毫秒）
   const DEFAULT_TIMEOUT = 30000

@@ -3,74 +3,17 @@
     <!-- Header with sidebar toggle -->
     <AppHeader mode="landing" @toggle-sidebar="showProjectDialog = true" />
     
-    <!-- Auth User: Project Creation Prompt -->
-    <template v-if="authStore.isAuthenticated">
-      <section class="prompt-section">
-        <div class="prompt-container">
-          <h1 class="prompt-title">今天想构建什么？</h1>
-          <p class="prompt-subtitle">描述你的需求，AI Agent 团队将为你生成完整的项目代码</p>
-          <div class="prompt-input-wrapper">
-            <el-input
-              v-model="projectPrompt"
-              type="textarea"
-              :rows="3"
-              placeholder="例如：帮我创建一个电商后台管理系统，包含商品管理、订单处理和数据统计功能..."
-              class="prompt-textarea"
-              @keydown.enter.prevent="handlePromptSubmit"
-            />
-            <div class="prompt-actions">
-              <el-button
-                type="primary"
-                size="large"
-                :loading="creating"
-                :disabled="!projectPrompt.trim()"
-                class="prompt-btn"
-                @click="handlePromptSubmit"
-              >
-                <el-icon><MagicStick /></el-icon>
-                <span>开始构建</span>
-              </el-button>
-              <el-button
-                size="large"
-                class="history-btn"
-                @click="showProjectDialog = true"
-              >
-                <el-icon><FolderOpened /></el-icon>
-                <span>历史项目</span>
-              </el-button>
-            </div>
-          </div>
-          <div v-if="recentProjects.length > 0" class="recent-projects">
-            <span class="recent-label">最近访问：</span>
-            <div class="recent-list">
-              <span
-                v-for="proj in recentProjects"
-                :key="proj.id"
-                class="recent-tag"
-                @click="selectProject(proj)"
-              >
-                {{ proj.name }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-    </template>
+    <!-- Hero -->
+    <OrganismsHeroSection />
 
-    <!-- Guest: Marketing Landing -->
-    <template v-else>
-      <!-- Hero -->
-      <OrganismsHeroSection />
+    <!-- Feature Highlights -->
+    <FeaturesSection />
 
-      <!-- Feature Highlights -->
-      <FeaturesSection />
+    <!-- Workflow -->
+    <WorkflowSection />
 
-      <!-- Workflow -->
-      <WorkflowSection />
-
-      <!-- CTA -->
-      <CTASection />
-    </template>
+    <!-- CTA -->
+    <CTASection />
     
     <!-- Project Selection Dialog -->
     <ClientRender>
@@ -105,7 +48,7 @@
               <div class="project-desc">{{ project.description }}</div>
             </div>
           </div>
-          <div v-if="filteredProjects.length === 0" class="empty-projects">
+          <div v-if="!filteredProjects?.length" class="empty-projects">
             <el-empty description="暂无项目" />
           </div>
         </div>
