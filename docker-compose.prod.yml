@@ -466,6 +466,8 @@ services:
       - PREFER_HOST_MODE=hostname
       - NACOS_AUTH_ENABLE=true
       - NACOS_AUTH_TOKEN=${NACOS_AUTH_TOKEN:-<NACOS_AUTH_TOKEN>}
+      - NACOS_AUTH_IDENTITY_KEY=${NACOS_AUTH_IDENTITY_KEY:-agenthive}
+      - NACOS_AUTH_IDENTITY_VALUE=${NACOS_AUTH_IDENTITY_VALUE:-agenthive-secret-2024}
     ports:
       - "8848:8848"
       - "9848:9848"
