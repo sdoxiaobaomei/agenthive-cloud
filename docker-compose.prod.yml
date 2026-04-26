@@ -137,6 +137,7 @@ services:
       # ===== Redis =====
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       nacos:
         condition: service_healthy
@@ -184,6 +185,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
       # ===== Auth / SMS =====
       - JWT_SECRET=${JWT_SECRET}
       - ALIYUN_SMS_ENABLED=${ALIYUN_SMS_ENABLED:-false}
@@ -236,6 +238,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       nacos:
         condition: service_healthy
@@ -283,6 +286,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
       # ===== RabbitMQ =====
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
@@ -335,6 +339,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
       # ===== RabbitMQ =====
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
@@ -387,6 +392,7 @@ services:
       - DB_PASSWORD=${DB_PASSWORD}
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
       # ===== RabbitMQ =====
       - SPRING_RABBITMQ_HOST=rabbitmq
       - SPRING_RABBITMQ_PORT=5672
@@ -447,6 +453,7 @@ services:
       # ===== Redis =====
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
+      - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       nacos:
         condition: service_healthy
