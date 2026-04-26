@@ -13,22 +13,42 @@ const PUBLIC_PATHS = [
 
 /**
  * 开发环境模拟用户注入（用于本地直连调试，不走 Gateway）
+ * 会自动在数据库中创建/查找本地用户映射，避免外键约束失败
  */
-function injectDevUser(req: Request): boolean {
+async function injectDevUser(req: Request): Promise<boolean> {
   if (process.env.NODE_ENV !== 'development') return false
 
   const devUserId = process.env.DEV_USER_ID || 'dev-user-id'
   const devUserName = process.env.DEV_USER_NAME || 'Developer'
   const devUserRole = process.env.DEV_USER_ROLE || 'admin'
 
-  ;(req as any).userId = devUserId
-  ;(req as any).externalUserId = devUserId
-  ;(req as any).user = {
-    userId: devUserId,
-    username: devUserName,
-    role: devUserRole,
+  try {
+    const localUser = await resolveLocalUser({
+      externalId: devUserId,
+      username: devUserName,
+      role: devUserRole,
+    })
+
+    ;(req as any).userId = localUser.id
+    ;(req as any).externalUserId = devUserId
+    ;(req as any).user = {
+      userId: localUser.id,
+      username: localUser.username,
+      role: localUser.role,
+    }
+    return true
+  } catch (error) {
+    logger.error('Dev user injection failed', error instanceof Error ? error : undefined)
+    // 降级：直接注入，不保证数据库有记录（可能后续仍会外键失败）
+    ;(req as any).userId = devUserId
+    ;(req as any).externalUserId = devUserId
+    ;(req as any).user = {
+      userId: devUserId,
+      username: devUserName,
+      role: devUserRole,
+    }
+    return true
   }
-  return true
 }
 
 /**
@@ -73,7 +93,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
   }
 
   // 开发环境：注入模拟用户（仅本地开发使用）
-  if (injectDevUser(req)) {
+  const devUserInjected = await injectDevUser(req)
+  if (devUserInjected) {
     return next()
   }
 
@@ -99,7 +120,8 @@ export async function optionalAuthMiddleware(req: Request, res: Response, next: 
   }
 
   // 开发环境模拟
-  if (injectDevUser(req)) {
+  const devUserInjectedOpt = await injectDevUser(req)
+  if (devUserInjectedOpt) {
     return next()
   }
 
