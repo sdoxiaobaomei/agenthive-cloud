@@ -2,7 +2,7 @@
 import { ref, reactive, computed, onUnmounted, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { User, Lock, Iphone, View, Hide } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useAuthStore } from '~/stores/auth'
 
 definePageMeta({
@@ -35,6 +35,15 @@ const form = reactive({
   code: '',
   password: ''
 })
+
+// 新用户补全资料
+const showProfileModal = ref(false)
+const profileForm = reactive({
+  username: '',
+  password: '',
+  confirmPassword: ''
+})
+const profileLoading = ref(false)
 
 // 简化的表单验证规则
 const rules = {
@@ -103,6 +112,24 @@ onUnmounted(() => {
   }
 })
 
+// 已登录用户自动重定向
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    const redirect = route.query.redirect as string
+    const targetPath = redirect || '/'
+    router.replace(targetPath)
+  }
+})
+
+const handleCompleteProfile = async () => {
+  // 新用户欢迎流程：直接跳转到工作区
+  // TODO: 如需绑定用户名密码，可在此调用 auth.register() 走 Java 注册接口
+  showProfileModal.value = false
+  const redirect = route.query.redirect as string
+  const targetPath = redirect || '/chat'
+  await router.push(targetPath)
+}
+
 const handleSubmit = async () => {
   console.log('[Login] Submit clicked, mode:', mode.value)
   
@@ -165,23 +192,33 @@ const handleSubmit = async () => {
   loading.value = true
   
   try {
+    let isNewUser = false
     if (mode.value === 'code') {
       console.log('[Login] SMS login with phone:', form.phone)
-      await authStore.login(form.phone, form.code)
+      const result = await authStore.login(form.phone, form.code)
+      isNewUser = result.isNewUser
     } else {
       console.log('[Login] Password login with username:', form.phone)
       await authStore.loginByPassword(form.phone, form.password)
     }
-    
+
     ElMessage.success('登录成功')
-    console.log('[Login] Login successful, preparing to navigate...')
+    console.log('[Login] Login successful, isNewUser:', isNewUser)
+
+    // 新用户引导补全资料
+    if (isNewUser) {
+      showProfileModal.value = true
+      loading.value = false
+      return
+    }
+
     console.log('[Login] Current route query:', route.query)
-    
+
     // 登录成功 - 跳转到目标页面
     const redirect = route.query.redirect as string
     const targetPath = redirect || '/chat'
     console.log('[Login] Navigating to:', targetPath)
-    
+
     try {
       await router.push(targetPath)
       console.log('[Login] Navigation successful')
@@ -431,6 +468,32 @@ const handleSubmit = async () => {
       </div>
     </div>
   </div>
+
+  <!-- 新用户欢迎弹窗 -->
+  <el-dialog
+    v-model="showProfileModal"
+    title="欢迎加入 AgentHive"
+    width="400px"
+    :close-on-click-modal="false"
+    :show-close="false"
+    class="!rounded-2xl"
+  >
+    <div class="text-sm text-[#58585a] mb-6">
+      您已成功注册！现在可以开始创建项目并与 AI Agent 团队协作开发。
+    </div>
+
+    <template #footer>
+      <el-button
+        type="primary"
+        class="w-full !h-12 !text-[15px] !font-semibold !rounded-xl"
+        style="background: #4267ff; border-color: #4267ff;"
+        :loading="profileLoading"
+        @click="handleCompleteProfile"
+      >
+        {{ profileLoading ? '跳转中...' : '进入工作区' }}
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>
@@ -464,7 +527,7 @@ const handleSubmit = async () => {
   background: transparent !important;
   font-size: 14px !important;
   color: #111827 !important;
-  8height: 48px !important;
+  height: 48px !important;
 }
 :deep(.el-input__inner::placeholder) {
   color: #9ca3af !important;

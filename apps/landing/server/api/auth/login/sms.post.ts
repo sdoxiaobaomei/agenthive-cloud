@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
 
   const result = await proxyToApi(event, '/api/auth/login/sms', { method: 'POST', body }, getGatewayBase())
 
-  // Java 返回: { code, message, data: { accessToken, refreshToken, expiresIn, tokenType } }
+  // Java 返回: { code, message, data: { accessToken, refreshToken, expiresIn, tokenType, isNewUser } }
   if (result.code === 200 && result.data?.accessToken) {
     const userResult = await proxyToApi(event, '/api/auth/me', undefined, getGatewayBase())
     const userVO = userResult.code === 200 ? userResult.data : null
@@ -14,7 +14,9 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       data: {
-        token: result.data.accessToken,
+        accessToken: result.data.accessToken,
+        refreshToken: result.data.refreshToken,
+        isNewUser: result.data.isNewUser ?? false,
         user: {
           id: String(userVO?.id || ''),
           username: userVO?.username || '',

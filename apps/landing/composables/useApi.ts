@@ -47,19 +47,6 @@ export interface PaginatedResponse<T> {
 
 // ============ 实体类型定义 ============
 
-/** 用户信息 (与 @agenthive/types 对齐) */
-export interface User {
-  id: string
-  username: string
-  name: string
-  email?: string
-  phone?: string
-  role: string
-  avatar?: string
-  createdAt: string
-  updatedAt: string
-}
-
 /** Agent 状态 */
 export type AgentStatus = 'idle' | 'running' | 'paused' | 'error' | 'stopped'
 
@@ -140,12 +127,11 @@ export interface SmsLoginParams {
   code: string
 }
 
-/** 注册参数 */
+/** 注册参数 - 适配 Java 后端 RegisterRequest */
 export interface RegisterParams {
-  name: string
-  phone: string
-  code: string
+  username: string
   password: string
+  email?: string
 }
 
 /** 发送短信参数 */
@@ -210,16 +196,6 @@ export interface ChatSession {
   status: string
   createdAt: string
   updatedAt: string
-}
-
-/** Chat 消息 */
-export interface ChatMessage {
-  id: string
-  sessionId: string
-  role: 'user' | 'assistant' | 'system' | 'agent'
-  content: string
-  metadata?: Record<string, any>
-  createdAt: string
 }
 
 /** 创建会话参数 */
@@ -486,21 +462,21 @@ export function useApi() {
 
     /** 短信登录 */
     loginBySms: (params: SmsLoginParams) => 
-      post<{ token: string; user: User }>('/api/auth/login/sms', params, { skipAuth: true }),
+      post<{ accessToken: string; refreshToken: string; isNewUser?: boolean; user: User }>('/api/auth/login/sms', params, { skipAuth: true }),
 
     /** 用户名密码登录 */
     login: (params: LoginParams) => 
-      post<{ token: string; user: User }>('/api/auth/login', params, { skipAuth: true }),
+      post<{ accessToken: string; refreshToken: string; isNewUser?: boolean; user: User }>('/api/auth/login', params, { skipAuth: true }),
 
     /** 注册 */
     register: (params: RegisterParams) => 
-      post<{ token: string; user: User }>('/api/auth/register', params, { skipAuth: true }),
+      post<{ accessToken: string; refreshToken: string; user: User }>('/api/auth/register', params, { skipAuth: true }),
 
     /** 登出 */
     logout: () => post<void>('/api/auth/logout'),
 
     /** 刷新 Token */
-    refresh: () => post<{ token: string }>('/api/auth/refresh'),
+    refresh: (refreshToken: string) => post<{ accessToken: string; refreshToken: string }>('/api/auth/refresh', { refreshToken }),
 
     /** 获取当前用户信息 */
     me: () => get<User>('/api/auth/me'),

@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
 
   const result = await proxyToApi(event, path, { method: 'POST', body }, getGatewayBase())
 
-  // Java 返回: { code, message, data: { accessToken, refreshToken, expiresIn, tokenType } }
+  // Java 返回: { code, message, data: { accessToken, refreshToken, expiresIn, tokenType, isNewUser } }
   if (result.code === 200 && result.data?.accessToken) {
     // 登录成功后获取用户信息
     const userResult = await proxyToApi(event, '/api/auth/me', undefined, getGatewayBase())
@@ -18,7 +18,9 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       data: {
-        token: result.data.accessToken,
+        accessToken: result.data.accessToken,
+        refreshToken: result.data.refreshToken,
+        isNewUser: result.data.isNewUser ?? false,
         user: {
           id: String(userVO?.id || ''),
           username: userVO?.username || '',
