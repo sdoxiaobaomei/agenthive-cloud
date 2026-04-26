@@ -119,7 +119,7 @@ export async function optionalAuthMiddleware(req: Request, res: Response, next: 
         role: localUser.role,
       }
     } catch (error) {
-      logger.warn('Optional auth: gateway user resolution failed', error instanceof Error ? error : undefined)
+      logger.warn('Optional auth: gateway user resolution failed', { error: error instanceof Error ? error.message : String(error) })
     }
   }
 

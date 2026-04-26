@@ -96,13 +96,13 @@ export const sendMessage = async (req: Request, res: Response) => {
     // Add system message about detected intent
     await chatService.addMessage(id, 'system', `检测到意图: ${intent}`, { intent })
 
-    // If intent is actionable, spawn agent tasks
+    // Submit Agent tasks asynchronously via queue (does not wait for completion)
     let tasks: Awaited<ReturnType<typeof chatService.executeAgentTask>> = []
     if (intent !== 'chat' && intent !== 'explain') {
       tasks = await chatService.executeAgentTask(id, intent, parseResult.data.content)
     }
 
-    // Generate assistant response via LLM
+    // Generate assistant response (based on created tickets, not execution result)
     const responseContent = await chatService.generateReply(id, intent, parseResult.data.content, tasks)
     const assistantMsg = await chatService.addMessage(id, 'assistant', responseContent, {
       intent,

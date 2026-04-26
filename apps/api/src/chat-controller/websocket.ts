@@ -19,12 +19,11 @@ export function initChatNamespace(io: SocketIOServer): void {
 
   chatNsp.use(async (socket: Socket, next) => {
     try {
-      const token = socket.handshake.auth.token as string | undefined
-      if (!token) {
+      // 认证已在主 hub (websocket/hub.ts) 的全局 io.use() 中完成
+      // socket.data 已包含 userId（认证用户、dev 模拟用户或访客）
+      if (!socket.data.userId) {
         return next(new Error('Authentication required'))
       }
-      // Token validation happens in main hub; here we just accept it
-      socket.data.token = token
       next()
     } catch (error) {
       next(new Error('Authentication error'))
@@ -81,6 +80,17 @@ export function initChatNamespace(io: SocketIOServer): void {
       socket.emit('session:logs', { sessionId, logs: logs.reverse() })
     })
 
+    // Subscribe to per-task progress channels
+    socket.on('task:subscribe', async (taskId: string) => {
+      const channel = `agenthive:agent:task:progress:${taskId}`
+      await redisSub.subscribe(channel)
+      socket.data.subscribedTask = taskId
+
+      // Send current status immediately
+      const status = await redis.get(`agenthive:agent:task:status:${taskId}`)
+      socket.emit('task:state', { taskId, status: status || 'queued' })
+    })
+
     // Handle disconnect
     socket.on('disconnect', (reason) => {
       logger.info('Chat WebSocket disconnected', { socketId: socket.id, reason })
@@ -94,6 +104,17 @@ export function initChatNamespace(io: SocketIOServer): void {
       try {
         const data = JSON.parse(message)
         chatNsp.to(`session:${data.sessionId}`).emit('session:update', data)
+      } catch {
+        // ignore invalid messages
+      }
+      return
+    }
+
+    // Handle per-task progress channels
+    if (channel.startsWith('agenthive:agent:task:progress:')) {
+      try {
+        const data = JSON.parse(message)
+        chatNsp.to(`session:${data.sessionId}`).emit('task:update', data)
       } catch {
         // ignore invalid messages
       }
