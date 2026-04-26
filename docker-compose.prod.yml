@@ -63,7 +63,7 @@ services:
       # ===== LLM =====
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_BASE_URL=${LLM_BASE_URL:-https://api.kimi.com/coding/v1}
-      - LLM_MODEL=${LLM_MODEL:-kimi-code}
+      - LLM_MODEL=${LLM_MODEL:-kimi-for-coding}
       - LLM_USER_AGENT=${LLM_USER_AGENT:-claude-code/0.1.0}
       # ===== 其他 =====
       - JWT_SECRET=${JWT_SECRET}
@@ -138,6 +138,12 @@ services:
       nacos:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -185,6 +191,12 @@ services:
       nacos:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -227,6 +239,216 @@ services:
       nacos:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-prod
+    profiles:
+      - java
+
+  java-payment:
+    image: ${PAYMENT_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/payment-service:latest}
+    pull_policy: always
+    container_name: agenthive-java-payment-prod
+    environment:
+      - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED=false
+      # ===== Nacos（开启认证）=====
+      - NACOS_SERVER=nacos:8848
+      - NACOS_HOST=nacos
+      - NACOS_PORT=8848
+      - SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR=nacos:8848
+      - SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR=nacos:8848
+      - NACOS_USERNAME=${NACOS_USERNAME:-nacos}
+      - NACOS_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
+      # ===== 远端数据层 =====
+      - DB_HOST=${DB_HOST:-172.24.146.165}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=payment_db
+      - DB_USER=${DB_USER:-agenthive}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # ===== RabbitMQ =====
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-agenthive}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-agenthive-secret}
+    depends_on:
+      nacos:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-prod
+    profiles:
+      - java
+
+  java-order:
+    image: ${ORDER_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/order-service:latest}
+    pull_policy: always
+    container_name: agenthive-java-order-prod
+    environment:
+      - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED=false
+      # ===== Nacos（开启认证）=====
+      - NACOS_SERVER=nacos:8848
+      - NACOS_HOST=nacos
+      - NACOS_PORT=8848
+      - SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR=nacos:8848
+      - SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR=nacos:8848
+      - NACOS_USERNAME=${NACOS_USERNAME:-nacos}
+      - NACOS_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
+      # ===== 远端数据层 =====
+      - DB_HOST=${DB_HOST:-172.24.146.165}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=order_db
+      - DB_USER=${DB_USER:-agenthive}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # ===== RabbitMQ =====
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-agenthive}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-agenthive-secret}
+    depends_on:
+      nacos:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-prod
+    profiles:
+      - java
+
+  java-cart:
+    image: ${CART_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/cart-service:latest}
+    pull_policy: always
+    container_name: agenthive-java-cart-prod
+    environment:
+      - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED=false
+      # ===== Nacos（开启认证）=====
+      - NACOS_SERVER=nacos:8848
+      - NACOS_HOST=nacos
+      - NACOS_PORT=8848
+      - SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR=nacos:8848
+      - SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR=nacos:8848
+      - NACOS_USERNAME=${NACOS_USERNAME:-nacos}
+      - NACOS_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
+      # ===== 远端数据层 =====
+      - DB_HOST=${DB_HOST:-172.24.146.165}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=cart_db
+      - DB_USER=${DB_USER:-agenthive}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      nacos:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - agenthive-prod
+    profiles:
+      - java
+
+  java-logistics:
+    image: ${LOGISTICS_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/logistics-service:latest}
+    pull_policy: always
+    container_name: agenthive-java-logistics-prod
+    environment:
+      - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED=false
+      # ===== Nacos（开启认证）=====
+      - NACOS_SERVER=nacos:8848
+      - NACOS_HOST=nacos
+      - NACOS_PORT=8848
+      - SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR=nacos:8848
+      - SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR=nacos:8848
+      - NACOS_USERNAME=${NACOS_USERNAME:-nacos}
+      - NACOS_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
+      # ===== 远端数据层 =====
+      - DB_HOST=${DB_HOST:-172.24.146.165}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=logistics_db
+      - DB_USER=${DB_USER:-agenthive}
+      - DB_PASSWORD=${DB_PASSWORD}
+      # ===== RabbitMQ =====
+      - SPRING_RABBITMQ_HOST=rabbitmq
+      - SPRING_RABBITMQ_PORT=5672
+      - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-agenthive}
+      - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-agenthive-secret}
+    depends_on:
+      nacos:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     deploy:
       resources:
         limits:
