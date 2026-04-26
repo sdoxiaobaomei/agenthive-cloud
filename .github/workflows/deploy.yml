@@ -51,6 +51,9 @@ jobs:
             set -e
             cd /opt/agenthive-cloud
 
+            echo "=== [0/6] 停止现有 prod 容器 ==="
+            docker compose -f docker-compose.prod.yml down 2>/dev/null || true
+
             echo "=== [1/6] 修复 Git 代理配置并拉取最新代码 ==="
             # 清除失效的 ghp.ci 代理配置
             git config --global --unset-regexp url."https://ghp.ci/" 2>/dev/null || true
