@@ -5,8 +5,11 @@ import './telemetry.js' // OpenTelemetry 必须在其他 import 之前初始化
 import { createServer } from 'http'
 import { mkdir } from 'fs/promises'
 import app from './app.js'
-import { testConnection } from './config/database.js'
+import { testConnection, pool } from './config/database.js'
 import { testRedisConnection } from './config/redis.js'
+import { readFileSync } from 'fs'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
 import { initWebSocket, getStats } from './websocket/hub.js'
 import { initLLM } from './services/llm.js'
 import { initializeTaskExecution } from './services/taskExecution.js'
@@ -15,12 +18,49 @@ import { initTaskQueue } from './services/taskQueue.js'
 const PORT = process.env.PORT || 3001
 const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/data/workspaces'
 
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+// 自动初始化数据库表（如果表不存在）
+async function initDatabaseSchema(): Promise<void> {
+  try {
+    await pool.query('SELECT 1 FROM projects LIMIT 1')
+  } catch (err: any) {
+    if (err.code === '42P01') {
+      console.log('[Database] Tables not found, running schema initialization...')
+      try {
+        const schemaPath = resolve(__dirname, './db/schema.sql')
+        const schema = readFileSync(schemaPath, 'utf-8')
+        const statements = schema
+          .split(';')
+          .map(s => s.trim())
+          .filter(s => s.length > 0 && !s.startsWith('--'))
+
+        for (const stmt of statements) {
+          try {
+            await pool.query(stmt)
+          } catch (e: any) {
+            if (e.code !== '42P07' && !e.message?.includes('already exists')) {
+              console.warn('[Database] Schema init warning:', e.message)
+            }
+          }
+        }
+        console.log('[Database] Schema initialization complete.')
+      } catch (readErr) {
+        console.error('[Database] Failed to read schema file:', readErr)
+      }
+    }
+  }
+}
+
 // 测试数据库和 Redis 连接并启动服务器
 const startServer = async () => {
   // 测试数据库连接
   const dbConnected = await testConnection()
   if (!dbConnected) {
     console.error('[Server] Failed to connect to database. Starting with limited functionality...')
+  } else {
+    // 自动初始化数据库表（如果不存在）
+    await initDatabaseSchema()
   }
 
   // 测试 Redis 连接
