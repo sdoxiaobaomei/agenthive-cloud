@@ -163,7 +163,8 @@ services:
       DB_NAME: ${DB_NAME:-agenthive}
       REDIS_URL: redis://redis:6379
       REDIS_HOST: redis
-      JWT_SECRET: ${JWT_SECRET:-dev-secret}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       LLM_API_KEY: ${LLM_API_KEY}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.kimi.com/coding/v1}
       LLM_MODEL: ${LLM_MODEL:-kimi-for-coding}
@@ -173,6 +174,7 @@ services:
       OTEL_SDK_DISABLED: "true"
       DEV_USER_ID: 5ab7d370-8900-41a8-a9ca-37dbdcb45b5a
       CORS_ORIGIN: ${CORS_ORIGIN}
+      UV_THREADPOOL_SIZE: 4
     ports:
       - "${API_PORT:-3001}:3001"
     depends_on:
@@ -255,6 +257,9 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
+      ALIYUN_SMS_ENABLED: ${ALIYUN_SMS_ENABLED:-false}
+      ALIBABA_CLOUD_ACCESS_KEY_ID: ${ALIBABA_CLOUD_ACCESS_KEY_ID}
+      ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
       JAVA_OPTS: "-Xms128m -Xmx384m"
     ports:
       - "8080:8080"
