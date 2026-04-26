@@ -26,8 +26,10 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
-      - api
-      - landing
+      api:
+        condition: service_healthy
+      landing:
+        condition: service_healthy
     restart: unless-stopped
     deploy:
       resources:
@@ -67,6 +69,12 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost,https://localhost}
       - UV_THREADPOOL_SIZE=4
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
     deploy:
       resources:
@@ -88,6 +96,13 @@ services:
       - NODE_ENV=production
       - NITRO_PORT=3000
       - API_URL=http://api:3001
+      - GATEWAY_URL=http://gateway-service:8080
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
     deploy:
       resources:
@@ -100,15 +115,25 @@ services:
   # Java 微服务（profile: java）
   # ==========================================
   java-gateway:
-    build:
-      context: ./apps/java/gateway-service
-      dockerfile: Dockerfile
+    image: ${GATEWAY_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/gateway-service:latest}
+    pull_policy: always
     container_name: agenthive-java-gateway-prod
     environment:
       - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
-      - NACOS_SERVER=nacos:8848
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED=false
+      # ===== Nacos（开启认证）=====
+      - NACOS_SERVER=nacos:8848
+      - NACOS_HOST=nacos
+      - NACOS_PORT=8848
+      - SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR=nacos:8848
+      - SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR=nacos:8848
+      - NACOS_USERNAME=${NACOS_USERNAME:-nacos}
+      - NACOS_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
     depends_on:
       nacos:
         condition: service_healthy
@@ -123,17 +148,39 @@ services:
       - java
 
   java-auth:
-    build:
-      context: ./apps/java/auth-service
-      dockerfile: Dockerfile
+    image: ${AUTH_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/auth-service:latest}
+    pull_policy: always
     container_name: agenthive-java-auth-prod
     environment:
       - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
-      - NACOS_SERVER=nacos:8848
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED=false
+      # ===== Nacos（开启认证）=====
+      - NACOS_SERVER=nacos:8848
+      - NACOS_HOST=nacos
+      - NACOS_PORT=8848
+      - SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR=nacos:8848
+      - SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR=nacos:8848
+      - NACOS_USERNAME=${NACOS_USERNAME:-nacos}
+      - NACOS_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
+      # ===== 远端数据层 =====
       - DB_HOST=${DB_HOST:-172.24.146.165}
       - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-agenthive}
+      - DB_USER=${DB_USER:-agenthive}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      # ===== Auth / SMS =====
+      - JWT_SECRET=${JWT_SECRET}
+      - ALIYUN_SMS_ENABLED=${ALIYUN_SMS_ENABLED:-false}
+      - ALIBABA_CLOUD_ACCESS_KEY_ID=${ALIBABA_CLOUD_ACCESS_KEY_ID}
+      - ALIBABA_CLOUD_ACCESS_KEY_SECRET=${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
     depends_on:
       nacos:
         condition: service_healthy
@@ -148,17 +195,34 @@ services:
       - java
 
   java-user:
-    build:
-      context: ./apps/java/user-service
-      dockerfile: Dockerfile
+    image: ${USER_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/user-service:latest}
+    pull_policy: always
     container_name: agenthive-java-user-prod
     environment:
       - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
-      - NACOS_SERVER=nacos:8848
       - SPRING_PROFILES_ACTIVE=docker
       - SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED=false
+      # ===== Nacos（开启认证）=====
+      - NACOS_SERVER=nacos:8848
+      - NACOS_HOST=nacos
+      - NACOS_PORT=8848
+      - SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR=nacos:8848
+      - SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR=nacos:8848
+      - NACOS_USERNAME=${NACOS_USERNAME:-nacos}
+      - NACOS_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD=${NACOS_PASSWORD:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_USERNAME=${NACOS_USERNAME:-nacos}
+      - SPRING_CLOUD_NACOS_CONFIG_PASSWORD=${NACOS_PASSWORD:-nacos}
+      # ===== 远端数据层 =====
       - DB_HOST=${DB_HOST:-172.24.146.165}
       - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${DB_NAME:-agenthive}
+      - DB_USER=${DB_USER:-agenthive}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - REDIS_HOST=${REDIS_HOST:-172.24.146.165}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
     depends_on:
       nacos:
         condition: service_healthy
