@@ -141,10 +141,10 @@ cp .env.example .env
 
 ```bash
 # 本地开发模式（使用宿主机 Ollama）
-docker-compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 
-# 完整模式（包含所有服务）
-docker-compose -f docker-compose.full.yml up -d
+# 含 Java 微服务
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d
 
 # 查看日志
 docker-compose logs -f

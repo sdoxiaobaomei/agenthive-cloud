@@ -1,6 +1,6 @@
 #!/bin/bash
 # PostgreSQL initialization script for multiple databases
-# Used by docker-compose.java.yml
+# Used by docker-compose.dev.yml (postgres service with POSTGRES_MULTIPLE_DATABASES)
 
 set -e
 set -u

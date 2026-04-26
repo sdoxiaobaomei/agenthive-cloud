@@ -11,7 +11,7 @@
 ### 1. 当前架构盘点
 
 ```yaml
-# docker-compose.full.yml 现状
+# docker-compose.dev.yml 现状
 服务列表:
   ✅ nginx:        反向代理 (Alpine)
   ✅ landing:      Nuxt 3 SSR (Node 20)
