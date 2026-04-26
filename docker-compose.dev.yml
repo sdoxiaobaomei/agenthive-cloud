@@ -406,7 +406,6 @@ services:
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
       JAVA_OPTS: "-Xms128m -Xmx384m"
-      SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
     ports:
       - "8083:8083"
     depends_on:
@@ -461,7 +460,6 @@ services:
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
       JAVA_OPTS: "-Xms128m -Xmx384m"
-      SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
     ports:
       - "8084:8084"
     depends_on:
