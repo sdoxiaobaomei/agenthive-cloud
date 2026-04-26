@@ -150,7 +150,7 @@ services:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
-      - "3001:3000"
+      - "3003:3000"
     depends_on:
       - prometheus
       - tempo
@@ -193,8 +193,8 @@ services:
     volumes:
       - ./opentelemetry/otel-collector/otel-collector.yml:/etc/otel-collector.yml:ro
     ports:
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
+      - "4327:4317"   # OTLP gRPC
+      - "4328:4318"   # OTLP HTTP
       - "8888:8888"   # Collector metrics
       - "8889:8889"   # Prometheus exporter
       - "13133:13133" # Health check
