@@ -12,10 +12,10 @@ public class JwtConfig {
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.access-expiration:3600000}")
+    @Value("${jwt.access-token-expiration:3600000}")
     private long accessExpiration;
 
-    @Value("${jwt.refresh-expiration:604800000}")
+    @Value("${jwt.refresh-token-expiration:604800000}")
     private long refreshExpiration;
 
     @PostConstruct

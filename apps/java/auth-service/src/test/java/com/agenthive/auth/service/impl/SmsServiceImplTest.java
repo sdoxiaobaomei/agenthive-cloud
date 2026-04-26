@@ -5,9 +5,9 @@ import com.agenthive.auth.domain.enums.SmsTemplateType;
 import com.agenthive.auth.service.dto.SendSmsVerifyCodeRequest;
 import com.agenthive.auth.service.dto.VerifySmsCodeRequest;
 import com.agenthive.common.core.exception.AgentHiveException;
-import com.aliyuncs.IAcsClient;
-import com.aliyuncs.dysmsapi.model.v20170525.SendSmsResponse;
-import com.aliyuncs.exceptions.ClientException;
+import com.aliyun.dypnsapi20170525.Client;
+import com.aliyun.dypnsapi20170525.models.SendSmsVerifyCodeResponse;
+import com.aliyun.dypnsapi20170525.models.SendSmsVerifyCodeResponseBody;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.*;
 class SmsServiceImplTest {
 
     @Mock
-    private IAcsClient acsClient;
+    private Client dypnsClient;
 
     @Mock
     private SmsProperties smsProperties;
@@ -49,10 +49,19 @@ class SmsServiceImplTest {
         when(smsProperties.getIntervalSeconds()).thenReturn(60);
         when(smsProperties.getDefaultSignName()).thenReturn("云渚科技验证平台");
         when(smsProperties.isOidcEnabled()).thenReturn(false);
+
+        // 配置模板 CODE（dypnsapi 纯数字格式）
+        when(smsProperties.getTemplateCodeLoginRegister()).thenReturn("100001");
+        when(smsProperties.getTemplateCodeModifyPhone()).thenReturn("100002");
+        when(smsProperties.getTemplateCodeResetPassword()).thenReturn("100003");
+        when(smsProperties.getTemplateCodeBindPhone()).thenReturn("100004");
+        when(smsProperties.getTemplateCodeVerifyPhone()).thenReturn("100005");
     }
 
     @Test
     void sendVerifyCode_success() throws Exception {
+        when(smsProperties.isEnabled()).thenReturn(true);
+
         SendSmsVerifyCodeRequest request = new SendSmsVerifyCodeRequest();
         request.setPhone("13800138000");
         request.setTemplateType("LOGIN_REGISTER");
@@ -60,10 +69,15 @@ class SmsServiceImplTest {
         when(valueOperations.get(anyString())).thenReturn(null);
         when(valueOperations.get(startsWith("sms:daily:"))).thenReturn("0");
 
-        SendSmsResponse response = new SendSmsResponse();
-        response.setCode("OK");
-        response.setBizId("123456");
-        when(acsClient.getAcsResponse(any())).thenReturn(response);
+        SendSmsVerifyCodeResponseBody body = new SendSmsVerifyCodeResponseBody()
+                .setCode("OK")
+                .setMessage("成功")
+                .setSuccess(true)
+                .setRequestId("test-request-id");
+        SendSmsVerifyCodeResponse response = new SendSmsVerifyCodeResponse();
+        response.setBody(body);
+        when(dypnsClient.sendSmsVerifyCode(any(com.aliyun.dypnsapi20170525.models.SendSmsVerifyCodeRequest.class)))
+                .thenReturn(response);
 
         assertDoesNotThrow(() -> smsService.sendVerifyCode(request));
 
@@ -101,6 +115,8 @@ class SmsServiceImplTest {
 
     @Test
     void sendVerifyCode_aliyunError() throws Exception {
+        when(smsProperties.isEnabled()).thenReturn(true);
+
         SendSmsVerifyCodeRequest request = new SendSmsVerifyCodeRequest();
         request.setPhone("13800138000");
         request.setTemplateType("LOGIN_REGISTER");
@@ -108,10 +124,15 @@ class SmsServiceImplTest {
         when(valueOperations.get(anyString())).thenReturn(null);
         when(valueOperations.get(startsWith("sms:daily:"))).thenReturn("0");
 
-        SendSmsResponse response = new SendSmsResponse();
-        response.setCode("isv.BUSINESS_LIMIT_CONTROL");
-        response.setMessage("触发业务流控");
-        when(acsClient.getAcsResponse(any())).thenReturn(response);
+        SendSmsVerifyCodeResponseBody body = new SendSmsVerifyCodeResponseBody()
+                .setCode("isv.BUSINESS_LIMIT_CONTROL")
+                .setMessage("触发业务流控")
+                .setSuccess(false)
+                .setRequestId("test-request-id");
+        SendSmsVerifyCodeResponse response = new SendSmsVerifyCodeResponse();
+        response.setBody(body);
+        when(dypnsClient.sendSmsVerifyCode(any(com.aliyun.dypnsapi20170525.models.SendSmsVerifyCodeRequest.class)))
+                .thenReturn(response);
 
         AgentHiveException ex = assertThrows(AgentHiveException.class,
                 () -> smsService.sendVerifyCode(request));
@@ -120,6 +141,8 @@ class SmsServiceImplTest {
 
     @Test
     void sendVerifyCode_clientException() throws Exception {
+        when(smsProperties.isEnabled()).thenReturn(true);
+
         SendSmsVerifyCodeRequest request = new SendSmsVerifyCodeRequest();
         request.setPhone("13800138000");
         request.setTemplateType("LOGIN_REGISTER");
@@ -127,7 +150,8 @@ class SmsServiceImplTest {
         when(valueOperations.get(anyString())).thenReturn(null);
         when(valueOperations.get(startsWith("sms:daily:"))).thenReturn("0");
 
-        when(acsClient.getAcsResponse(any())).thenThrow(new ClientException("SDK.Error", "SDK error"));
+        when(dypnsClient.sendSmsVerifyCode(any(com.aliyun.dypnsapi20170525.models.SendSmsVerifyCodeRequest.class)))
+                .thenThrow(new Exception("SDK error"));
 
         AgentHiveException ex = assertThrows(AgentHiveException.class,
                 () -> smsService.sendVerifyCode(request));
@@ -200,6 +224,8 @@ class SmsServiceImplTest {
 
     @Test
     void sendVerifyCode_customValidSignName() throws Exception {
+        when(smsProperties.isEnabled()).thenReturn(true);
+
         SendSmsVerifyCodeRequest request = new SendSmsVerifyCodeRequest();
         request.setPhone("13800138000");
         request.setTemplateType("LOGIN_REGISTER");
@@ -208,10 +234,15 @@ class SmsServiceImplTest {
         when(valueOperations.get(anyString())).thenReturn(null);
         when(valueOperations.get(startsWith("sms:daily:"))).thenReturn("0");
 
-        SendSmsResponse response = new SendSmsResponse();
-        response.setCode("OK");
-        response.setBizId("123456");
-        when(acsClient.getAcsResponse(any())).thenReturn(response);
+        SendSmsVerifyCodeResponseBody body = new SendSmsVerifyCodeResponseBody()
+                .setCode("OK")
+                .setMessage("成功")
+                .setSuccess(true)
+                .setRequestId("test-request-id");
+        SendSmsVerifyCodeResponse response = new SendSmsVerifyCodeResponse();
+        response.setBody(body);
+        when(dypnsClient.sendSmsVerifyCode(any(com.aliyun.dypnsapi20170525.models.SendSmsVerifyCodeRequest.class)))
+                .thenReturn(response);
 
         assertDoesNotThrow(() -> smsService.sendVerifyCode(request));
     }

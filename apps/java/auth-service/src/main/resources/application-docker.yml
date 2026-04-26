@@ -45,12 +45,18 @@ mybatis-plus:
 
 aliyun:
   sms:
-    enabled: ${ALIYUN_SMS_ENABLED:true}
+    enabled: ${ALIYUN_SMS_ENABLED:false}
     region-id: ${ALIYUN_SMS_REGION_ID:cn-hangzhou}
     default-sign-name: ${ALIYUN_SMS_DEFAULT_SIGN_NAME:云渚科技验证平台}
     code-expire-minutes: ${ALIYUN_SMS_CODE_EXPIRE_MINUTES:5}
     daily-limit: ${ALIYUN_SMS_DAILY_LIMIT:10}
     interval-seconds: ${ALIYUN_SMS_INTERVAL_SECONDS:60}
+    # 短信模板 CODE（从阿里云控制台 → 短信服务 → 模板管理 获取）
+    template-code-login-register: ${ALIYUN_SMS_TEMPLATE_CODE_LOGIN_REGISTER:100001}
+    template-code-modify-phone: ${ALIYUN_SMS_TEMPLATE_CODE_MODIFY_PHONE:100002}
+    template-code-reset-password: ${ALIYUN_SMS_TEMPLATE_CODE_RESET_PASSWORD:100003}
+    template-code-bind-phone: ${ALIYUN_SMS_TEMPLATE_CODE_BIND_PHONE:100004}
+    template-code-verify-phone: ${ALIYUN_SMS_TEMPLATE_CODE_VERIFY_PHONE:100005}
     # Docker 环境下默认关闭 OIDC（需 K8s），通过环境变量注入 STS/AccessKey
     oidc-enabled: ${ALIYUN_SMS_OIDC_ENABLED:false}
     oidc-role-arn: ${ALIYUN_SMS_OIDC_ROLE_ARN:}
