@@ -1,5 +1,4 @@
 import type { Request, Response, NextFunction } from 'express'
-import { createHmac } from 'crypto'
 import { resolveLocalUser } from '../services/userMapping.js'
 import logger from '../utils/logger.js'
 
@@ -53,28 +52,6 @@ async function injectDevUser(req: Request): Promise<boolean> {
 }
 
 /**
- * 轻量 JWT 验证（HS256），用于 Landing BFF 直接调用时的身份解析
- */
-function verifyJwt(token: string, secret: string): { sub?: string; username?: string; roles?: string } | null {
-  const [headerB64, payloadB64, signature] = token.split('.')
-  if (!headerB64 || !payloadB64 || !signature) return null
-
-  const expectedSig = createHmac('sha256', secret)
-    .update(`${headerB64}.${payloadB64}`)
-    .digest('base64url')
-
-  if (signature !== expectedSig) return null
-
-  try {
-    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf-8'))
-    if (payload.exp && Date.now() >= payload.exp * 1000) return null
-    return payload
-  } catch {
-    return null
-  }
-}
-
-/**
  * 从 Gateway 透传 header 解析用户身份
  */
 async function resolveGatewayUser(req: Request): Promise<boolean> {
@@ -102,45 +79,6 @@ async function resolveGatewayUser(req: Request): Promise<boolean> {
   }
 }
 
-/**
- * 从 Authorization header 解析 JWT 并解析用户身份
- * 用于 Landing BFF 直接调用 API（不经过 Gateway）的场景
- */
-async function resolveJwtUser(req: Request): Promise<boolean> {
-  const authHeader = req.headers.authorization as string | undefined
-  if (!authHeader || !authHeader.startsWith('Bearer ')) return false
-
-  const token = authHeader.substring(7)
-  const jwtSecret = process.env.JWT_SECRET
-  if (!jwtSecret) {
-    logger.warn('JWT_SECRET not configured, cannot verify token')
-    return false
-  }
-
-  const payload = verifyJwt(token, jwtSecret)
-  if (!payload || !payload.sub) return false
-
-  try {
-    const localUser = await resolveLocalUser({
-      externalId: payload.sub,
-      username: payload.username,
-      role: payload.roles,
-    })
-
-    ;(req as any).userId = localUser.id
-    ;(req as any).externalUserId = payload.sub
-    ;(req as any).user = {
-      userId: localUser.id,
-      username: localUser.username,
-      role: localUser.role,
-    }
-    return true
-  } catch (error) {
-    logger.error('JWT user resolution failed', error instanceof Error ? error : undefined)
-    return false
-  }
-}
-
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {
   // 白名单路径直接放行
   if (PUBLIC_PATHS.some((p) => req.path.includes(p))) {
@@ -160,12 +98,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     return next()
   }
 
-  // 生产环境：优先 Gateway 透传，其次自己解析 JWT
-  // Landing BFF 直接调用时只带 Authorization，不设置 X-User-Id
+  // 生产环境：强制 Gateway 透传认证（P0-001 统一认证层设计）
   if (await resolveGatewayUser(req)) {
-    return next()
-  }
-  if (await resolveJwtUser(req)) {
     return next()
   }
 
