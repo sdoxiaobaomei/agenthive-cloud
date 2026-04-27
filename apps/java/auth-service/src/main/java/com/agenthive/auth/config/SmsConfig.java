@@ -41,9 +41,12 @@ public class SmsConfig {
         Config config = new Config()
                 .setAccessKeyId(akId)
                 .setAccessKeySecret(akSecret)
-                .setEndpoint("dypnsapi.aliyuncs.com");
+                .setEndpoint("dypnsapi.aliyuncs.com")
+                .setRegionId(smsProperties.getRegionId())
+                .setProtocol("HTTPS");
 
-        log.info("阿里云 Dypnsapi Client 初始化完成，endpoint={}", config.getEndpoint());
+        log.info("阿里云 Dypnsapi Client 初始化完成，endpoint={}，regionId={}，protocol={}",
+                config.getEndpoint(), config.getRegionId(), config.getProtocol());
         return new Client(config);
     }
 }

@@ -138,6 +138,8 @@ services:
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
       - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      # ===== JWT =====
+      - JWT_SECRET=${JWT_SECRET}
     depends_on:
       nacos:
         condition: service_healthy
@@ -483,7 +485,7 @@ services:
       - MODE=standalone
       - PREFER_HOST_MODE=hostname
       - NACOS_AUTH_ENABLE=true
-      - NACOS_AUTH_TOKEN=${NACOS_AUTH_TOKEN:-<NACOS_AUTH_TOKEN>}
+      - NACOS_AUTH_TOKEN=${NACOS_AUTH_TOKEN:-bmFjb3Mtc2VjcmV0LWtleS1hZ2VudGhpdmUtMjAyNA==}
       - NACOS_AUTH_IDENTITY_KEY=${NACOS_AUTH_IDENTITY_KEY:-agenthive}
       - NACOS_AUTH_IDENTITY_VALUE=${NACOS_AUTH_IDENTITY_VALUE:-agenthive-secret-2024}
     ports:
