@@ -98,9 +98,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     return next()
   }
 
-  // 生产环境：强制 Gateway 透传认证
-  const resolved = await resolveGatewayUser(req)
-  if (resolved) {
+  // 生产环境：强制 Gateway 透传认证（P0-001 统一认证层设计）
+  if (await resolveGatewayUser(req)) {
     return next()
   }
 

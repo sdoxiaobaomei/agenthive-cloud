@@ -22,6 +22,11 @@ dist
 build
 **/build
 
+# 例外：Dockerfile 需要 COPY 预构建产物
+!apps/agent-runtime/dist
+!apps/api/dist
+!packages/observability/dist
+
 # ==================== 测试和日志 ====================
 *.log
 **/*.log

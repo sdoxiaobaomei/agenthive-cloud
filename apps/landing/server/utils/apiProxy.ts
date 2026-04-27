@@ -1,19 +1,17 @@
 /**
- * API 代理工具 - 将 Landing SSR 请求转发到后端 API
+ * API 代理工具 - 将 Landing SSR 请求转发到后端 Gateway
+ * P0-001 统一认证层：所有请求必须经过 Gateway，由 Gateway 验证 JWT 并注入 X-User-Id
  */
 import { getHeader, getQuery, readBody, getMethod, setResponseStatus } from 'h3'
 
 /**
- * 获取后端 API 基础地址（Node API 业务服务）
+ * 获取 Node API 直连地址（仅用于不经过 Gateway 的内部调用，如 WebSocket）
  * - Docker 环境: 使用 API_URL 环境变量 (http://api:3001)
- * - 本地开发: 使用 runtimeConfig.public.apiBase 或 localhost:3001
  */
 export function getApiBase(): string {
-  // Docker Compose 会注入 API_URL
   if (process.env.API_URL) {
     return process.env.API_URL
   }
-  // Nuxt runtime config (SSR 端可用)
   try {
     const config = useRuntimeConfig()
     if (config.public?.apiBase) {
@@ -26,8 +24,9 @@ export function getApiBase(): string {
 }
 
 /**
- * 获取 Gateway 基础地址（认证等 Java 服务统一入口）
- * - 所有 /api/auth/** 请求应走 Gateway，由 Gateway 路由到 Java auth-service
+ * 获取 Gateway 基础地址（统一认证入口）
+ * - P0-001 后，所有 HTTP API 请求（包括 projects/agents/chat）都走 Gateway
+ * - Gateway 负责 JWT 验证、X-User-Id 注入、服务路由
  */
 export function getGatewayBase(): string {
   if (process.env.GATEWAY_URL) {
@@ -49,11 +48,11 @@ export function getAuthHeader(event: any): Record<string, string> {
 }
 
 /**
- * 代理请求到后端 API
+ * 代理请求到后端 Gateway
  * @param event H3Event
  * @param path 后端 API 路径 (如 /api/agents)
  * @param options 额外选项
- * @param baseUrl 自定义基础地址（默认走 Node API，auth 请求可指定 Gateway）
+ * @param baseUrl 自定义基础地址（默认走 Gateway，特殊场景可指定直连 API）
  */
 export async function proxyToApi(
   event: any,
@@ -65,7 +64,7 @@ export async function proxyToApi(
   },
   baseUrl?: string
 ): Promise<any> {
-  const apiBase = baseUrl || getApiBase()
+  const apiBase = baseUrl || getGatewayBase()
   const query = options?.query || getQuery(event)
   const queryParams = new URLSearchParams()
   for (const [k, v] of Object.entries(query as Record<string, any>)) {

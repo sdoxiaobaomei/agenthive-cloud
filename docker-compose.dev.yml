@@ -209,7 +209,7 @@ services:
     container_name: agenthive-landing-dev
     restart: unless-stopped
     environment:
-      API_URL: http://api:3001
+      API_URL: http://gateway-service:8080
       GATEWAY_URL: http://gateway-service:8080
       NUXT_PUBLIC_API_BASE: /api
       OTEL_SDK_DISABLED: "true"
@@ -257,6 +257,9 @@ services:
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       ALIYUN_SMS_ENABLED: ${ALIYUN_SMS_ENABLED:-false}
       ALIBABA_CLOUD_ACCESS_KEY_ID: ${ALIBABA_CLOUD_ACCESS_KEY_ID}
       ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
@@ -302,8 +305,9 @@ services:
       DB_NAME: auth_db
       DB_USER: ${DB_USER:-agenthive}
       DB_PASSWORD: ${DB_PASSWORD:-dev}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       JAVA_OPTS: "-Xms128m -Xmx384m"
     ports:
@@ -351,8 +355,9 @@ services:
       DB_NAME: user_db
       DB_USER: ${DB_USER:-agenthive}
       DB_PASSWORD: ${DB_PASSWORD:-dev}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       JAVA_OPTS: "-Xms128m -Xmx384m"
     ports:
       - "8082:8082"
@@ -399,8 +404,9 @@ services:
       DB_NAME: payment_db
       DB_USER: ${DB_USER:-agenthive}
       DB_PASSWORD: ${DB_PASSWORD:-dev}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
@@ -454,8 +460,9 @@ services:
       DB_NAME: order_db
       DB_USER: ${DB_USER:-agenthive}
       DB_PASSWORD: ${DB_PASSWORD:-dev}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
@@ -509,8 +516,9 @@ services:
       DB_NAME: cart_db
       DB_USER: ${DB_USER:-agenthive}
       DB_PASSWORD: ${DB_PASSWORD:-dev}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
@@ -563,6 +571,9 @@ services:
       DB_NAME: logistics_db
       DB_USER: ${DB_USER:-agenthive}
       DB_PASSWORD: ${DB_PASSWORD:-dev}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
@@ -723,6 +734,8 @@ services:
       api:
         condition: service_healthy
       landing:
+        condition: service_healthy
+      gateway-service:
         condition: service_healthy
     networks:
       - agenthive-dev

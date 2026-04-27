@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8080
 
 spring:
@@ -53,10 +53,16 @@ spring:
             - Path=/api/logistics/**
           filters:
             - StripPrefix=1
+        # Node API fallback — Gateway 认证后路由到 Node.js 服务
+        - id: node-api
+          uri: http://api:3001
+          predicates:
+            - Path=/api/**
   data:
     redis:
-      host: ${REDIS_HOST:redis}
-      port: ${REDIS_PORT:6379}
+      host: ${SPRING_DATA_REDIS_HOST:redis}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
 
 jwt:
   secret: ${JWT_SECRET:agenthive-default-secret-key-2024-change-in-production}
