@@ -176,7 +176,7 @@
 
 | 阶段 | 状态 | 任务数 | 预估工时 | 关键里程碑 |
 |------|------|--------|----------|------------|
-| **Phase 0** | ✅ 完成 | 7 | 1-2 周 | 安全基线可投产 |
+| **Phase 0** | 🟡 有条件通过 | 7 | 1-2 周 | 安全基线可投产 (遗留 0.4.1 默认密码清理) |
 | **Phase 1** | ⬜ 待启动 | 12 | 4-6 周 | 电商 + Agent API 完整 |
 | **Phase 2** | ⬜ 待启动 | 7 | 6-8 周 | 服务拆分 + 可观测闭环 |
 | **Phase 3** | ⬜ 待启动 | 5 | 8-12 周 | 弹性伸缩 + 商业化 |
@@ -221,4 +221,5 @@
 |------|------|----------|
 | v1.1 | 2026-04-27 | P0-A 运行时验证完成（5/7 UP，order/user 镜像待 rebuild）；P0-B API 限速完成；Prometheus 监控埋点提前完成（Phase 2.2.2）；Nacos 线程/内存优化完成；Agent YAML 递归修复 |
 | v1.2 | 2026-04-27 | 全部 7 个 Java 服务 rebuild 完成，actuator/health + actuator/prometheus 验证通过；docker compose 加载 .env.dev 修复 Redis 密码传递；Phase 0 标记完成 |
+| v1.3 | 2026-04-27 | Phase 0 验收报告：有条件通过 (15/19 项通过)。核心阻塞项：0.4.1 默认密码 fallback 未移除 (JWT_SECRET, DB_PASSWORD)。建议 Phase 1 启动前修复。 |
 | v1.0 | 2026-04-27 | 初始版本，整合 TODO.md + development-roadmap.md + 架构审视发现的问题 |
