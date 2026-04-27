@@ -16,13 +16,13 @@ RUN mkdir -p /etc/grafana/provisioning/datasources && \
     mkdir -p /usr/share/grafana/.aws
 
 # 复制数据源配置
-COPY grafana/provisioning/datasources/prometheus.yml /etc/grafana/provisioning/datasources/
+COPY provisioning/datasources/prometheus.yml /etc/grafana/provisioning/datasources/
 
 # 复制 Dashboard 提供者配置
-COPY grafana/provisioning/dashboards/main.yaml /etc/grafana/provisioning/dashboards/
+COPY provisioning/dashboards/main.yaml /etc/grafana/provisioning/dashboards/
 
 # 复制 Dashboard JSON 文件
-COPY grafana/provisioning/dashboards/dashboards/system-monitor.json /etc/grafana/provisioning/dashboards/
+COPY provisioning/dashboards/dashboards/system-monitor.json /etc/grafana/provisioning/dashboards/
 
 # 调试：列出文件（验证 COPY 是否成功）
 RUN ls -la /etc/grafana/provisioning/dashboards/

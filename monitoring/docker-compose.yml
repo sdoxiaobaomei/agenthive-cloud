@@ -251,4 +251,5 @@ networks:
     name: agenthive-monitoring
     driver: bridge
   agenthive-dev:
+    name: agenthive-cloud_agenthive-dev
     external: true
