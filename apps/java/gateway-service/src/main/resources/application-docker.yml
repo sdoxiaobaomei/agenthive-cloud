@@ -65,7 +65,7 @@ spring:
       password: ${SPRING_DATA_REDIS_PASSWORD:}
 
 jwt:
-  secret: ${JWT_SECRET:agenthive-default-secret-key-2024-change-in-production}
+  secret: ${JWT_SECRET}
 
 logging:
   level:

@@ -8,7 +8,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:postgres-auth}:${DB_PORT:5432}/${DB_NAME:auth_db}
     username: ${DB_USER:agenthive}
-    password: ${DB_PASSWORD:secret}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
@@ -66,7 +66,7 @@ aliyun:
     oidc-role-session-name: ${ALIYUN_SMS_OIDC_ROLE_SESSION_NAME:auth-service-sms}
 
 jwt:
-  secret: ${JWT_SECRET:agenthive-default-secret-key-2024-change-in-production}
+  secret: ${JWT_SECRET}
   access-token-expiration: 86400000
   refresh-token-expiration: 604800000
 
