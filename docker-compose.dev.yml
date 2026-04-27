@@ -209,7 +209,7 @@ services:
     container_name: agenthive-landing-dev
     restart: unless-stopped
     environment:
-      API_URL: http://api:3001
+      API_URL: http://gateway-service:8080
       GATEWAY_URL: http://gateway-service:8080
       NUXT_PUBLIC_API_BASE: /api
       OTEL_SDK_DISABLED: "true"

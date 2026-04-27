@@ -40,7 +40,16 @@ export const getAgents = async (req: Request, res: Response) => {
   try {
     await delay(300)
     const agents = await agentDb.findAll()
-    res.json({ code: 200, message: 'success', data: { agents, total: agents.length },
+    res.json({
+      code: 200,
+      message: 'success',
+      data: {
+        items: agents,
+        total: agents.length,
+        page: 1,
+        pageSize: agents.length,
+        totalPages: 1,
+      },
     })
   } catch (error) {
     logger.error('Get agents error', error instanceof Error ? error : undefined)

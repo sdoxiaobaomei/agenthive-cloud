@@ -24,7 +24,17 @@ export const getProjects = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId as string | undefined
     const projects = await projectService.findAll(userId)
-    res.json({ code: 200, message: 'success', data: { items: projects, total: projects.length } })
+    res.json({
+      code: 200,
+      message: 'success',
+      data: {
+        items: projects,
+        total: projects.length,
+        page: 1,
+        pageSize: projects.length,
+        totalPages: 1,
+      },
+    })
   } catch (error) {
     logger.error('Failed to get projects', error instanceof Error ? error : undefined)
     res.status(500).json({ code: 500, message: '获取项目列表失败' , data: null })
