@@ -735,6 +735,8 @@ services:
         condition: service_healthy
       landing:
         condition: service_healthy
+      gateway-service:
+        condition: service_healthy
     networks:
       - agenthive-dev
     deploy:
