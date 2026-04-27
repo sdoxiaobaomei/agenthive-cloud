@@ -1,0 +1,5 @@
+version: 1
+agent:
+  extend: default
+  name: frontend-dev
+  system_prompt_path: ./frontend-system.md

@@ -42,6 +42,44 @@ scrape_configs:
   #   static_configs:
   #     - targets: ['nginx-exporter:9113']
 
+  # Java 微服务 - AgentHive Cloud
+  # 所有服务统一暴露 /actuator/prometheus 端点
+  # 使用 Docker Compose 服务名进行 DNS 解析
+  - job_name: 'java-gateway'
+    static_configs:
+      - targets: ['gateway-service:8080']
+    metrics_path: '/actuator/prometheus'
+
+  - job_name: 'java-auth'
+    static_configs:
+      - targets: ['auth-service:8081']
+    metrics_path: '/actuator/prometheus'
+
+  - job_name: 'java-user'
+    static_configs:
+      - targets: ['user-service:8082']
+    metrics_path: '/actuator/prometheus'
+
+  - job_name: 'java-payment'
+    static_configs:
+      - targets: ['payment-service:8083']
+    metrics_path: '/actuator/prometheus'
+
+  - job_name: 'java-order'
+    static_configs:
+      - targets: ['order-service:8084']
+    metrics_path: '/actuator/prometheus'
+
+  - job_name: 'java-cart'
+    static_configs:
+      - targets: ['cart-service:8085']
+    metrics_path: '/actuator/prometheus'
+
+  - job_name: 'java-logistics'
+    static_configs:
+      - targets: ['logistics-service:8086']
+    metrics_path: '/actuator/prometheus'
+
 # 远程存储（可选）
 # remote_write:
 #   - url: "http://your-remote-storage/api/v1/write"

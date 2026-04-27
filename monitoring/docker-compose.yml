@@ -127,6 +127,7 @@ services:
       - '--web.enable-remote-write-receiver'
     networks:
       - agenthive-monitoring
+      - agenthive-dev
     deploy:
       resources:
         limits:
@@ -249,3 +250,5 @@ networks:
   agenthive-monitoring:
     name: agenthive-monitoring
     driver: bridge
+  agenthive-dev:
+    external: true

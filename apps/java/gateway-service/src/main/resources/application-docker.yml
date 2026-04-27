@@ -70,3 +70,19 @@ jwt:
 logging:
   level:
     org.springframework.cloud.gateway: debug
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: always
+    gateway:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

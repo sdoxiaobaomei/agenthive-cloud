@@ -1,0 +1,105 @@
+﻿name: Memory Maintenance
+
+on:
+  schedule:
+    # 每周一 02:00 UTC — 健康检查（纯只读，安全）
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Maintenance task to run'
+        required: true
+        default: 'health-check'
+        type: choice
+        options:
+          - health-check
+          - dry-run-compress
+          - dry-run-review
+
+jobs:
+  # ============================================
+  # Job 1: 健康检查 — 全自动，零风险，纯只读
+  # ============================================
+  health-check:
+    if: github.event.schedule == '0 2 * * 1' || github.event.inputs.task == 'health-check'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Memory Health Check
+        shell: bash
+        run: |
+          chmod +x scripts/maintenance/*.sh
+          ./scripts/maintenance/memory-health-check.sh
+      - name: Create Issue if unhealthy
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `⚠️ Memory Health Check Failed — ${new Date().toISOString().slice(0,10)}`;
+            const body = `The weekly memory health check detected issues.\n\nPlease run \`.\\scripts\\maintenance\\memory-health-check.ps1\` or \`.sh\` locally for details,\nor ask the Lead Agent to perform maintenance.\n\n---\n*Auto-created by Memory Maintenance workflow*`;
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['maintenance', 'agent-memory', 'automated']
+            });
+
+  # ============================================
+  # Job 2: Reflection 压缩 — Dry Run + 创建 PR
+  # 不直接 commit！只生成摘要草稿，由人类/Agent 确认后合并
+  # ============================================
+  dry-run-compress:
+    if: github.event.inputs.task == 'dry-run-compress'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Compression (Dry Run)
+        shell: bash
+        run: |
+          chmod +x scripts/maintenance/*.sh
+          LAST_MONTH=$(date -d 'last month' +%Y-%m)
+          ./scripts/maintenance/compress-reflections.sh "$LAST_MONTH" ".kimi/memory" "--whatif"
+      - name: Create PR with compression instructions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const month = new Date();
+            month.setMonth(month.getMonth() - 1);
+            const ym = month.toISOString().slice(0,7);
+            const title = `[bot] Reflection Compression Ready — ${ym}`;
+            const body = `## Monthly Reflection Compression\n\nThe dry-run indicates there are reflections ready to be compressed for **${ym}**.\n\n### Next Steps (choose one):\n1. **Lead Agent**: Run \`.\\scripts\\maintenance\\compress-reflections.ps1 -Month ${ym}\` locally, review the summary, then commit\n2. **Human**: Run the same script, or manually compress reflections\n3. **With Kimi API**: If \`KIMI_API_KEY\` is configured, the script can auto-generate summaries\n\n### What this does:\n- Archives old reflections to \`.kimi/memory/archive/reflections/${ym}/\`\n- Generates \`summary-${ym}.md\` with high-frequency patterns and insights\n\n---\n*This issue was auto-created by the Memory Maintenance workflow.*`;
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['maintenance', 'agent-memory', 'needs-action']
+            });
+
+  # ============================================
+  # Job 3: Skill 审查 — Dry Run + 创建 Issue
+  # ============================================
+  dry-run-review:
+    if: github.event.inputs.task == 'dry-run-review'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Skill Review (Dry Run)
+        shell: bash
+        run: |
+          chmod +x scripts/maintenance/*.sh
+          ./scripts/maintenance/review-skills.sh ".kimi/memory" "--whatif"
+      - name: Create Issue for Human Review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = `🔧 Quarterly Skill Review — ${new Date().toISOString().slice(0,7)}`;
+            const body = `The quarterly skill review dry-run has been executed.\n\nPlease:\n1. Check the workflow logs for the full review report\n2. Run \`.\\scripts\\maintenance\\review-skills.ps1\` or \`.sh\` locally to apply changes\n3. **Note**: This script requires human confirmation (y/N) before deleting any files\n\n---\n*Auto-created by the Memory Maintenance workflow.*`;
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['maintenance', 'agent-memory', 'needs-action']
+            });

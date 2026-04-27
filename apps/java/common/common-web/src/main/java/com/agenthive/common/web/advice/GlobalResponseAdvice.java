@@ -30,6 +30,11 @@ public class GlobalResponseAdvice implements ResponseBodyAdvice<Object> {
                                   Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   ServerHttpRequest request,
                                   ServerHttpResponse response) {
+        // Skip actuator endpoints — they must return raw Prometheus/text format
+        String path = request.getURI().getPath();
+        if (path != null && path.startsWith("/actuator")) {
+            return body;
+        }
         if (body instanceof Result) {
             return body;
         }

@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser'
 import { requestLogger } from './middleware/request-logger.js'
 import { corsConfig } from './config/cors.js'
 import { authMiddleware } from './middleware/auth.js'
+import { rateLimitMiddleware } from './middleware/rateLimit.js'
 import routes from './routes/index.js'
 import logger from './utils/logger.js'
 import { setupSwagger } from './swagger.js'
@@ -23,6 +24,9 @@ setupSwagger(app)
 
 // 认证中间件
 app.use(authMiddleware)
+
+// 速率限制（认证之后，路由之前）
+app.use(rateLimitMiddleware)
 
 // API 路由
 app.use('/api', routes)

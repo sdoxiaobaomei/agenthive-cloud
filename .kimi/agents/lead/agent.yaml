@@ -1,0 +1,18 @@
+version: 1
+agent:
+  extend: default
+  name: agenthive-lead
+  system_prompt_path: ./system.md
+  subagents:
+    java:
+      path: ../java/agent.yaml
+      description: "Java microservices dev — gateway/auth/user/order/payment/cart/logistics"
+    node:
+      path: ../node/agent.yaml
+      description: "Node.js backend dev — API / Agent Runtime / packages"
+    frontend:
+      path: ../frontend/agent.yaml
+      description: "Frontend dev — Landing (Nuxt) & Web (Vue)"
+    platform:
+      path: ../platform/agent.yaml
+      description: "Platform & DevOps — Docker / K8s / Terraform / CI-CD / monitoring"

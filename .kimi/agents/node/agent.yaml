@@ -1,0 +1,5 @@
+version: 1
+agent:
+  extend: default
+  name: node-backend
+  system_prompt_path: ./node-system.md

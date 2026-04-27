@@ -59,6 +59,7 @@ services:
       --maxmemory-policy allkeys-lru
       --appendonly yes
       --save 60 1000
+      --requirepass ${REDIS_PASSWORD:-agenthive}
     volumes:
       - redis_data:/data
     ports:
@@ -95,8 +96,11 @@ services:
       NACOS_AUTH_TOKEN: bmFjb3Mtc2VjcmV0LWtleS1hZ2VudGhpdmUtMjAyNC1sb25nZXIta2V5
       NACOS_AUTH_IDENTITY_KEY: agenthive
       NACOS_AUTH_IDENTITY_VALUE: agenthive-secret-2024
-      JVM_XMS: 256m
-      JVM_XMX: 512m
+      JVM_XMS: 512m
+      JVM_XMX: 1024m
+      JVM_XMN: 384m
+      JVM_MMS: 256m
+      JAVA_TOOL_OPTIONS: "-Dremote.executor.times.of.processors=1 -Dnacos.common.processors=2"
     ports:
       - "8848:8848"
       - "9848:9848"
@@ -113,9 +117,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 768M
+          memory: 1536M
         reservations:
-          memory: 512M
+          memory: 1024M
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     container_name: agenthive-rabbitmq-dev
@@ -263,7 +267,7 @@ services:
       ALIYUN_SMS_ENABLED: ${ALIYUN_SMS_ENABLED:-false}
       ALIBABA_CLOUD_ACCESS_KEY_ID: ${ALIBABA_CLOUD_ACCESS_KEY_ID}
       ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
-      JAVA_OPTS: "-Xms128m -Xmx384m"
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
     ports:
       - "8080:8080"
     depends_on:
@@ -280,9 +284,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
         reservations:
-          memory: 256M
+          memory: 384M
   auth-service:
     build:
       context: ./apps/java/auth-service
@@ -309,7 +313,7 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
-      JAVA_OPTS: "-Xms128m -Xmx384m"
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
     ports:
       - "8081:8081"
     depends_on:
@@ -330,9 +334,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
         reservations:
-          memory: 256M
+          memory: 384M
   user-service:
     build:
       context: ./apps/java/user-service
@@ -358,7 +362,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
-      JAVA_OPTS: "-Xms128m -Xmx384m"
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
     ports:
       - "8082:8082"
     depends_on:
@@ -379,9 +383,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
         reservations:
-          memory: 256M
+          memory: 384M
   payment-service:
     build:
       context: ./apps/java/payment-service
@@ -411,7 +415,7 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
-      JAVA_OPTS: "-Xms128m -Xmx384m"
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
       SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
     ports:
       - "8083:8083"
@@ -435,9 +439,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
         reservations:
-          memory: 256M
+          memory: 384M
   order-service:
     build:
       context: ./apps/java/order-service
@@ -467,7 +471,7 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
-      JAVA_OPTS: "-Xms128m -Xmx384m"
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
       SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
     ports:
       - "8084:8084"
@@ -491,9 +495,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
         reservations:
-          memory: 256M
+          memory: 384M
   cart-service:
     build:
       context: ./apps/java/cart-service
@@ -523,7 +527,7 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
-      JAVA_OPTS: "-Xms128m -Xmx384m"
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
     ports:
       - "8085:8085"
     depends_on:
@@ -546,9 +550,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
         reservations:
-          memory: 256M
+          memory: 384M
   logistics-service:
     build:
       context: ./apps/java/logistics-service
@@ -578,7 +582,7 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
-      JAVA_OPTS: "-Xms128m -Xmx384m"
+      JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
     ports:
       - "8086:8086"
     depends_on:
@@ -599,9 +603,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 768M
         reservations:
-          memory: 256M
+          memory: 384M
   # ============================================
   # Monitoring Stack (profile: monitoring)
   # ============================================
