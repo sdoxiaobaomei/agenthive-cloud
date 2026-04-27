@@ -31,7 +31,7 @@
 | 0.1.1 | 统一认证层 — Gateway 唯一 JWT 验签 | ✅ 完成 | Node API 拒绝无 `X-User-Id` 请求，返回 401 | Node 团队 |
 | 0.1.2 | 开发环境模拟用户注入 | ✅ 完成 | `injectDevUser()` + `DEV_USER_*` env 可用 | Node 团队 |
 | 0.1.3 | 移除 Node API 本地 JWT 依赖 | ✅ 完成 | `jwt.ts` 已删除，`jose` 已移除 | Node 团队 |
-| 0.1.4 | 生产环境 CORS 限制精确 Origin | ⬜ 未开始 | `allowedOriginPatterns` 不再用 `*` | Java 团队 |
+| 0.1.4 | 生产环境 CORS 限制精确 Origin | ✅ 完成 | Gateway globalcors 配置已部署，精确 Origin 列表 | Java 团队 |
 | 0.1.5 | API 全端点速率限制 | ✅ 完成 | Redis-backed 分端点限速已部署 | Node 团队 |
 
 ### 0.2 Java 微服务编译（P0-002 已完成，需运行时验证）
@@ -49,13 +49,13 @@
 | 0.3.1 | Redis Stream 任务队列 | ✅ 完成 | `enqueueTask` 异步提交 | Node 团队 |
 | 0.3.2 | Agent Runtime 独立消费 | ✅ 完成 | `TaskConsumer` + `pnpm consumer` 运行中 | Node 团队 |
 | 0.3.3 | WebSocket 进度推送 | ✅ 完成 | `task:subscribe` + Pub/Sub 已对接 | Node 团队 |
-| 0.3.4 | 任务崩溃隔离验证 | ⬜ 未验证 | `kill -9` 消费者后 API 仍健康 | Node 团队 |
+| 0.3.4 | 任务崩溃隔离验证 | ✅ 完成 | `kill -9` consumer 后 API health 正常，Redis Stream 未阻塞 | Node 团队 |
 
 ### 0.4 基础设施安全加固
 
 | # | 任务 | 状态 | 验收标准 | 负责人 |
 |---|------|------|----------|--------|
-| 0.4.1 | 移除 Java 配置中所有默认密码/Secret | ⬜ 未开始 | `application*.yml` 无 fallback 默认值 | Java 团队 |
+| 0.4.1 | 移除 Java 配置中所有默认密码/Secret | ✅ 完成 | auth-service 和 gateway-service 的 JWT_SECRET/DB_PASSWORD fallback 已移除 | Java 团队 |
 | 0.4.2 | K8s Secrets 迁移 External Secrets Operator | ⬜ 未开始 | `01-secrets.yaml` 从 Git 移除 | DevOps |
 | 0.4.3 | Nginx HTTPS + cert-manager | ⬜ 未开始 | TLS 强制跳转，HTTP 301 → HTTPS | DevOps |
 | 0.4.4 | PostgreSQL 自动备份策略 | ⬜ 未开始 | 每日备份 + 7 天保留 | DevOps |
@@ -176,7 +176,7 @@
 
 | 阶段 | 状态 | 任务数 | 预估工时 | 关键里程碑 |
 |------|------|--------|----------|------------|
-| **Phase 0** | 🟡 有条件通过 | 7 | 1-2 周 | 安全基线可投产 (遗留 0.4.1 默认密码清理) |
+| **Phase 0** | ✅ 完成 | 7 | 1-2 周 | 安全基线可投产 |
 | **Phase 1** | ⬜ 待启动 | 12 | 4-6 周 | 电商 + Agent API 完整 |
 | **Phase 2** | ⬜ 待启动 | 7 | 6-8 周 | 服务拆分 + 可观测闭环 |
 | **Phase 3** | ⬜ 待启动 | 5 | 8-12 周 | 弹性伸缩 + 商业化 |
