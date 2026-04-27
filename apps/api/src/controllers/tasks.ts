@@ -43,7 +43,16 @@ export const getTasks = async (req: Request, res: Response) => {
     const size = parseInt(pageSize as string)
     const start = (pageNum - 1) * size
     tasks = tasks.slice(start, start + size)
-    res.json({ code: 200, message: 'success', data: { tasks, total, page: pageNum, pageSize: size },
+    res.json({
+      code: 200,
+      message: 'success',
+      data: {
+        items: tasks,
+        total,
+        page: pageNum,
+        pageSize: size,
+        totalPages: Math.ceil(total / size) || 1,
+      },
     })
   } catch (error) {
     logger.error('Get tasks error', error instanceof Error ? error : undefined)

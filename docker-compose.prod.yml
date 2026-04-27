@@ -97,7 +97,7 @@ services:
     environment:
       - NODE_ENV=production
       - NITRO_PORT=3000
-      - API_URL=http://api:3001
+      - API_URL=http://java-gateway:8080
       - GATEWAY_URL=http://java-gateway:8080
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000"]

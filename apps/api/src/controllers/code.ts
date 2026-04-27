@@ -31,8 +31,7 @@ export const getFileList = async (req: Request, res: Response) => {
   try {
     await delay(300)
     const files = await codeDb.findAll()
-    res.json({ code: 200, message: 'success', data: { files, total: files.length, path: (req.query.path as string) || '/' },
-    })
+    res.json({ code: 200, message: 'success', data: files })
   } catch (error) {
     logger.error('Get file list error', error instanceof Error ? error : undefined)
     res.status(500).json({ code: 500, message: '获取文件列表失败' , data: null })
