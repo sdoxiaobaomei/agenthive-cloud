@@ -131,8 +131,8 @@
         <div class="input-wrapper" :class="{ focused: isInputFocused }">
           <textarea
             v-model="inputText"
-            :disabled="isLoading"
-            placeholder="Describe what you want to build..."
+            :disabled="isLoading || (!props.projectId && !props.currentProject?.id)"
+            :placeholder="(!props.projectId && !props.currentProject?.id) ? 'Select a project first...' : 'Describe what you want to build...'"
             class="message-input"
             rows="1"
             @keydown.enter.prevent="handleEnter"
@@ -325,6 +325,7 @@ const createNewSession = async () => {
 }
 
 const connectWebSocket = (sid: string) => {
+  wsConnected.value = false
   if (socket) {
     socket.disconnect()
   }
@@ -342,6 +343,18 @@ const connectWebSocket = (sid: string) => {
 
   socket.on('disconnect', () => {
     wsConnected.value = false
+  })
+
+  socket.on('connect_error', () => {
+    wsConnected.value = false
+  })
+
+  socket.on('error', () => {
+    wsConnected.value = false
+  })
+
+  socket.on('reconnect_attempt', () => {
+    // reconnecting state is implicitly offline
   })
 
   socket.on('session:state', (data: any) => {
@@ -369,6 +382,11 @@ const connectWebSocket = (sid: string) => {
 const sendMessage = async () => {
   const text = inputText.value.trim()
   if (!text || isLoading.value) return
+
+  if (!props.projectId && !props.currentProject?.id) {
+    ElMessage.warning('Please select a project first')
+    return
+  }
 
   // Ensure session exists
   if (!sessionId.value) {

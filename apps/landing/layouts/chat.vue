@@ -34,50 +34,43 @@
           <span v-if="!isSidebarCollapsed" class="nav-label">Marketplace</span>
         </NuxtLink>
 
-        <!-- Projects Section -->
-        <div class="nav-section">
-          <button
-            class="nav-item nav-section-header"
-            :class="{ expanded: isProjectsExpanded }"
-            @click="toggleProjectsExpanded"
+        <!-- My Projects -->
+        <NuxtLink
+          to="/projects"
+          class="nav-item"
+          :class="{ active: route.path === '/projects' }"
+        >
+          <div class="nav-icon">
+            <el-icon><FolderOpened /></el-icon>
+          </div>
+          <span v-if="!isSidebarCollapsed" class="nav-label">My Projects</span>
+        </NuxtLink>
+
+        <!-- Recents -->
+        <div v-if="!isSidebarCollapsed" class="sidebar-recents">
+          <div class="recents-label">Recents</div>
+          <div class="project-icons">
+            <div
+              v-for="project in recentProjects"
+              :key="project.id"
+              class="project-icon-item"
+              :class="{ active: currentProject?.id === project.id }"
+              :title="project.name"
+              @click="selectProject(project)"
+            >
+              <div class="project-icon-avatar">{{ project.name.charAt(0) }}</div>
+              <span class="project-icon-name">{{ project.name }}</span>
+            </div>
+          </div>
+          <NuxtLink
+            v-if="recentProjects.length > 0"
+            to="/projects"
+            class="view-all-link"
           >
-            <div class="nav-icon">
-              <el-icon><Folder /></el-icon>
-            </div>
-            <span v-if="!isSidebarCollapsed" class="nav-label">Projects</span>
-            <el-icon v-if="!isSidebarCollapsed" class="section-arrow" :class="{ expanded: isProjectsExpanded }">
-              <ArrowRight />
-            </el-icon>
-          </button>
-
-          <!-- Projects List (always visible when expanded) -->
-          <div v-show="isProjectsExpanded && !isSidebarCollapsed" class="projects-list">
-            <!-- My Projects button -->
-            <button class="my-projects-btn" @click="showProjectSearchDialog = true">
-              <el-icon><FolderOpened /></el-icon>
-              <span>My Projects</span>
-            </button>
-
-            <!-- Recents -->
-            <div class="recents-section">
-              <div class="recents-label">Recents</div>
-              <div class="project-icons">
-                <div
-                  v-for="project in recentProjects"
-                  :key="project.id"
-                  class="project-icon-item"
-                  :class="{ active: currentProject?.id === project.id }"
-                  :title="project.name"
-                  @click="selectProject(project)"
-                >
-                  <div class="project-icon-avatar">{{ project.name.charAt(0) }}</div>
-                  <span class="project-icon-name">{{ project.name }}</span>
-                </div>
-              </div>
-              <div v-if="recentProjects.length === 0" class="empty-recents">
-                <span>No projects yet</span>
-              </div>
-            </div>
+            View All →
+          </NuxtLink>
+          <div v-if="recentProjects.length === 0" class="empty-recents">
+            <span>No projects yet</span>
           </div>
         </div>
       </nav>
@@ -187,60 +180,7 @@
       </template>
     </el-dialog>
 
-    <!-- Project Search Dialog -->
-    <el-dialog
-      v-model="showProjectSearchDialog"
-      title="All Projects"
-      width="600px"
-      :close-on-click-modal="true"
-      class="project-search-dialog"
-    >
-      <!-- Search Input -->
-      <div class="project-search-input-wrapper">
-        <el-icon class="search-icon"><Search /></el-icon>
-        <el-input
-          v-model="projectSearchQuery"
-          placeholder="Search projects..."
-          size="large"
-          clearable
-          class="project-search-input"
-        />
-      </div>
 
-      <!-- Project List -->
-      <div class="project-search-list">
-        <div
-          v-for="project in filteredProjects"
-          :key="project.id"
-          class="project-search-item"
-          :class="{ active: currentProject?.id === project.id }"
-          @click="selectProjectFromSearch(project)"
-        >
-          <div class="project-search-icon">
-            <el-icon><Folder /></el-icon>
-          </div>
-          <div class="project-search-info">
-            <div class="project-search-name">{{ project.name }}</div>
-            <div class="project-search-desc">{{ project.description }}</div>
-            <div class="project-search-date">{{ formatDate(project.createdAt) }}</div>
-          </div>
-          <el-icon v-if="currentProject?.id === project.id" class="project-search-check"><Check /></el-icon>
-        </div>
-
-        <!-- Empty State -->
-        <div v-if="filteredProjects.length === 0" class="project-search-empty">
-          <el-icon :size="48"><Search /></el-icon>
-          <p>No projects found</p>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="project-search-footer">
-          <span class="project-count">{{ filteredProjects.length }} projects</span>
-          <el-button @click="showProjectSearchDialog = false">Close</el-button>
-        </div>
-      </template>
-    </el-dialog>
 
     <!-- Notifications Dialog (placeholder) -->
     <el-dialog
@@ -276,12 +216,8 @@ import { useRoute, useRouter } from 'vue-router'
 import type { Component } from 'vue'
 import {
   Plus,
-  Folder,
   FolderOpened,
-  ArrowRight,
   Upload,
-  Search,
-  Check,
   HomeFilled,
   SwitchButton,
   Shop,
@@ -353,19 +289,14 @@ onUnmounted(() => {
 
 // Sidebar state - default expanded
 const isSidebarCollapsed = ref(false)
-const isProjectsExpanded = ref(true)
 
 const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
 }
 
-const toggleProjectsExpanded = () => {
-  isProjectsExpanded.value = !isProjectsExpanded.value
-}
-
 // Projects from store
 const currentProject = computed(() => projectStore.currentProject)
-const recentProjects = computed(() => projectStore.activeProjects.slice(0, 5))
+const recentProjects = computed(() => projectStore.activeProjects.slice(0, 3))
 
 const selectProject = (project: Project) => {
   projectStore.setCurrentProject(project)
@@ -407,29 +338,7 @@ const addProject = async () => {
   }
 }
 
-// Project Search Dialog
-const showProjectSearchDialog = ref(false)
-const projectSearchQuery = ref('')
 
-const filteredProjects = computed(() => {
-  if (!projectSearchQuery.value.trim()) return projectStore.projects
-  const query = projectSearchQuery.value.toLowerCase()
-  return projectStore.projects.filter(p =>
-    p.name.toLowerCase().includes(query) ||
-    (p.description?.toLowerCase().includes(query) ?? false)
-  )
-})
-
-const selectProjectFromSearch = (project: Project) => {
-  selectProject(project)
-  showProjectSearchDialog.value = false
-  projectSearchQuery.value = ''
-}
-
-const formatDate = (date: string | Date) => {
-  const d = typeof date === 'string' ? new Date(date) : date
-  return d.toLocaleDateString()
-}
 
 // Header tabs
 type TabId = 'files' | 'editor' | 'preview'
@@ -584,11 +493,25 @@ provide('currentProject', currentProject)
 }
 
 /* Projects List */
-.projects-list {
-  padding: 4px 0 4px 8px;
+.sidebar-recents {
+  padding: 4px 8px 4px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
+}
+
+.view-all-link {
+  font-size: 12px;
+  font-weight: 500;
+  color: #4f46e5;
+  text-decoration: none;
+  padding: 4px;
+  transition: color 0.15s ease;
+}
+
+.view-all-link:hover {
+  color: #4338ca;
+  text-decoration: underline;
 }
 
 .my-projects-btn {

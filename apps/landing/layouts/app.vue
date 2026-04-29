@@ -78,6 +78,13 @@
                 <el-icon><Document /></el-icon>
               </button>
             </div>
+            <NuxtLink
+              v-if="recentProjects.length > 0"
+              to="/projects"
+              class="view-all-projects"
+            >
+              View All →
+            </NuxtLink>
             <div v-if="recentProjects.length === 0" class="empty-projects">
               <span class="empty-text">No projects yet</span>
             </div>
@@ -285,7 +292,7 @@ const toggleProjectsExpanded = () => {
 
 // Projects from store
 const currentProject = computed(() => projectStore.currentProject)
-const recentProjects = computed(() => projectStore.activeProjects.slice(0, 5))
+const recentProjects = computed(() => projectStore.activeProjects.slice(0, 3))
 
 const selectProject = (project: any) => {
   projectStore.setCurrentProject(project)
@@ -610,6 +617,22 @@ onMounted(() => {
 .empty-text {
   font-size: 12px;
   color: #9ca3af;
+}
+
+.view-all-projects {
+  display: block;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #4f46e5;
+  text-decoration: none;
+  text-align: right;
+  transition: color 0.15s ease;
+}
+
+.view-all-projects:hover {
+  color: #4338ca;
+  text-decoration: underline;
 }
 
 /* Main Content */
