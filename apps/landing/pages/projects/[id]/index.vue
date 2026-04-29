@@ -84,10 +84,6 @@
             <el-icon><Monitor /></el-icon>
             Open Workspace
           </el-button>
-          <el-button class="action-btn" @click="openChat">
-            <el-icon><ChatDotRound /></el-icon>
-            Open Chat
-          </el-button>
           <el-button class="action-btn" @click="goToSettings">
             <el-icon><Setting /></el-icon>
             Settings
@@ -216,7 +212,6 @@ import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft,
   Monitor,
-  ChatDotRound,
   Setting,
 } from '@element-plus/icons-vue'
 import { useProjectStore, type ProjectMember } from '~/stores/project'
@@ -258,7 +253,6 @@ const activityLog = ref([
 // ============ Navigation ============
 const goToProjects = () => router.push('/projects')
 const openWorkspace = () => router.push(`/workspace/${projectId.value}`)
-const openChat = () => router.push(`/workspace/${projectId.value}`)
 const goToSettings = () => router.push(`/projects/${projectId.value}/settings`)
 const openFile = (path: string) => {
   router.push(`/workspace/${projectId.value}`)

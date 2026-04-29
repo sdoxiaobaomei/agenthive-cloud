@@ -171,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import {
   Delete,
   ChatDotRound,
@@ -214,7 +214,7 @@ const emit = defineEmits<{
 }>()
 
 const { user } = useAuth()
-const { chat: chatApi, baseUrl } = useApi()
+const { chat: chatApi, baseUrl, get } = useApi()
 const creditsStore = useCreditsStore()
 const creditsBalance = computed(() => creditsStore.balance)
 
@@ -230,6 +230,7 @@ const wsConnected = ref(false)
 const agentStatus = ref('idle')
 const agentLogs = ref<string[]>([])
 const estimatedCost = ref(0)
+const resolvedProjectName = ref('')
 
 let socket: Socket | null = null
 
@@ -284,12 +285,31 @@ const formatTime = (date: string | Date): string => {
   }).format(d)
 }
 
+const fetchProjectName = async () => {
+  if (props.currentProject?.name) {
+    resolvedProjectName.value = props.currentProject.name
+    return
+  }
+  if (!props.projectId) {
+    resolvedProjectName.value = ''
+    return
+  }
+  try {
+    const res = await get(`/api/projects/${props.projectId}`)
+    if (res.success && res.data?.name) {
+      resolvedProjectName.value = res.data.name
+    }
+  } catch (err: any) {
+    if (import.meta.dev) console.debug('[ChatPanel] Failed to fetch project name:', err.message)
+  }
+}
+
 const createNewSession = async () => {
   try {
     const resolvedProjectId = props.projectId || props.currentProject?.id
     const res = await chatApi.createSession({
       projectId: resolvedProjectId,
-      title: props.currentProject?.name || 'New Chat',
+      title: resolvedProjectName.value || props.currentProject?.name || 'New Chat',
     })
     if (res.success && res.data) {
       sessionId.value = res.data.id
@@ -467,7 +487,11 @@ onMounted(() => {
   }
   // 加载 credits 余额
   creditsStore.fetchBalance()
+  // 解析项目名（仅 projectId 时）
+  fetchProjectName()
 })
+
+watch(() => props.projectId, fetchProjectName)
 
 onUnmounted(() => {
   if (socket) socket.disconnect()
