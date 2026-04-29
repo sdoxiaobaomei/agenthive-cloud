@@ -635,28 +635,28 @@ export function useApi() {
 
   const code = {
     /** 获取文件列表 */
-    getFiles: (path: string = '') => 
-      get<FileInfo[]>(`/api/code/files${path ? '?path=' + encodeURIComponent(path) : ''}`),
+    getFiles: (projectId: string, path: string = '') => 
+      get<FileInfo[]>(`/api/code/files?projectId=${projectId}&path=${encodeURIComponent(path)}`),
 
     /** 获取文件内容 */
-    getFile: (path: string) => 
-      get<FileContent>(`/api/code/files/${encodeURIComponent(path)}`),
+    getFile: (projectId: string, path: string) => 
+      get<FileContent>(`/api/code/files/${encodeURIComponent(path)}?projectId=${projectId}`),
 
-    /** 更新文件 */
-    updateFile: (path: string, params: UpdateFileParams) => 
-      put<FileContent>(`/api/code/files/${encodeURIComponent(path)}`, params),
+    /** 保存/更新文件 */
+    updateFile: (projectId: string, path: string, params: UpdateFileParams) => 
+      post<FileContent>('/api/code/files/save', { projectId, filePath: path, ...params }),
 
     /** 创建文件/目录 */
-    create: (path: string, isDirectory: boolean = false) => 
-      post<FileInfo>(`/api/code/files/${encodeURIComponent(path)}`, { isDirectory }),
+    create: (projectId: string, path: string, isDirectory: boolean = false) => 
+      post<FileInfo>(`/api/code/files/${encodeURIComponent(path)}?projectId=${projectId}`, { isDirectory }),
 
     /** 删除文件/目录 */
-    delete: (path: string) => 
-      del<void>(`/api/code/files/${encodeURIComponent(path)}`),
+    delete: (projectId: string, path: string) => 
+      del<void>(`/api/code/files/${encodeURIComponent(path)}?projectId=${projectId}`),
 
     /** 重命名/移动文件 */
-    move: (fromPath: string, toPath: string) => 
-      patch<void>(`/api/code/files/${encodeURIComponent(fromPath)}/move`, { toPath }),
+    move: (projectId: string, fromPath: string, toPath: string) => 
+      post<void>('/api/code/files/move', { projectId, sourcePath: fromPath, targetPath: toPath }),
   }
 
   // ============ 导出 ============

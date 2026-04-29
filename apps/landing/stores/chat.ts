@@ -150,6 +150,10 @@ export const useChatStore = defineStore('chat', {
     currentConversationId: (state): string | null => 
       state.currentConversation?.id || null,
 
+    /** 当前会话关联的项目ID */
+    projectId: (state): string | null =>
+      state.currentConversation?.projectId || null,
+
     /** 当前会话消息 */
     currentMessages: (state): ChatMessage[] => {
       if (!state.currentConversation) return []
@@ -440,9 +444,17 @@ export const useChatStore = defineStore('chat', {
       this.error = null
 
       try {
+        const projectId = this.currentConversation?.projectId
+        if (!projectId) {
+          if (!path && this.fileTree.length === 0) {
+            this.fileTree = defaultFileTree
+          }
+          return this.fileTree
+        }
+
         // 使用实际的 API 调用
         const { code: codeApi } = useApi()
-        const response = await codeApi.getFiles(path)
+        const response = await codeApi.getFiles(projectId, path)
 
         if (!response.success || !response.data) {
           throw new Error(response.message || '加载文件树失败')
@@ -641,9 +653,12 @@ export const useChatStore = defineStore('chat', {
      */
     async createFile(parentPath: string, name: string, isDirectory: boolean = false): Promise<void> {
       try {
+        const projectId = this.currentConversation?.projectId
+        if (!projectId) throw new Error('当前会话未关联项目')
+
         const fullPath = parentPath ? `${parentPath}/${name}` : name
         const { code: codeApi } = useApi()
-        const response = await codeApi.create(fullPath, isDirectory)
+        const response = await codeApi.create(projectId, fullPath, isDirectory)
         
         if (response.success) {
           // 刷新父目录
@@ -664,10 +679,13 @@ export const useChatStore = defineStore('chat', {
      */
     async renameFile(oldPath: string, newName: string): Promise<void> {
       try {
+        const projectId = this.currentConversation?.projectId
+        if (!projectId) throw new Error('当前会话未关联项目')
+
         const parentPath = oldPath.split('/').slice(0, -1).join('/')
         const newPath = parentPath ? `${parentPath}/${newName}` : newName
         const { code: codeApi } = useApi()
-        const response = await codeApi.move(oldPath, newPath)
+        const response = await codeApi.move(projectId, oldPath, newPath)
         
         if (response.success) {
           // 刷新文件树
@@ -687,8 +705,11 @@ export const useChatStore = defineStore('chat', {
      */
     async deleteFile(path: string): Promise<void> {
       try {
+        const projectId = this.currentConversation?.projectId
+        if (!projectId) throw new Error('当前会话未关联项目')
+
         const { code: codeApi } = useApi()
-        const response = await codeApi.delete(path)
+        const response = await codeApi.delete(projectId, path)
         
         if (response.success) {
           // 如果删除的是已打开的文件，关闭它
