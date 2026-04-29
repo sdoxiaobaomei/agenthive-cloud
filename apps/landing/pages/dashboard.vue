@@ -309,6 +309,8 @@ async function handleSubmit() {
     const project = await projectStore.createProject({
       name: autoName,
       description: text,
+      type: 'blank',
+      techStack: 'react',
     })
 
     // 2. 创建 Chat Session
