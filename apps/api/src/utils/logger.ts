@@ -1,8 +1,9 @@
 /**
  * Structured Logger for API Service
- * 
+ *
  * 输出 JSON 格式日志，自动注入 trace_id / span_id
  * 兼容 Loki 解析规则
+ * 自动脱敏敏感信息：密码、连接串、Secret、Token、API Key
  */
 
 import { getCurrentTraceId, getCurrentSpanId } from '@agenthive/observability';
@@ -35,6 +36,90 @@ const LOG_LEVELS: Record<LogLevel, number> = {
 const SERVICE_NAME = 'agenthive-api';
 const MIN_LEVEL = (process.env.LOG_LEVEL?.toLowerCase() as LogLevel) || 'info';
 
+// 脱敏规则：匹配并替换敏感信息
+const SENSITIVE_PATTERNS: Array<{ pattern: RegExp; replacement: string }> = [
+  // PostgreSQL 连接串：postgresql://user:password@host/db
+  {
+    pattern: /(postgresql|postgres):\/\/[^:]+:[^@]+@/gi,
+    replacement: '$1://***:***@',
+  },
+  // Redis URL：redis://:password@host 或 redis://user:password@host
+  {
+    pattern: /(redis|rediss):\/\/([^@]*@)?/gi,
+    replacement: '$1://***:***@',
+  },
+  // JWT Secret / 通用 Secret（作为独立值）
+  {
+    pattern: /\b(secret|jwt_secret|jwtsecret|jwtsecretkey)\s*[:=]\s*["']?[^\s"',}&\]]{8,}["']?/gi,
+    replacement: '$1: ***',
+  },
+  // API Key（以 sk-、ak- 开头，或包含 api_key 字段）
+  {
+    pattern: /\b(api[_-]?key|apikey)\s*[:=]\s*["']?[^\s"',}&\]]{8,}["']?/gi,
+    replacement: '$1: ***',
+  },
+  // OpenAI / Ollama / LLM 密钥（sk-xxx, pk-xxx）
+  {
+    pattern: /\b(sk-[a-zA-Z0-9]{20,}|pk-[a-zA-Z0-9]{20,})\b/g,
+    replacement: '***',
+  },
+  // 密码字段（password, pwd）
+  {
+    pattern: /\b(password|pwd)\s*[:=]\s*["']?[^\s"',}&\]]{1,}["']?/gi,
+    replacement: '$1: ***',
+  },
+  // Bearer Token
+  {
+    pattern: /\b(Bearer\s+)[a-zA-Z0-9_\-\.]{20,}/g,
+    replacement: '$1***',
+  },
+  // 连接串中的 host:port 后的密码（兜底）
+  {
+    pattern: /:\/\/[^:]+:[^@]+@/g,
+    replacement: '://***:***@',
+  },
+];
+
+function sanitizeString(input: string): string {
+  let result = input;
+  for (const { pattern, replacement } of SENSITIVE_PATTERNS) {
+    result = result.replace(pattern, replacement);
+  }
+  return result;
+}
+
+function sanitizeValue(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return sanitizeString(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(sanitizeValue);
+  }
+  if (value !== null && typeof value === 'object') {
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value)) {
+      // 对已知敏感键直接脱敏，无论值类型
+      const lowerKey = key.toLowerCase();
+      if (
+        lowerKey.includes('password') ||
+        lowerKey.includes('secret') ||
+        lowerKey.includes('token') ||
+        lowerKey.includes('api_key') ||
+        lowerKey.includes('apikey') ||
+        lowerKey.includes('jwt') ||
+        lowerKey.includes('auth') ||
+        lowerKey.includes('credential')
+      ) {
+        sanitized[key] = typeof val === 'string' && val.length > 0 ? '***' : val;
+      } else {
+        sanitized[key] = sanitizeValue(val);
+      }
+    }
+    return sanitized;
+  }
+  return value;
+}
+
 function shouldLog(level: LogLevel): boolean {
   return LOG_LEVELS[level] >= LOG_LEVELS[MIN_LEVEL];
 }
@@ -56,13 +141,13 @@ function buildLogEntry(
     timestamp: formatTimestamp(),
     level,
     service: SERVICE_NAME,
-    message,
+    message: sanitizeString(message),
     trace_id: getCurrentTraceId(),
     span_id: getCurrentSpanId(),
   };
 
   if (meta?.context) {
-    entry.context = meta.context;
+    entry.context = sanitizeValue(meta.context) as Record<string, unknown>;
   }
 
   if (meta?.duration_ms !== undefined) {
@@ -71,8 +156,8 @@ function buildLogEntry(
 
   if (meta?.error) {
     entry.error = {
-      message: meta.error.message,
-      stack: meta.error.stack,
+      message: sanitizeString(meta.error.message),
+      stack: meta.error.stack ? sanitizeString(meta.error.stack) : undefined,
       code: (meta.error as any).code,
     };
   }
@@ -81,13 +166,11 @@ function buildLogEntry(
 }
 
 function output(entry: LogEntry): void {
-  const logLine = JSON.stringify(entry);
+  const logLine = JSON.stringify(entry) + '\n';
   if (entry.level === 'error') {
-    console.error(logLine);
-  } else if (entry.level === 'warn') {
-    console.warn(logLine);
+    process.stderr.write(logLine);
   } else {
-    console.log(logLine);
+    process.stdout.write(logLine);
   }
 }
 

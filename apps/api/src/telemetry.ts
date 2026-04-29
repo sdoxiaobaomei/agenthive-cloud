@@ -18,6 +18,7 @@ import {
   SEMRESATTRS_DEPLOYMENT_ENVIRONMENT,
 } from '@opentelemetry/semantic-conventions';
 import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
+import logger from './utils/logger.js';
 
 // 仅在开发环境启用 OTel 内部调试日志
 if (process.env.OTEL_LOG_LEVEL === 'debug') {
@@ -70,22 +71,22 @@ const sdk = new NodeSDK({
 
 // 启动 SDK
 sdk.start();
-console.log(`[Telemetry] OpenTelemetry SDK started for ${serviceName} → ${otlpEndpoint}`);
+logger.info('[Telemetry] OpenTelemetry SDK started', { serviceName, otlpEndpoint });
 
 // 优雅关闭
 process.on('SIGTERM', () => {
   sdk
     .shutdown()
-    .then(() => console.log('[Telemetry] OTel SDK shut down gracefully'))
-    .catch((err) => console.error('[Telemetry] OTel SDK shutdown error:', err))
+    .then(() => logger.info('[Telemetry] OTel SDK shut down gracefully'))
+    .catch((err) => logger.error('[Telemetry] OTel SDK shutdown error', err))
     .finally(() => process.exit(0));
 });
 
 process.on('SIGINT', () => {
   sdk
     .shutdown()
-    .then(() => console.log('[Telemetry] OTel SDK shut down gracefully'))
-    .catch((err) => console.error('[Telemetry] OTel SDK shutdown error:', err))
+    .then(() => logger.info('[Telemetry] OTel SDK shut down gracefully'))
+    .catch((err) => logger.error('[Telemetry] OTel SDK shutdown error', err))
     .finally(() => process.exit(0));
 });
 

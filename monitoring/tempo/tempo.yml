@@ -45,13 +45,7 @@ compactor:
 
 storage:
   trace:
-    backend: s3
-    s3:
-      bucket: tempo
-      endpoint: minio:9000
-      insecure: true
-      access_key: tempo
-      secret_key: supersecret
+    backend: local
     wal:
       path: /tmp/tempo/wal
     local:

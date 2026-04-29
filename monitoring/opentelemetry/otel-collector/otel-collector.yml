@@ -152,12 +152,6 @@ exporters:
   logging:
     verbosity: detailed
 
-  # 健康检查端点
-  otlp/health:
-    endpoint: localhost:4317
-    tls:
-      insecure: true
-
 extensions:
   # 健康检查
   health_check:
