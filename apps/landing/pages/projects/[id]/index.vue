@@ -258,7 +258,7 @@ const activityLog = ref([
 // ============ Navigation ============
 const goToProjects = () => router.push('/projects')
 const openWorkspace = () => router.push(`/workspace/${projectId.value}`)
-const openChat = () => router.push('/chat')
+const openChat = () => router.push(`/workspace/${projectId.value}`)
 const goToSettings = () => router.push(`/projects/${projectId.value}/settings`)
 const openFile = (path: string) => {
   router.push(`/workspace/${projectId.value}`)

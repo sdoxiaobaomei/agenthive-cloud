@@ -289,7 +289,7 @@ const recentProjects = computed(() => projectStore.activeProjects.slice(0, 5))
 
 const selectProject = (project: any) => {
   projectStore.setCurrentProject(project)
-  router.push('/chat')
+  router.push(`/workspace/${project.id}`)
 }
 
 const openWorkspace = (projectId: string) => {
@@ -339,9 +339,9 @@ const addProject = async () => {
     newProject.value = { name: '', description: '' }
     showNewProjectDialog.value = false
     ElMessage.success('Project created')
-    // Navigate to chat with the new project
+    // Navigate to workspace with the new project
     projectStore.setCurrentProject(project)
-    router.push('/chat')
+    router.push(`/workspace/${project.id}`)
   } catch (err: any) {
     ElMessage.error(err.message || 'Failed to create project')
   }

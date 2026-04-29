@@ -162,7 +162,7 @@ const selectProject = (project: Project) => {
   projectStore.setCurrentProject(project)
   sessionStorage.setItem('pending-project', JSON.stringify(project))
   showProjectDialog.value = false
-  router.push('/chat')
+  router.push(`/workspace/${project.id}`)
 }
 
 // 从需求描述创建项目
@@ -183,7 +183,7 @@ const handlePromptSubmit = async () => {
     projectStore.setCurrentProject(project)
     sessionStorage.setItem('pending-project', JSON.stringify(project))
     ElMessage.success('项目创建成功，进入工作区')
-    router.push('/chat')
+    router.push(`/workspace/${project.id}`)
   } catch (error: any) {
     ElMessage.error(error.message || '创建项目失败')
   } finally {
@@ -211,7 +211,7 @@ const confirmCreateProject = async () => {
     projectStore.setCurrentProject(project)
     sessionStorage.setItem('pending-project', JSON.stringify(project))
     ElMessage.success('项目创建成功')
-    router.push('/chat')
+    router.push(`/workspace/${project.id}`)
   } catch (error: any) {
     ElMessage.error(error.message || '创建项目失败')
   } finally {

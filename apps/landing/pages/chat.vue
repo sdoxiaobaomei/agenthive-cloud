@@ -333,6 +333,13 @@ watch(() => chatStore.activeFilePath, async (path) => {
 })
 
 onMounted(() => {
+  // Redirect to workspace if a current project exists (URL-first approach)
+  const project = projectStore.currentProject
+  if (project?.id) {
+    router.replace(`/workspace/${project.id}`)
+    return
+  }
+
   // Load file tree on mount
   chatStore.loadFileTree().catch((err) => {
     console.warn('Failed to load file tree:', err)

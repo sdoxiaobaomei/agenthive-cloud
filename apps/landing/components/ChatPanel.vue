@@ -205,6 +205,7 @@ import type { Project } from '~/stores/project'
 const props = defineProps<{
   isCollapsed?: boolean
   currentProject?: Project | null
+  projectId?: string
   embedded?: boolean
 }>()
 
@@ -285,8 +286,9 @@ const formatTime = (date: string | Date): string => {
 
 const createNewSession = async () => {
   try {
+    const resolvedProjectId = props.projectId || props.currentProject?.id
     const res = await chatApi.createSession({
-      projectId: props.currentProject?.id,
+      projectId: resolvedProjectId,
       title: props.currentProject?.name || 'New Chat',
     })
     if (res.success && res.data) {

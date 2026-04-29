@@ -189,6 +189,11 @@
         @open-file="handleToolbarOpenFile"
       />
     </main>
+
+    <!-- Chat Panel -->
+    <aside class="workspace-chat-panel">
+      <ChatPanel :project-id="projectId" embedded />
+    </aside>
   </div>
 </template>
 
@@ -218,6 +223,7 @@ import FileIcon from '~/components/FileIcon.vue'
 import MonacoEditor from '~/components/MonacoEditor.vue'
 import ContextMenu from '~/components/ContextMenu.vue'
 import WorkspaceToolbar from '~/components/WorkspaceToolbar.vue'
+import ChatPanel from '~/components/ChatPanel.vue'
 import type { MenuItem } from '~/components/ContextMenu.vue'
 
 definePageMeta({
@@ -911,5 +917,22 @@ onMounted(async () => {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+}
+
+/* ============ Chat Panel ============ */
+.workspace-chat-panel {
+  width: 320px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border-left: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 1024px) {
+  .workspace-chat-panel {
+    display: none;
+  }
 }
 </style>

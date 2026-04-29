@@ -410,6 +410,6 @@ export const useProjectStore = defineStore('project', {
   persist: {
     key: 'agenthive:project',
     storage: typeof window !== 'undefined' ? localStorage : undefined,
-    pick: ['currentProject', 'viewMode'],
+    pick: ['viewMode'],
   },
 })
