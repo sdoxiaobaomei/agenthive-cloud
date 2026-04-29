@@ -13,6 +13,14 @@ export interface Project {
   taskCount: number
   createdAt: string
   updatedAt: string
+  /** 扩展字段：技术栈（FEAT-001a） */
+  techStack?: string
+  /** 扩展字段：项目类型 */
+  type?: 'blank' | 'git-import' | string
+  /** 扩展字段：Git 地址 */
+  gitUrl?: string
+  /** 扩展字段：最后访问时间 */
+  lastAccessedAt?: string
 }
 
 /** 项目成员 */
@@ -25,6 +33,12 @@ export interface ProjectMember {
   joinedAt: string
 }
 
+/** 视图模式 */
+export type ViewMode = 'card' | 'table'
+
+/** 项目状态过滤 */
+export type StatusFilter = 'all' | 'active' | 'archived'
+
 /** 项目状态 */
 interface ProjectState {
   projects: Project[]
@@ -32,6 +46,14 @@ interface ProjectState {
   members: ProjectMember[]
   loading: boolean
   error: string | null
+  /** 列表视图模式 */
+  viewMode: ViewMode
+  /** 状态过滤 */
+  statusFilter: StatusFilter
+  /** 当前页码 */
+  currentPage: number
+  /** 每页条数 */
+  itemsPerPage: number
 }
 
 export const useProjectStore = defineStore('project', {
@@ -41,6 +63,10 @@ export const useProjectStore = defineStore('project', {
     members: [],
     loading: false,
     error: null,
+    viewMode: 'card',
+    statusFilter: 'all',
+    currentPage: 1,
+    itemsPerPage: 12,
   }),
 
   getters: {
@@ -59,6 +85,44 @@ export const useProjectStore = defineStore('project', {
 
     /** 获取当前项目名称 */
     currentProjectName: (state): string => state.currentProject?.name || '',
+
+    /** 过滤后的项目列表（根据状态过滤） */
+    filteredProjects: (state): Project[] => {
+      let result = state.projects
+      if (state.statusFilter !== 'all') {
+        result = result.filter(p => p.status === state.statusFilter)
+      }
+      return result
+    },
+
+    /** 分页后的项目列表 */
+    paginatedProjects: (state): Project[] => {
+      const filtered = state.projects
+      if (state.statusFilter !== 'all') {
+        // Re-filter to avoid circular dependency issues with getters in options api
+        const filteredList = state.projects.filter(p => p.status === state.statusFilter)
+        const start = (state.currentPage - 1) * state.itemsPerPage
+        return filteredList.slice(start, start + state.itemsPerPage)
+      }
+      const start = (state.currentPage - 1) * state.itemsPerPage
+      return filtered.slice(start, start + state.itemsPerPage)
+    },
+
+    /** 过滤后的总数 */
+    filteredTotal: (state): number => {
+      if (state.statusFilter !== 'all') {
+        return state.projects.filter(p => p.status === state.statusFilter).length
+      }
+      return state.projects.length
+    },
+
+    /** 总页数 */
+    totalPages: (state): number => {
+      const total = state.statusFilter !== 'all'
+        ? state.projects.filter(p => p.status === state.statusFilter).length
+        : state.projects.length
+      return Math.ceil(total / state.itemsPerPage)
+    },
   },
 
   actions: {
@@ -155,9 +219,14 @@ export const useProjectStore = defineStore('project', {
 
     /**
      * 创建项目 - 使用 useApi() 调用真实 API
-     * @param data 项目数据
+     * @param data 项目数据（支持扩展字段）
      */
-    async createProject(data: Partial<Project>): Promise<Project> {
+    async createProject(data: Partial<Project> & {
+      type?: 'blank' | 'git-import'
+      techStack?: string
+      gitUrl?: string
+      gitBranch?: string
+    }): Promise<Project> {
       const { post } = useApi()
       
       this.loading = true
@@ -168,6 +237,10 @@ export const useProjectStore = defineStore('project', {
           name: data.name,
           description: data.description,
           avatar: data.avatar,
+          type: data.type,
+          tech_stack: data.techStack,
+          git_url: data.gitUrl,
+          git_branch: data.gitBranch,
         })
 
         if (!response.success || !response.data) {
@@ -289,6 +362,44 @@ export const useProjectStore = defineStore('project', {
     },
 
     /**
+     * 设置视图模式
+     */
+    setViewMode(mode: ViewMode): void {
+      this.viewMode = mode
+    },
+
+    /**
+     * 设置状态过滤
+     */
+    setStatusFilter(filter: StatusFilter): void {
+      this.statusFilter = filter
+      this.currentPage = 1 // 重置到第一页
+    },
+
+    /**
+     * 设置当前页码
+     */
+    setPage(page: number): void {
+      this.currentPage = page
+    },
+
+    /**
+     * 设置每页条数
+     */
+    setItemsPerPage(size: number): void {
+      this.itemsPerPage = size
+      this.currentPage = 1
+    },
+
+    /**
+     * 清除所有过滤条件
+     */
+    clearFilters(): void {
+      this.statusFilter = 'all'
+      this.currentPage = 1
+    },
+
+    /**
      * 清除错误状态
      */
     clearError(): void {
@@ -299,6 +410,6 @@ export const useProjectStore = defineStore('project', {
   persist: {
     key: 'agenthive:project',
     storage: typeof window !== 'undefined' ? localStorage : undefined,
-    pick: ['currentProject'],
+    pick: ['currentProject', 'viewMode'],
   },
 })

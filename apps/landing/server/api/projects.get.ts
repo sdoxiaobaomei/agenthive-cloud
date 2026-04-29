@@ -2,7 +2,8 @@
 import { proxyToApi } from '../utils/apiProxy'
 
 export default defineEventHandler(async (event) => {
-  const result = await proxyToApi(event, '/api/projects')
+  const query = getQuery(event)
+  const result = await proxyToApi(event, '/api/projects', { query })
 
   // 格式转换: 后端返回 { data: { items, total } }，前端期望 { data: { items, total, page, pageSize, totalPages } }
   if (result.success && result.data?.items) {

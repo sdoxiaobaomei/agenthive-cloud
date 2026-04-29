@@ -18,8 +18,20 @@ vi.mock('../../src/utils/logger.js', () => ({
   },
 }))
 
+vi.mock('fs/promises', () => ({
+  cp: vi.fn(),
+  mkdir: vi.fn(),
+  rm: vi.fn(),
+}))
+
+vi.mock('child_process', () => ({
+  spawn: vi.fn(),
+}))
+
 import { pool } from '../../src/config/database.js'
-import { projectService } from '../../src/project/service.js'
+import { projectService, startGitClone, getCloneJob } from '../../src/project/service.js'
+import { cp, mkdir, rm } from 'fs/promises'
+import { spawn } from 'child_process'
 
 const mockQuery = pool.query as ReturnType<typeof vi.fn>
 
@@ -118,7 +130,7 @@ describe('Project Service', () => {
       expect(result.status).toBe('active')
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO projects'),
-        ['New Project', 'A test project', 'https://github.com/test/repo', 'user-123', 'active']
+        ['New Project', 'A test project', 'https://github.com/test/repo', 'user-123', 'active', 'blank', null, null, 'main', false]
       )
     })
 
@@ -140,7 +152,7 @@ describe('Project Service', () => {
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.any(String),
-        ['Minimal Project', null, null, 'user-123', 'active']
+        ['Minimal Project', null, null, 'user-123', 'active', 'blank', null, null, 'main', false]
       )
     })
   })
@@ -167,7 +179,7 @@ describe('Project Service', () => {
       expect(result?.status).toBe('archived')
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE projects'),
-        ['Updated Name', 'Updated Desc', 'https://new.url', 'archived', 'proj-1']
+        ['Updated Name', 'Updated Desc', 'https://new.url', 'archived', undefined, undefined, undefined, undefined, undefined, undefined, undefined, 'proj-1']
       )
     })
 
@@ -186,7 +198,7 @@ describe('Project Service', () => {
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('COALESCE'),
-        ['Only Name Updated', undefined, undefined, undefined, 'proj-1']
+        ['Only Name Updated', undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, 'proj-1']
       )
     })
   })
@@ -210,6 +222,74 @@ describe('Project Service', () => {
       const result = await projectService.delete('non-existent')
 
       expect(result).toBe(false)
+    })
+  })
+
+  describe('initBlankWorkspace', () => {
+    const mockCp = cp as ReturnType<typeof vi.fn>
+    const mockMkdir = mkdir as ReturnType<typeof vi.fn>
+
+    it('应创建目录并复制模板', async () => {
+      mockMkdir.mockResolvedValue(undefined)
+      mockCp.mockResolvedValue(undefined)
+      mockQuery.mockResolvedValue({ rowCount: 1 })
+
+      await projectService.initBlankWorkspace('proj-1', 'user-1', 'node')
+
+      expect(mockMkdir).toHaveBeenCalledWith(
+        expect.stringContaining('user-1'),
+        { recursive: true }
+      )
+      expect(mockCp).toHaveBeenCalledWith(
+        expect.stringContaining('templates'),
+        expect.stringContaining('user-1'),
+        { recursive: true, force: false }
+      )
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE projects SET workspace_path = $1 WHERE id = $2'),
+        [expect.any(String), 'proj-1']
+      )
+    })
+  })
+
+  describe('startGitClone', () => {
+    it('应返回 cloning 状态的 job', () => {
+      const mockSpawn = spawn as ReturnType<typeof vi.fn>
+      const mockChild = {
+        stderr: { on: vi.fn() },
+        on: vi.fn(),
+      }
+      mockSpawn.mockReturnValue(mockChild)
+
+      const job = startGitClone('proj-1', 'user-1', 'https://github.com/test/repo.git', 'main')
+
+      expect(job.projectId).toBe('proj-1')
+      expect(job.status).toBe('cloning')
+      expect(job.jobId).toBeDefined()
+      expect(typeof job.jobId).toBe('string')
+    })
+  })
+
+  describe('getCloneJob', () => {
+    it('应返回已存在的 job', () => {
+      const mockSpawn = spawn as ReturnType<typeof vi.fn>
+      const mockChild = {
+        stderr: { on: vi.fn() },
+        on: vi.fn(),
+      }
+      mockSpawn.mockReturnValue(mockChild)
+
+      const job = startGitClone('proj-2', 'user-1', 'https://github.com/test/repo.git')
+      const found = getCloneJob(job.jobId)
+
+      expect(found).toBeDefined()
+      expect(found?.jobId).toBe(job.jobId)
+      expect(found?.status).toBe('cloning')
+    })
+
+    it('不存在的 job 应返回 undefined', () => {
+      const result = getCloneJob('non-existent-job-id')
+      expect(result).toBeUndefined()
     })
   })
 })

@@ -35,6 +35,8 @@ export interface QueryLoopV2Config {
   enableStreaming?: boolean
   enableCompaction?: boolean
   onProgress?: (data: QueryProgressData) => void
+  /** 任务完成后回调，用于上报 token 消耗等计费信息 */
+  onComplete?: (result: QueryLoopV2Result) => void | Promise<void>
 }
 
 export interface QueryProgressData {
@@ -100,6 +102,7 @@ export class QueryLoopV2 extends EventEmitter {
       enableStreaming: true,
       enableCompaction: true,
       onProgress: () => {},
+      onComplete: undefined as any,
       compactionEngine: undefined as any,
       permissionManager: undefined as any,
       ...config
@@ -163,11 +166,21 @@ export class QueryLoopV2 extends EventEmitter {
       this.state.endTime = Date.now()
       
       this.emit('complete', { result, state: this.state })
-      
-      return {
+
+      const finalResult: QueryLoopV2Result = {
         ...result,
         duration: this.state.endTime - this.state.startTime
       }
+
+      if (this.config.onComplete) {
+        try {
+          await this.config.onComplete(finalResult)
+        } catch (err) {
+          this.logger.error('onComplete callback failed', { error: err instanceof Error ? err.message : String(err) })
+        }
+      }
+
+      return finalResult
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'

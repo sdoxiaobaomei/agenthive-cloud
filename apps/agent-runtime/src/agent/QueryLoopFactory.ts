@@ -20,6 +20,7 @@ export interface UnifiedQueryLoopConfig extends Omit<LegacyConfig, 'toolRegistry
   maxTokens?: number
   compactionThreshold?: number
   enableCompaction?: boolean
+  onComplete?: QueryLoopV2Config['onComplete']
 }
 
 // 统一的 QueryLoop 接口
@@ -68,7 +69,8 @@ export function createQueryLoop(config: UnifiedQueryLoopConfig): IQueryLoop {
       compactionThreshold: config.compactionThreshold ?? 10000,
       enableStreaming: config.enableStreaming,
       enableCompaction: config.enableCompaction ?? false,
-      onProgress: config.onProgress as any
+      onProgress: config.onProgress as any,
+      onComplete: config.onComplete as any,
     }
     
     return new QueryLoopV2(v2Config)
