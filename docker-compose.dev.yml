@@ -220,7 +220,7 @@ services:
       OLLAMA_URL: http://host.docker.internal:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:14b}
       OTEL_SERVICE_NAME: agenthive-api
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
       DEV_USER_ID: 5ab7d370-8900-41a8-a9ca-37dbdcb45b5a
       CORS_ORIGIN: ${CORS_ORIGIN}
@@ -233,6 +233,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     volumes:
       - workspace_data:/data/workspaces
     healthcheck:
@@ -339,7 +341,7 @@ services:
       ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
       OTEL_SERVICE_NAME: gateway-service
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
@@ -351,6 +353,8 @@ services:
     depends_on:
       nacos:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 20s
@@ -412,7 +416,7 @@ services:
       ALIYUN_SMS_TEMPLATE_CODE_RESET_PASSWORD: ${ALIYUN_SMS_TEMPLATE_CODE_RESET_PASSWORD}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
       OTEL_SERVICE_NAME: auth-service
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
@@ -428,6 +432,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
       interval: 20s
@@ -483,7 +489,7 @@ services:
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
       OTEL_SERVICE_NAME: user-service
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
@@ -499,6 +505,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
       interval: 20s
@@ -561,7 +569,7 @@ services:
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       WITHDRAWAL_ENCRYPT_KEY: ${WITHDRAWAL_ENCRYPT_KEY}
       OTEL_SERVICE_NAME: payment-service
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
@@ -579,6 +587,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
       interval: 20s
@@ -639,7 +649,7 @@ services:
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
       SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
       OTEL_SERVICE_NAME: order-service
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
@@ -657,6 +667,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
       interval: 20s
@@ -716,7 +728,7 @@ services:
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
       OTEL_SERVICE_NAME: cart-service
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
@@ -734,6 +746,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
       interval: 20s
@@ -793,7 +807,7 @@ services:
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
       OTEL_SERVICE_NAME: logistics-service
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
@@ -809,6 +823,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health"]
       interval: 20s
@@ -980,11 +996,6 @@ services:
     ports:
       - "4317:4317"
       - "4318:4318"
-    depends_on:
-      tempo:
-        condition: service_healthy
-      jaeger:
-        condition: service_started
     networks:
       - agenthive-dev
     deploy:
@@ -993,14 +1004,6 @@ services:
           memory: 512M
         reservations:
           memory: 256M
-    profiles:
-      - monitoring
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:13133/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
     logging:
       driver: "json-file"
       options:
