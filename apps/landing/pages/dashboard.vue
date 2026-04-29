@@ -7,7 +7,7 @@
       <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(rgba(66,103,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(66,103,255,0.5) 1px, transparent 1px); background-size: 60px 60px;" />
     </div>
 
-    <div class="relative z-10 flex flex-col items-center justify-center h-full px-4 sm:px-6 lg:px-8">
+    <div class="relative z-10 flex flex-col items-center justify-center w-full px-4 sm:px-6 lg:px-8">
       <!-- 柴犬头像组 -->
       <div class="flex items-center justify-center mb-8">
         <div class="flex items-center -space-x-3">
@@ -49,6 +49,12 @@
           </ClientRender>
         </div>
       </div>
+
+      <!-- 大标题 -->
+      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 leading-tight tracking-tight text-center" style="font-family: 'IBM Plex Sans', sans-serif; color: var(--ah-text-primary);">
+        <span style="background: linear-gradient(135deg, #4267ff 0%, #6b8cff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">用自然语言构建</span>
+        <span>你的应用</span>
+      </h1>
 
       <!-- 大聊天输入框 -->
       <div class="max-w-4xl w-full mx-auto">
@@ -164,6 +170,10 @@
 </template>
 
 <script setup lang="ts">
+definePageMeta({
+  layout: 'app'
+})
+
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -327,7 +337,11 @@ useSeoMeta({
 .dashboard-page {
   position: relative;
   width: 100%;
-  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
 }
 
