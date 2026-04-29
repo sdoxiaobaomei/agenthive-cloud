@@ -24,7 +24,7 @@
 
       <!-- Logo (visible when expanded) -->
       <div v-if="!isSidebarCollapsed" class="sidebar-logo">
-        <NuxtLink to="/" class="logo-link">
+        <NuxtLink to="/dashboard" class="logo-link">
           <div class="logo-icon">A</div>
           <span class="logo-text">AgentHive</span>
         </NuxtLink>
@@ -140,7 +140,7 @@
       <!-- Top Header Bar -->
       <header class="top-bar">
         <div class="flex items-center gap-3">
-          <NuxtLink v-if="isSidebarCollapsed" to="/" class="logo-link">
+          <NuxtLink v-if="isSidebarCollapsed" to="/dashboard" class="logo-link">
             <div class="logo-icon">A</div>
             <span class="logo-text">AgentHive</span>
           </NuxtLink>
@@ -148,7 +148,7 @@
 
         <div class="breadcrumb">
           <span v-if="currentProject">{{ currentProject.name }}</span>
-          <span v-else-if="route.path === '/'">Dashboard</span>
+          <span v-else-if="route.path === '/dashboard'">Dashboard</span>
           <span v-else-if="route.path.startsWith('/marketplace')">Marketplace</span>
           <span v-else-if="route.path === '/projects' || route.path.startsWith('/projects/')">Projects</span>
           <span v-else-if="route.path.startsWith('/chat')">Chat</span>

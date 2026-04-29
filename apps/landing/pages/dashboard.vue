@@ -1,449 +1,362 @@
 <template>
-  <div class="dashboard-page" style="background: var(--ah-bg-page);">
-    <div class="dashboard-header">
-      <h1>我的工作台</h1>
-      <p class="dashboard-subtitle">选择项目继续，或创建新项目</p>
+  <div class="dashboard-page" style="background: linear-gradient(180deg, #f9f8f6 0%, #f0eeea 100%);">
+    <!-- 背景装饰 -->
+    <div class="absolute inset-0 pointer-events-none">
+      <div class="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full opacity-30" style="background: radial-gradient(circle, rgba(66,103,255,0.15) 0%, transparent 60%); filter: blur(80px);" />
+      <div class="absolute bottom-0 right-1/4 w-[800px] h-[800px] rounded-full opacity-30" style="background: radial-gradient(circle, rgba(255,138,61,0.12) 0%, transparent 60%); filter: blur(100px);" />
+      <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(rgba(66,103,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(66,103,255,0.5) 1px, transparent 1px); background-size: 60px 60px;" />
     </div>
-    <!-- Authenticated Dashboard Extension -->
-    <section class="dashboard-section">
-      <div class="container">
-        <h2 class="section-title">我的工作台</h2>
 
-        <!-- Recent Projects -->
-        <div v-if="recentProjects.length > 0" class="recent-projects-block">
-          <h3 class="block-title">最近项目</h3>
-          <div class="project-grid">
-            <div
-              v-for="project in recentProjects"
-              :key="project.id"
-              class="project-card"
-              @click="router.push(`/workspace/${project.id}`)"
+    <div class="relative z-10 flex flex-col items-center justify-center h-full px-4 sm:px-6 lg:px-8">
+      <!-- 柴犬头像组 -->
+      <div class="flex items-center justify-center mb-8">
+        <div class="flex items-center -space-x-3">
+          <ClientRender>
+            <el-tooltip
+              v-for="(avatar, index) in avatars"
+              :key="index"
+              :content="avatar.tooltip"
+              effect="dark"
+              :show-arrow="false"
+              popper-class="avatar-tooltip"
+              placement="top"
             >
-              <div class="project-icon-lg">{{ project.name.charAt(0) }}</div>
-              <div class="project-name-lg">{{ project.name }}</div>
-              <div class="project-desc-lg">{{ project.description }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-          <h3 class="block-title">快速开始</h3>
-          <div class="action-buttons">
-            <button class="action-btn primary" @click="router.push('/projects')">
-              <el-icon><FolderOpened /></el-icon>
-              <span>我的项目</span>
-            </button>
-            <button class="action-btn" @click="showProjectDialog = true">
-              <el-icon><Plus /></el-icon>
-              <span>新建项目</span>
-            </button>
-            <button class="action-btn" @click="router.push('/marketplace')">
-              <el-icon><ShoppingBag /></el-icon>
-              <span>应用市场</span>
-            </button>
-          </div>
+              <div
+                class="relative w-14 h-14 rounded-full border-3 border-white shadow-lg overflow-hidden cursor-pointer hover:scale-110 hover:z-10 transition-all duration-300"
+              >
+                <img
+                  :src="avatar.src"
+                  :alt="avatar.tooltip"
+                  class="w-full h-full object-cover object-center scale-110"
+                />
+              </div>
+            </el-tooltip>
+          </ClientRender>
+          <ClientRender>
+            <el-tooltip
+              content="更多角色学习中..."
+              effect="dark"
+              :show-arrow="false"
+              popper-class="avatar-tooltip"
+              placement="top"
+            >
+              <div
+                class="w-14 h-14 rounded-full border-3 border-white shadow-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center cursor-pointer hover:scale-110 hover:z-10 transition-all duration-300 -ml-3"
+              >
+                <el-icon class="text-white text-xl font-bold"><Plus /></el-icon>
+              </div>
+            </el-tooltip>
+          </ClientRender>
         </div>
       </div>
-    </section>
+
+      <!-- 大聊天输入框 -->
+      <div class="max-w-4xl w-full mx-auto">
+        <div class="relative p-5 rounded-[20px] border-2 transition-all duration-300 shadow-xl"
+          :class="isFocused ? 'border-[#4267ff] shadow-2xl shadow-[#4267ff]/15' : 'border-[var(--ah-beige-300)] shadow-xl'"
+          style="background: white;"
+        >
+          <!-- 文本输入区 -->
+          <div class="flex items-start gap-3 mb-2">
+            <div class="flex-1">
+              <textarea
+                v-model="inputText"
+                rows="4"
+                :placeholder="typewriterText"
+                class="w-full resize-none outline-none text-base bg-transparent leading-relaxed"
+                style="color: var(--ah-text-primary); min-height: 100px;"
+                @focus="handleFocus"
+                @blur="handleBlur"
+                @keydown.enter.ctrl.prevent="handleSubmit"
+              />
+            </div>
+          </div>
+
+          <!-- 底部工具栏 -->
+          <div class="flex items-center justify-between pt-2">
+            <div class="flex items-center gap-2">
+              <!-- 主题选择 -->
+              <ClientRender>
+                <div class="relative">
+                  <button
+                    @click="showThemeDropdown = !showThemeDropdown"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all hover:border-[#4267ff]"
+                    :class="selectedTheme ? 'border-[#4267ff]/30 bg-[#4267ff]/5' : 'border-gray-200 bg-white'"
+                  >
+                    <el-icon class="text-xs text-[#4267ff]"><Brush /></el-icon>
+                    <span style="color: var(--ah-grey-700);">
+                      {{ selectedTheme ? currentTheme?.label : '主题' }}
+                    </span>
+                    <el-icon class="text-[10px] ml-0.5 text-gray-400"><ArrowDown /></el-icon>
+                  </button>
+                  <div v-if="showThemeDropdown" class="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[100px]">
+                    <button
+                      v-for="theme in themes"
+                      :key="theme.value"
+                      @click="selectedTheme = theme.value; showThemeDropdown = false"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <span class="w-2 h-2 rounded-full" :style="{ background: theme.color }"></span>
+                      <span>{{ theme.label }}</span>
+                    </button>
+                  </div>
+                </div>
+              </ClientRender>
+
+              <!-- 模型选择 -->
+              <ClientRender>
+                <div class="relative">
+                  <button
+                    @click="showModelDropdown = !showModelDropdown"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-xs transition-all hover:border-[#4267ff]"
+                  >
+                    <el-icon class="text-xs text-[#4267ff]"><Cpu /></el-icon>
+                    <span style="color: var(--ah-grey-700);">{{ currentModel?.label }}</span>
+                    <el-icon class="text-[10px] ml-0.5 text-gray-400"><ArrowDown /></el-icon>
+                  </button>
+                  <div v-if="showModelDropdown" class="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[140px]">
+                    <button
+                      v-for="model in models"
+                      :key="model.value"
+                      @click="selectedModel = model.value; showModelDropdown = false"
+                      class="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors text-left"
+                    >
+                      <el-icon class="text-xs"><Cpu /></el-icon>
+                      <span>{{ model.label }}</span>
+                    </button>
+                  </div>
+                </div>
+              </ClientRender>
+            </div>
+
+            <!-- 开始构建按钮 -->
+            <button
+              @click="handleSubmit"
+              :disabled="!inputText.trim() || isLoading"
+              class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-medium text-xs text-white transition-all duration-200"
+              :class="inputText.trim() && !isLoading
+                ? 'bg-gradient-to-r from-[#4267ff] to-[#5a7fff] hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5'
+                : 'bg-gray-300 cursor-not-allowed'"
+            >
+              <el-icon v-if="isLoading" class="animate-spin text-sm"><Loading /></el-icon>
+              <span>开始构建</span>
+              <el-icon v-if="!isLoading" class="text-sm"><ArrowRight /></el-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- 快捷提示 -->
+        <div class="flex flex-wrap items-center justify-center gap-3 mt-5">
+          <span class="text-sm" style="color: var(--ah-grey-400);">试试：</span>
+          <button
+            v-for="prompt in quickPrompts"
+            :key="prompt"
+            @click="inputText = prompt"
+            class="text-sm px-3 py-1.5 rounded-full transition-all duration-200 hover:scale-105"
+            style="color: var(--ah-grey-600); background: var(--ah-beige-100); border: 1px solid var(--ah-beige-200);"
+          >
+            {{ prompt }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { FolderOpened, Plus, ShoppingBag } from '@element-plus/icons-vue'
-import { useAuthStore } from '~/stores/auth'
-import { useProjectStore, type Project } from '~/stores/project'
+import { Plus, Cpu, ArrowRight, Loading, Brush, ArrowDown } from '@element-plus/icons-vue'
+import { useProjectStore } from '~/stores/project'
+import { useChatStore } from '~/stores/chat'
 
 const router = useRouter()
-const authStore = useAuthStore()
 const projectStore = useProjectStore()
+const chatStore = useChatStore()
 
-const showProjectDialog = ref(false)
-const showCreateProjectDialog = ref(false)
-const newProject = ref({ name: '', description: '' })
-const creating = ref(false)
-const projectSearchQuery = ref('')
+const inputText = ref('')
+const isFocused = ref(false)
+const isLoading = ref(false)
+const showThemeDropdown = ref(false)
+const showModelDropdown = ref(false)
 
-const projects = computed(() => projectStore.projects)
-const currentProject = computed(() => projectStore.currentProject)
-const recentProjects = computed(() => {
-  return projectStore.activeProjects.slice(0, 6)
-})
+// 柴犬头像
+const avatars = [
+  { src: '/avatars/shiba_tl.png', tooltip: '阿黄 - 技术负责人' },
+  { src: '/avatars/shiba_fe.png', tooltip: '小花 - 前端开发' },
+  { src: '/avatars/shiba_be.png', tooltip: '阿铁 - 后端开发' },
+  { src: '/avatars/shiba_qa.png', tooltip: '阿镜 - 测试工程师' },
+]
 
-const filteredProjects = computed(() => {
-  if (!projectSearchQuery.value) return projects.value
-  const query = projectSearchQuery.value.toLowerCase()
-  return projects.value.filter((p: Project) =>
-    p.name.toLowerCase().includes(query) ||
-    (p.description || '').toLowerCase().includes(query)
-  )
-})
+// 打字机效果
+const typewriterTexts = [
+  '帮我做一个任务管理系统，支持拖拽排序、标签分类和团队协作，风格要简洁现代。',
+  '创建一个个人博客网站，要有深色模式、Markdown 支持和评论功能。',
+  '设计一个电商数据看板，包含销售趋势图、库存预警和用户行为分析。'
+]
+const typewriterText = ref('')
+const currentTextIndex = ref(0)
+const charIndex = ref(0)
+const isDeleting = ref(false)
+const typewriterTimer = ref<number | null>(null)
+const isTypingActive = ref(true)
 
-onMounted(async () => {
-  if (authStore.isAuthenticated) {
-    await projectStore.fetchProjects()
+const typeWriter = () => {
+  if (!isTypingActive.value) return
+  const currentText = typewriterTexts[currentTextIndex.value]
+  if (isDeleting.value) {
+    typewriterText.value = currentText.substring(0, charIndex.value - 1)
+    charIndex.value--
+  } else {
+    typewriterText.value = currentText.substring(0, charIndex.value + 1)
+    charIndex.value++
   }
+  let nextDelay = isDeleting.value ? 30 : 50
+  if (!isDeleting.value && charIndex.value === currentText.length) {
+    nextDelay = 2000
+    isDeleting.value = true
+  } else if (isDeleting.value && charIndex.value === 0) {
+    isDeleting.value = false
+    currentTextIndex.value = (currentTextIndex.value + 1) % typewriterTexts.length
+    nextDelay = 500
+  }
+  typewriterTimer.value = window.setTimeout(typeWriter, nextDelay)
+}
+
+const startTypewriter = () => {
+  isTypingActive.value = true
+  typeWriter()
+}
+
+const stopTypewriter = () => {
+  isTypingActive.value = false
+  if (typewriterTimer.value) {
+    clearTimeout(typewriterTimer.value)
+    typewriterTimer.value = null
+  }
+}
+
+const handleFocus = () => {
+  isFocused.value = true
+  stopTypewriter()
+  typewriterText.value = ''
+}
+
+const handleBlur = () => {
+  isFocused.value = false
+  if (!inputText.value) {
+    charIndex.value = 0
+    isDeleting.value = false
+    startTypewriter()
+  }
+}
+
+onMounted(() => {
+  startTypewriter()
 })
 
-const selectProject = (project: Project) => {
-  projectStore.setCurrentProject(project)
-  showProjectDialog.value = false
-  router.push(`/workspace/${project.id}`)
-}
+onUnmounted(() => {
+  stopTypewriter()
+})
 
-const openCreateDialog = () => {
-  showProjectDialog.value = false
-  showCreateProjectDialog.value = true
-}
+// 主题选择
+const selectedTheme = ref('')
+const themes = [
+  { value: 'modern', label: '现代', color: '#4267ff' },
+  { value: 'minimal', label: '极简', color: '#1a1a1a' },
+  { value: 'warm', label: '温暖', color: '#ff8a3d' },
+  { value: 'fresh', label: '清新', color: '#10b981' },
+]
 
-const confirmCreateProject = async () => {
-  if (!newProject.value.name.trim()) return
-  creating.value = true
+const currentTheme = computed(() => themes.find(t => t.value === selectedTheme.value))
+const currentModel = computed(() => models.find(m => m.value === selectedModel.value))
+
+// 模型选择
+const selectedModel = ref('claude-sonnet-4.6')
+const models = [
+  { value: 'claude-sonnet-4.6', label: 'Claude Sonnet 4.6' },
+  { value: 'gpt-4o', label: 'GPT-4o' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+  { value: 'deepseek', label: 'DeepSeek' },
+]
+
+const quickPrompts = [
+  '博客系统',
+  '电商后台',
+  '个人主页',
+  '数据看板',
+]
+
+async function handleSubmit() {
+  const text = inputText.value.trim()
+  if (!text || isLoading.value) return
+
+  isLoading.value = true
   try {
+    // 1. 创建项目
+    const autoName = text.slice(0, 20) + (text.length > 20 ? '...' : '')
     const project = await projectStore.createProject({
-      name: newProject.value.name.trim(),
-      description: newProject.value.description.trim(),
+      name: autoName,
+      description: text,
     })
-    showCreateProjectDialog.value = false
-    newProject.value = { name: '', description: '' }
-    projectStore.setCurrentProject(project)
-    ElMessage.success('项目创建成功')
-    router.push(`/workspace/${project.id}`)
-  } catch (err: any) {
-    ElMessage.error(err.message || '创建项目失败')
+
+    // 2. 创建 Chat Session
+    const conversation = await chatStore.createConversation(project.name, project.id)
+
+    // 3. 发送第一条消息
+    await chatStore.sendMessage(text, 'user')
+
+    // 4. 跳转到 Chat 页面
+    ElMessage.success('项目创建成功，AI 团队开始工作')
+    router.push('/chat/' + conversation.id)
+  } catch (error: any) {
+    ElMessage.error(error.message || '创建项目失败')
   } finally {
-    creating.value = false
+    isLoading.value = false
   }
 }
+
+useSeoMeta({
+  title: 'Dashboard - AgentHive Cloud',
+  description: '描述你的需求，让 AI Agent 团队帮你完成开发',
+})
 </script>
 
 <style scoped>
-.project-search {
-  margin-bottom: 16px;
-}
-
-.project-loading {
-  padding: 20px 0;
-}
-
-.project-list {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.project-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.project-item:hover {
-  background: #f5f7fa;
-}
-
-.project-item.active {
-  background: #ecf5ff;
-}
-
-.project-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: #4267ff;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.project-info {
-  flex: 1;
-}
-
-.project-name {
-  font-weight: 500;
-  color: #303133;
-  margin-bottom: 4px;
-}
-
-.project-desc {
-  font-size: 12px;
-  color: #909399;
-}
-
-.empty-projects {
-  padding: 40px 0;
-}
-
-/* Prompt Section for Authenticated Users */
-.prompt-section {
-  min-height: calc(100vh - 64px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-}
-
-.prompt-container {
-  max-width: 720px;
+.dashboard-page {
+  position: relative;
   width: 100%;
-  text-align: center;
-}
-
-.prompt-title {
-  font-size: 36px;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 12px;
-  letter-spacing: -0.5px;
-}
-
-.prompt-subtitle {
-  font-size: 16px;
-  color: #6b7280;
-  margin: 0 0 32px;
-}
-
-.prompt-input-wrapper {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-  text-align: left;
-}
-
-.prompt-textarea :deep(.el-textarea__inner) {
-  border: none;
-  background: transparent;
-  font-size: 15px;
-  resize: none;
-  box-shadow: none !important;
-  padding: 0;
-}
-
-.prompt-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 16px;
-  justify-content: flex-end;
-}
-
-.prompt-btn {
-  background: #4267ff !important;
-  border-color: #4267ff !important;
-}
-
-.history-btn {
-  color: #374151;
-}
-
-.recent-projects {
-  margin-top: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.recent-label {
-  font-size: 13px;
-  color: #9ca3af;
-}
-
-.recent-list {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.recent-tag {
-  font-size: 13px;
-  color: #4267ff;
-  background: rgba(66, 103, 255, 0.08);
-  padding: 4px 12px;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.recent-tag:hover {
-  background: rgba(66, 103, 255, 0.15);
-}
-
-/* Dashboard Section Styles */
-.dashboard-section {
-  padding: 80px 20px;
-  background: var(--ah-beige-50);
-  border-top: 1px solid var(--ah-beige-200);
-}
-
-.dashboard-section .container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.dashboard-section .section-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--ah-text-primary);
-  margin: 0 0 40px;
-  text-align: center;
-}
-
-.dashboard-section .block-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--ah-text-primary);
-  margin: 0 0 20px;
-}
-
-.recent-projects-block {
-  margin-bottom: 48px;
-}
-
-.project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
-}
-
-.project-card {
-  background: #ffffff;
-  border: 1px solid var(--ah-beige-200);
-  border-radius: 16px;
-  padding: 24px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
-}
-
-.project-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--ah-primary-light);
-}
-
-.project-icon-lg {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--ah-primary);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 16px;
-}
-
-.project-name-lg {
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--ah-text-primary);
-  margin-bottom: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.project-desc-lg {
-  font-size: 13px;
-  color: var(--ah-grey-500);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  height: 100%;
   overflow: hidden;
 }
 
-.quick-actions {
-  text-align: center;
+/* 头像悬停效果 */
+.border-3 {
+  border-width: 3px;
 }
 
-.action-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 16px;
+/* Element Plus Select 样式覆盖 */
+:deep(.theme-select .el-input__wrapper),
+:deep(.model-select .el-input__wrapper) {
+  border-radius: 10px;
+  padding: 0 8px;
+  min-height: 28px;
 }
 
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 28px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 500;
-  border: 1px solid var(--ah-beige-300);
-  background: #ffffff;
-  color: var(--ah-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
+:deep(.theme-select .el-input__inner),
+:deep(.model-select .el-input__inner) {
+  font-size: 12px;
 }
 
-.action-btn:hover {
-  border-color: var(--ah-primary);
-  color: var(--ah-primary);
-  box-shadow: var(--shadow-md);
+:deep(.theme-select .el-input__prefix) {
+  margin-right: 4px;
 }
 
-.action-btn.primary {
-  background: var(--ah-primary);
-  border-color: var(--ah-primary);
-  color: #ffffff;
-}
-
-.action-btn.primary:hover {
-  background: var(--ah-primary-dark);
-  border-color: var(--ah-primary-dark);
-}
-
-@media (max-width: 640px) {
-  .prompt-title {
-    font-size: 28px;
-  }
-  .prompt-actions {
-    flex-direction: column;
-  }
-  .prompt-actions .el-button {
-    width: 100%;
-  }
-
-  .dashboard-section {
-    padding: 48px 16px;
-  }
-
-  .dashboard-section .section-title {
-    font-size: 24px;
-    margin-bottom: 28px;
-  }
-
-  .project-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .action-btn {
-    justify-content: center;
-  }
+/* Tooltip 样式 */
+:deep(.avatar-tooltip) {
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  border-radius: 6px !important;
 }
 </style>
