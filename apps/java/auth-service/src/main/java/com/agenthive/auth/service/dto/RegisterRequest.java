@@ -3,9 +3,13 @@ package com.agenthive.auth.service.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString(exclude = "password")
 public class RegisterRequest {
 
     @NotBlank(message = "Username is required")

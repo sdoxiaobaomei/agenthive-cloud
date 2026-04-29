@@ -1,9 +1,13 @@
 package com.agenthive.auth.service.dto;
 
 import jakarta.validation.constraints.Size;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 
-@Data
+@Getter
+@Setter
+@ToString(exclude = "password")
 public class UpdateProfileRequest {
 
     @Size(min = 3, max = 64, message = "Username must be between 3 and 64 characters")

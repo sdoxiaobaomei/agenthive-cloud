@@ -13,8 +13,8 @@ spring:
           enabled: false
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:auth_db}
-    username: ${DB_USER:agenthive}
-    password: ${DB_PASSWORD:secret}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
@@ -25,7 +25,7 @@ spring:
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
+    password: ${REDIS_PASSWORD}
     lettuce:
       pool:
         max-active: 20
@@ -35,7 +35,7 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
   global-config:
     db-config:
       id-type: assign_id
@@ -46,7 +46,7 @@ mybatis-plus:
 
 logging:
   level:
-    com.agenthive.auth.mapper: debug
+    com.agenthive.auth.mapper: warn
 
 ---
 spring:
@@ -58,14 +58,14 @@ aliyun:
   sms:
     enabled: ${ALIYUN_SMS_ENABLED:true}
     region-id: ${ALIYUN_SMS_REGION_ID:cn-hangzhou}
-    default-sign-name: ${ALIYUN_SMS_DEFAULT_SIGN_NAME:云渚科技验证平台}
+    default-sign-name: ${ALIYUN_SMS_DEFAULT_SIGN_NAME}
     code-expire-minutes: ${ALIYUN_SMS_CODE_EXPIRE_MINUTES:5}
     daily-limit: ${ALIYUN_SMS_DAILY_LIMIT:10}
     interval-seconds: ${ALIYUN_SMS_INTERVAL_SECONDS:60}
     # 短信模板 CODE（从阿里云控制台 → 短信服务 → 模板管理 获取）
     template-code-login-register: ${ALIYUN_SMS_TEMPLATE_CODE_LOGIN_REGISTER:100001}
     template-code-modify-phone: ${ALIYUN_SMS_TEMPLATE_CODE_MODIFY_PHONE:100002}
-    template-code-reset-password: ${ALIYUN_SMS_TEMPLATE_CODE_RESET_PASSWORD:100003}
+    template-code-reset-password: ${ALIYUN_SMS_TEMPLATE_CODE_RESET_PASSWORD}
     template-code-bind-phone: ${ALIYUN_SMS_TEMPLATE_CODE_BIND_PHONE:100004}
     template-code-verify-phone: ${ALIYUN_SMS_TEMPLATE_CODE_VERIFY_PHONE:100005}
     # OIDC 联邦身份认证（K8s 生产环境推荐，实现零 AccessKey）
@@ -76,6 +76,6 @@ aliyun:
     oidc-role-session-name: ${ALIYUN_SMS_OIDC_ROLE_SESSION_NAME:auth-service-sms}
 
 jwt:
-  secret: ${JWT_SECRET:agenthive-default-secret-key-2024-change-in-production}
+  secret: ${JWT_SECRET}
   access-token-expiration: 86400000
   refresh-token-expiration: 604800000

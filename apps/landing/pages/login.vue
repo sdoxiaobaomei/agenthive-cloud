@@ -64,8 +64,6 @@ const rules = {
 const formRef = ref()
 
 const sendCode = async () => {
-  console.log('[SendCode] Clicked, phone:', form.phone)
-  
   if (!form.phone) {
     ElMessage.error('请输入手机号')
     return
@@ -78,7 +76,6 @@ const sendCode = async () => {
   
   try {
     loading.value = true
-    console.log('[SendCode] Calling API...')
     // 调用 authStore 发送验证码
     const { auth } = useApi()
     const response = await auth.sendSms({ phone: form.phone, type: 'login' })
@@ -96,7 +93,6 @@ const sendCode = async () => {
         timer.value = null
       }
     }, 1000)
-    console.log('[SendCode] Countdown started')
   } catch (error: any) {
     console.error('[SendCode] Error:', error)
     ElMessage.error(error.message || '发送验证码失败')
@@ -131,8 +127,6 @@ const handleCompleteProfile = async () => {
 }
 
 const handleSubmit = async () => {
-  console.log('[Login] Submit clicked, mode:', mode.value)
-  
   if (!agreed.value) {
     ElMessage.warning('请先同意服务协议和隐私政策')
     return
@@ -143,9 +137,6 @@ const handleSubmit = async () => {
     ElMessage.error('表单未准备好，请刷新页面重试')
     return
   }
-  
-  console.log('[Login] Validating form...')
-  console.log('[Login] Form data:', { phone: form.phone, code: form.code, password: form.password })
   
   // 手动验证，避免 Element Plus 验证卡住
   if (mode.value === 'code') {
@@ -185,25 +176,19 @@ const handleSubmit = async () => {
       return
     }
   }
-  
-  console.log('[Login] All fields valid')
-  
-  console.log('[Login] Form valid, attempting login...')
+
   loading.value = true
   
   try {
     let isNewUser = false
     if (mode.value === 'code') {
-      console.log('[Login] SMS login with phone:', form.phone)
       const result = await authStore.login(form.phone, form.code)
       isNewUser = result.isNewUser
     } else {
-      console.log('[Login] Password login with username:', form.phone)
       await authStore.loginByPassword(form.phone, form.password)
     }
 
     ElMessage.success('登录成功')
-    console.log('[Login] Login successful, isNewUser:', isNewUser)
 
     // 新用户引导补全资料
     if (isNewUser) {
@@ -212,16 +197,12 @@ const handleSubmit = async () => {
       return
     }
 
-    console.log('[Login] Current route query:', route.query)
-
     // 登录成功 - 跳转到目标页面
     const redirect = route.query.redirect as string
     const targetPath = redirect || '/chat'
-    console.log('[Login] Navigating to:', targetPath)
 
     try {
       await router.push(targetPath)
-      console.log('[Login] Navigation successful')
     } catch (navError: any) {
       console.error('[Login] Navigation failed:', navError)
       // 如果导航失败，尝试强制跳转

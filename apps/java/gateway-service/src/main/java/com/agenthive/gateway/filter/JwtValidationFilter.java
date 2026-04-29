@@ -25,7 +25,7 @@ import java.util.List;
 @Component
 public class JwtValidationFilter implements GlobalFilter, Ordered {
 
-    @Value("${jwt.secret:agenthive-default-secret-key-2024}")
+    @Value("${jwt.secret}")
     private String jwtSecret;
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();

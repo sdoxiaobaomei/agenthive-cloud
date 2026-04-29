@@ -1,0 +1,27 @@
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "https://agenthive.cloud"
+              - "https://app.agenthive.cloud"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - PATCH
+              - OPTIONS
+            allowedHeaders:
+              - Content-Type
+              - Accept
+              - Authorization
+              - X-Query-Params
+              - X-Requested-With
+              - X-User-Id
+              - X-User-Name
+              - X-User-Role
+            allowCredentials: true
+            maxAge: 3600

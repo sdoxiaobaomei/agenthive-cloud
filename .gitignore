@@ -93,6 +93,12 @@ terraform.tfstate*
 *.tar
 kubeconfig-*
 
+# TLS certificates (self-signed or private keys)
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+nginx/ssl/*.csr
+
 # Third-party K8s manifests (downloaded during deploy)
 # Keep these out of git; documented in deployment notes
 ingress-nginx-deploy.yaml
@@ -102,3 +108,8 @@ cert-manager.yaml
 **/target/classes/
 
 .env.dev
+
+# OTel Java Agent cache (pre-downloaded for China dev environment)
+apps/java/.cache/
+apps/java/*/opentelemetry-javaagent-2.6.0.jar
+

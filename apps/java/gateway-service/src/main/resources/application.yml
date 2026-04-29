@@ -8,13 +8,6 @@ spring:
     active: dev
   cloud:
     gateway:
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOrigins: "*"
-            allowedMethods: "*"
-            allowedHeaders: "*"
-            allowCredentials: false
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin, RETAIN_UNIQUE
       routes:
@@ -64,10 +57,10 @@ spring:
   redis:
     host: ${REDIS_HOST:localhost}
     port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
+    password: ${REDIS_PASSWORD}
 
 jwt:
-  secret: ${JWT_SECRET:agenthive-default-secret-key-2024-change-in-production}
+  secret: ${JWT_SECRET}
 
 springdoc:
   swagger-ui:

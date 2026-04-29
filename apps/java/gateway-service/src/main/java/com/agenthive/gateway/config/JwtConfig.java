@@ -1,9 +1,7 @@
-package com.agenthive.auth.config;
+package com.agenthive.gateway.config;
 
-import com.agenthive.common.security.util.JwtUtils;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
@@ -11,12 +9,6 @@ public class JwtConfig {
 
     @Value("${jwt.secret}")
     private String secret;
-
-    @Value("${jwt.access-token-expiration:3600000}")
-    private long accessExpiration;
-
-    @Value("${jwt.refresh-token-expiration:604800000}")
-    private long refreshExpiration;
 
     @PostConstruct
     public void validateSecret() {
@@ -47,10 +39,5 @@ public class JwtConfig {
                 "Please use a cryptographically strong random string."
             );
         }
-    }
-
-    @Bean
-    public JwtUtils jwtUtils() {
-        return new JwtUtils(secret, accessExpiration, refreshExpiration);
     }
 }
