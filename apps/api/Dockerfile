@@ -53,6 +53,9 @@ VOLUME /data/workspaces
 # Copy the deployed production bundle (already contains dist + prod node_modules)
 COPY --from=builder --chown=appuser:nodejs /prod/api .
 
+# Copy templates directory for blank project initialization
+COPY --chown=appuser:nodejs apps/api/templates ./apps/api/templates
+
 # Switch to non-root user
 USER appuser
 
