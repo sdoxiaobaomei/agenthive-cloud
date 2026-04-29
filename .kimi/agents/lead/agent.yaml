@@ -16,3 +16,6 @@ agent:
     platform:
       path: ../platform/agent.yaml
       description: "Platform & DevOps — Docker / K8s / Terraform / CI-CD / monitoring"
+    explore:
+      path: ../explore/agent.yaml
+      description: "Codebase research — read-only exploration and architecture analysis"

@@ -82,6 +82,33 @@
 
 Read Strategy: pom.xml -> application.yml -> 目标文件 + 直接依赖（最多3层）-> 修改后 `mvn compile` 验证
 
+## Task Intake Protocol (Workspace)
+
+**AGENTS/workspace/ 是唯一任务来源。** 当用户没有给出明确需求时，按以下步骤执行：
+
+1. 扫描 `AGENTS/workspace/` 下所有子目录的 `TICKET.yaml`
+2. 筛选条件：`assigned_team` 为 `java` 且 `status` 为 `pending`
+3. 检查 `depends_on`：如依赖的 Ticket 未完成，写 `RESPONSE.yaml` 标记 `status: blocked` 并说明等待项
+4. 按拓扑排序执行无依赖的 Ticket
+5. 执行完成后，在对应目录写 `RESPONSE.yaml`（与 `TICKET.yaml` 同目录）：
+   ```yaml
+   ticket_id: TICKET-xxx
+   status: completed|blocked|needs_review
+   confidence_score: 0.xx
+   summary: "..."
+   files_modified:
+     - apps/java/...
+   verification_status:
+     compile_passed: true
+     self_review_passed: true
+     tests_added: true
+     security_check_passed: true
+   blockers: []
+   learnings: "..."
+   ```
+6. **禁止**修改他人的 `TICKET.yaml`（只读），只写自己的 `RESPONSE.yaml`
+7. 完成后更新本文件中的 `status` 为 `completed` 或 `blocked`
+
 ## Memory Management
 
 ### 启动加载（固定 <3KB）

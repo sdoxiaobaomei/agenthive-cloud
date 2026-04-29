@@ -1,0 +1,18 @@
+ticket_id: FE-MKT-003
+status: completed
+confidence_score: 0.92
+summary: "Credits Center fully implemented with UI-mock data. Includes /credits homepage (animated balance, income/expense summary, echarts pie chart, recent transactions), /credits/transactions (filterable table), /credits/recharge (quick amounts + custom + payment method + confirmation), /credits/withdraw (amount with live fee calculation, account selection, history). Global credits badge added to top nav linking to /credits. All backend APIs mocked in Pinia store."
+files_modified:
+  - apps/landing/stores/credits.ts
+  - apps/landing/pages/credits/index.vue
+  - apps/landing/pages/credits/transactions.vue
+  - apps/landing/pages/credits/recharge.vue
+  - apps/landing/pages/credits/withdraw.vue
+  - apps/landing/layouts/app.vue
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: "Animated balance uses requestAnimationFrame with exponential decay for smooth number transition. ECharts pie chart uses donut style (radius ['40%', '70%']) for modern look. Recharge/withdraw use ElMessageBox.confirm for secondary confirmation as required. Exchange rate and fee rate are store constants configurable for admin."

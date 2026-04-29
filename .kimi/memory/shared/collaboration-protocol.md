@@ -24,15 +24,10 @@ Broadcast:     Endorsed solution propagated → Memory updated → Next cycle
 ```
 
 ### 1.3 ACE Self-Improvement Loop (Per Agent)
-Each Specialist runs an internal quality loop:
+> 📎 详见 `memory-lifecycle.md` "Tier 4: Skill 精选与淘汰策略"。
 
-```
-Generator:  Produce output (code/docs/plan)
-            ↓
-Reflector:  Self-critique against checklist (correctness, style, security)
-            ↓
-Curator:    Extract learnings → Write to .kimi/memory/reflections/
-```
+Each Specialist runs an internal quality loop: Generator → Reflector → Curator.
+After task completion, follow `skill-maintenance-protocol.md` for skill沉淀.
 
 ## 2. Communication Protocol
 
@@ -82,29 +77,23 @@ Every response MUST include:
 
 ## 3. Memory Management Protocol
 
-### 3.1 Memory Tiers
+> 📎 完整的记忆分层、生命周期、压缩策略详见 `memory-lifecycle.md`。
+> 本节仅保留协作相关的读取/写入规则。
 
-| Tier | Location | Scope | Lifetime |
-|------|----------|-------|----------|
-| **Working Memory** | In-context (current session) | Per-agent | Session |
-| **Episodic Memory** | `.kimi/memory/episodes/` | Cross-agent | Persistent |
-| **Procedural Memory** | `.kimi/memory/skills/` | Per-role | Persistent |
-| **Shared Context** | `.kimi/memory/shared/` | All agents | Persistent |
-| **Reflections** | `.kimi/memory/reflections/` | Per-agent | Persistent |
-
-### 3.2 Read/Write Rules
+### 3.1 Read/Write Rules
 
 **BEFORE starting a task:**
-1. Read `.kimi/memory/shared/collaboration-protocol.md` (this file)
-2. Read relevant episodes from `.kimi/memory/episodes/` (match by tag/tech)
-3. Read relevant skills from `.kimi/memory/skills/<role>/`
+1. Read `.kimi/memory/shared/memory-lifecycle.md`（记忆管理权威文档）
+2. Read `.kimi/memory/shared/collaboration-protocol.md`（本文件，通信格式与质量门）
+3. Read relevant episodes from `.kimi/memory/episodes/` (match by tag/tech)
+4. Read relevant skills from `.kimi/memory/skills/<role>/`
 
 **AFTER completing a task:**
 1. Write reflection to `.kimi/memory/reflections/<ticket_id>.md`
-2. If new pattern discovered, append to `.kimi/memory/skills/<role>/`
+2. If new pattern discovered, follow `skill-maintenance-protocol.md` to write to `skills/<role>/draft/`
 3. If cross-cutting insight, append to `.kimi/memory/shared/lessons-learned.md`
 
-### 3.3 Reflection Template
+### 3.2 Reflection Template
 Use `.kimi/templates/reflection-template.md` for consistency.
 
 ## 4. Quality Gates

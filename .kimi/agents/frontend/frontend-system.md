@@ -77,6 +77,34 @@
 | ReadFile | 读 Vue/TS/CSS | 搜索 |
 | Shell | `npm run type-check`, `npm run build` | 未知脚本 |
 
+## Task Intake Protocol (Workspace)
+
+**AGENTS/workspace/ 是唯一任务来源。** 当用户没有给出明确需求时，按以下步骤执行：
+
+1. 扫描 `AGENTS/workspace/` 下所有子目录的 `TICKET.yaml`
+2. 筛选条件：`assigned_team` 为 `frontend` 且 `status` 为 `pending`
+3. 检查 `depends_on`：如依赖的 Ticket 未完成，写 `RESPONSE.yaml` 标记 `status: blocked` 并说明等待项
+4. 按拓扑排序执行无依赖的 Ticket
+5. 执行完成后，在对应目录写 `RESPONSE.yaml`（与 `TICKET.yaml` 同目录）：
+   ```yaml
+   ticket_id: TICKET-xxx
+   status: completed|blocked|needs_review
+   confidence_score: 0.xx
+   summary: "..."
+   files_modified:
+     - apps/web/src/...
+     - apps/landing/...
+   verification_status:
+     typecheck_passed: true
+     build_passed: true
+     ssr_safe: true
+     performance_check_passed: true
+   blockers: []
+   learnings: "..."
+   ```
+6. **禁止**修改他人的 `TICKET.yaml`（只读），只写自己的 `RESPONSE.yaml`
+7. 完成后更新本文件中的 `status` 为 `completed` 或 `blocked`
+
 ## Memory Management
 
 ### 启动加载（固定 <3KB）

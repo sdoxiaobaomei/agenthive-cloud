@@ -1,52 +1,65 @@
 # AgentHive Cloud — Shared Lessons Learned
 
-> Cross-cutting insights from all Agent sessions. Updated automatically by Curator step.
+> **范围**: 仅记录跨角色、跨栈的架构洞察和协作教训。≤3K tokens。
+> **原则**: 技术实现细节沉淀为 `skills/<role>/official/` 中的 skill，或归档至 `lessons-learned-archive.md`。
+> 
+> 检索顺序: `INDEX.md` → `memory-lifecycle.md` → `collaboration-protocol.md` → 按需检索 skills / episodes / reflections。
+
+---
 
 ## Architecture
 - [2026-04-27] Role separation by runtime (JVM/V8/Browser/Docker) proven effective. Avoid business-domain splitting.
-- [2026-04-27] Landing BFF (Nuxt server/api/) belongs to Frontend Agent because it's Nitro/V8 runtime, not JVM.
+- [2026-04-27] Landing BFF (Nuxt server/api/) belongs to Frontend Agent (Nitro/V8 runtime).
 
-## Encoding / File Handling
-- [2026-04-27] `StrReplaceFile` on UTF-8 BOM files causes mojibake (GBK misread). Use Python byte-level operations for BOM files.
-- [2026-04-27] Git `core.autocrlf=true` on Windows + shell scripts = potential line ending issues. Prefer `.gitattributes` with `* text=auto eol=lf`.
+## Collaboration
+- [2026-04-27] **Lead 必须不直接写代码**。Role boundary: plan → dispatch → review → broadcast only.
+- [2026-04-27] Agent 工具失败时，Lead 必须上报人类，不得直接 Shell 执行代码变更。
+- [2026-04-27] `Set-Content -NoNewline` 批量修改文件 → 22 个 TICKET.yaml 编码损坏。→ 使用 `StrReplaceFile` 或 Python UTF-8。
 
 ## Security
-- [2026-04-27] 8 P0 security baseline items identified but not yet fixed. See `docs/architecture/00-architecture-review.md`.
-
-## CI / Build
-- [2026-04-27] `packages/ui` missing `@element-plus/icons-vue` — known blocker.
-- [2026-04-27] `landing` GSAP type conflict — known blocker.
-- [2026-04-27] `agent-runtime` type errors bypassed with `|| true` — must fix properly.
-
-## DevOps / Container
-- [2026-04-27] Nacos 2.3.0 `JVM_XMN=512m` default conflicts with `JVM_XMX=512m` → near-zero old generation. Override `JVM_XMN` explicitly.
-- [2026-04-27] Nacos `remote.executor.times.of.processors=16` × Docker Desktop 32 vCPU = 512 gRPC threads. Use `JAVA_TOOL_OPTIONS="-Dremote.executor.times.of.processors=1"` to control.
-- [2026-04-27] Nacos `docker-startup.sh` appends `JAVA_OPT_EXT` AFTER `-jar`, so JVM ignores it. Always use `JAVA_TOOL_OPTIONS` for container JVM tuning.
-- [2026-04-27] Java 21 + Spring Boot 3 baseline non-heap memory ≈ 80-120MB (Metaspace + Code Cache + Thread Stacks + DirectBuffer). Container limit must leave headroom above `-Xmx`.
-- [2026-04-27] Redisson sends AUTH command even when password is empty string. Ensure Redis `requirepass` is set or omit `spring.data.redis.password` entirely.
-
-## Observability
-- [2026-04-27] 7 Java services: only 3 have `spring-boot-starter-actuator`, 0 have `micrometer-registry-prometheus`. Prometheus scrape targets are all commented. Monitoring stack is infrastructure-only, no app metrics.
-- [2026-04-27] Prometheus and Java services must share a Docker network for DNS-based service discovery. If services are on `agenthive-dev` and Prometheus on `agenthive-monitoring`, add `external: true` network bridge or attach Prometheus to both networks.
+- [2026-04-27] 8 P0 security baseline items identified. See `docs/architecture/00-architecture-review.md`.
 
 ## Agent Tooling
-- [2026-04-27] Built-in `Agent` tool fails with cyclic path resolution when specialist agent.yaml uses `extend: ../lead/agent.yaml` and lead defines `subagents` pointing back to specialists. Workaround: dispatch via CLI `kimi --print --agent-file path --input-format text --output-format text --final-message-only --work-dir .`
-- [2026-04-27] Jinja template syntax in system.md must avoid `${}` literal strings (kimi CLI uses `${`/`}` as variable delimiters). Escape as `${'${}'}` or wrap in `{% raw %}` blocks.
-- [2026-04-27] Lead must NOT execute code changes directly. Role boundary: plan → dispatch → review → broadcast only.
+- [2026-04-27] Built-in `Agent` tool fails with cyclic path resolution (`extend: ../lead/agent.yaml`).
+- [2026-04-27] Session-level agent spec cache retains old spec until restart.
 
-## Agent Tooling (continued)
-- [2026-04-27] **Session-level agent spec cache**: Even after fixing `extend: ../lead/agent.yaml` on disk, the running Lead session retains the old recursive spec in memory. `Agent` tool dispatch remains broken until session restart. Workaround: use direct Shell execution for urgent tasks.
-- [2026-04-27] **Lead fallback to Shell execution**: When Agent infrastructure is blocked, Lead may fall back to direct Shell-based task execution. This is acceptable as emergency measure but must be recorded as debt to restore proper dispatch ASAP.
+---
 
-## Java / Spring Boot
-- [2026-04-27] **Docker image staleness**: Adding actuator/micrometer to `pom.xml` does NOT affect running containers. Images must be rebuilt (`docker compose build`) after any dependency change. ~~Current dev environment lacks Maven (`mvn` not in PATH, no `target/*.jar`), making rebuild impossible.~~ **Resolved**: Maven installed at `C:\tools\apache-maven-3.9.15\bin\mvn.cmd`.
-- [2026-04-27] **PowerShell `mvn` invocation trap**: On Windows, `where mvn` finds the directory but PowerShell cannot execute `mvn` without `.cmd` suffix. Always use `mvn.cmd` or full path `C:\tools\apache-maven-3.9.15\bin\mvn.cmd`.
-- [2026-04-27] **GlobalResponseAdvice breaks Docker healthcheck**: When `ResponseBodyAdvice` wraps actuator 404 into HTTP 200 + JSON 500, `wget` returns exit code 0, causing Docker to falsely mark container as `healthy`. This is a critical blind spot. Fix: exclude `/actuator/**` in `beforeBodyWrite()`.
-- [2026-04-27] **docker-compose `--env-file` is not automatic**: `docker-compose.dev.yml` does NOT auto-load `.env.dev`. Without `--env-file .env.dev`, `${REDIS_PASSWORD}` resolves to empty string, causing Redis AUTH failures in all Java services. Either add `env_file: .env.dev` to compose file or always pass `--env-file .env.dev`.
-- [2026-04-27] **Monitoring stack network bridge**: When Prometheus runs in a separate compose file (`monitoring/`), it must connect to the dev network (`agenthive-dev`) via `external: true`. The actual network name follows Docker Compose project naming: `<project_dir>_<network_name>`. For `agenthive-cloud/`, it's `agenthive-cloud_agenthive-dev`.
-- [2026-04-27] **SecurityConfig actuator authorization**: `requestMatchers("/actuator/health").permitAll()` is insufficient — Prometheus scrapes `/actuator/prometheus`, Gateway routes query `/actuator/gateway/routes`. Use `requestMatchers("/actuator/**").permitAll()` for dev/monitoring compatibility.
-- [2026-04-27] **Global response wrapper interference**: `ResponseBodyAdvice` that wraps all responses into `Result<T>` breaks actuator endpoints (Prometheus expects raw text, health expects JSON). Exclude `/actuator/**` paths in `beforeBodyWrite()`.
-- [2026-04-27] **Gateway actuator endpoint disabled by default**: Spring Cloud Gateway's `/actuator/gateway/routes` requires explicit `management.endpoint.gateway.enabled: true` and `gateway` in `web.exposure.include`.
+## Lead 行为红线（2026-04-27）
 
-## Node.js / API
-- [2026-04-27] **express-rate-limit v7 + ioredis custom Store**: `express-rate-limit` v7 is ESM-compatible but has no built-in ioredis store. Implement custom `Store` with `incr` + `pexpire` pipeline for atomic window management. Mount after `authMiddleware` so `X-User-Id` is available for per-user rate limiting.
+### 🚫 绝对禁止
+1. **禁止 Lead 直接编写业务代码**（Java/Node/Frontend/Platform 任何代码文件）
+2. **禁止 Lead 直接执行构建/部署**（mvn/docker/kubectl/terraform）
+3. **禁止 Lead 使用 PowerShell 批量修改文件**（`Set-Content -NoNewline` 等）
+
+### ⚠️ 紧急回退
+Agent 工具不可用时：记录 → 上报人类 → 获授权 → 记录为债务。
+
+### ✅ 合法职责
+任务分解、质量审查、冲突仲裁、记忆沉淀、架构决策。
+
+---
+
+## Quality & Review
+- [2026-04-28] **Strategy A 批量审查**: 17 tickets 全部打回。0% objective_breakdown 合规率。说明新标发布后 Specialist 未自动适配。
+- [2026-04-28] **files_modified 欺诈检测**: JAVA-001 报告 `files_modified: []` 但仓库存在 7 个文件。空数组 + 声称完成 = 强制验证代码仓库。
+- [2026-04-28] **安全测试零容忍**: P0-007 `tests_added=false` 但 `confidence=0.94`。安全相关变更无测试直接拒绝，无例外。
+- [2026-04-28] **批量审查最佳实践**: Python 脚本处理统一违规（高效），人工深度审查关键 ticket（JAVA-001/P0-007）。两者缺一不可。
+
+## 自检元记录
+- [2026-04-27] 自检发现: Lead 越权 5 起、Skill 沉淀机制完全失效、文档冗余 4 处、Workflow 审查缺失 16/41 Ticket。
+- [2026-04-27] 已修复: Token-Based 记忆管理 v2.0、Skills 目录规范化、Lead 红线、Workflow checklist。
+- [2026-04-28] Strategy A 执行: 17/17 不通过。经济系统闭环阻塞。Agent 4月评分 F/D/D/D。5月目标 C(>=60)。
+- [2026-04-28] **Frontend Specialist 自检完成**: 4 个 frontend ticket (FE-MKT-003, FEAT-007, FE-MKT-002) RESPONSE.yaml 已更新至 Objective Confidence v1.0。2 个 completed ticket 补写 reflection。FE-MKT-002 确认仍 blocked (依赖 JAVA-002)。发现 Landing 项目测试基础设施缺失是系统性问题。
+- [2026-04-29] **Agent 系统全面维护**: 修复 system.md 自检路径 + v2.0 阈值对齐；修正 INDEX.md 虚假健康数据；归档 6 个 approved reflections；晋升 8 个 draft -> official（frontend×3, java×1, node×2, platform×2）；同步 14 个 ticket 状态不一致；补建 SEC-001/002 TICKET.yaml。闭环率从 ~70% 提升至 91.2%。
+
+---
+
+## 技术详情归档
+> 以下主题的详细技术条目已归档至 `lessons-learned-archive.md`：
+> - Encoding / File Handling（BOM、Git autocrlf）
+> - DevOps / Container（Nacos JVM、Java 内存、Redis AUTH）
+> - Observability（actuator、Prometheus 网络）
+> - Java / Spring Boot（Docker image、GlobalResponseAdvice、SecurityConfig、Gateway actuator）
+> - Node.js / API（express-rate-limit v7 + ioredis）
+> - CI / Build（GSAP 类型冲突、agent-runtime 类型错误）
