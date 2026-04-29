@@ -15,48 +15,6 @@
     <!-- CTA -->
     <CTASection />
 
-    <!-- Authenticated Dashboard Extension -->
-    <section v-if="authStore.isAuthenticated" class="dashboard-section">
-      <div class="container">
-        <h2 class="section-title">我的工作台</h2>
-
-        <!-- Recent Projects -->
-        <div v-if="recentProjects.length > 0" class="recent-projects-block">
-          <h3 class="block-title">最近项目</h3>
-          <div class="project-grid">
-            <div
-              v-for="project in recentProjects"
-              :key="project.id"
-              class="project-card"
-              @click="router.push(`/workspace/${project.id}`)"
-            >
-              <div class="project-icon-lg">{{ project.name.charAt(0) }}</div>
-              <div class="project-name-lg">{{ project.name }}</div>
-              <div class="project-desc-lg">{{ project.description }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-          <h3 class="block-title">快速开始</h3>
-          <div class="action-buttons">
-            <button class="action-btn primary" @click="router.push('/projects')">
-              <el-icon><FolderOpened /></el-icon>
-              <span>我的项目</span>
-            </button>
-            <button class="action-btn" @click="showProjectDialog = true">
-              <el-icon><Plus /></el-icon>
-              <span>新建项目</span>
-            </button>
-            <button class="action-btn" @click="router.push('/marketplace')">
-              <el-icon><ShoppingBag /></el-icon>
-              <span>应用市场</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
     
     <!-- Project Selection Dialog -->
     <ClientRender>
@@ -194,6 +152,10 @@ onMounted(async () => {
   if (!authStore.isAuthenticated) return
   try {
     await projectStore.fetchProjects()
+    if (authStore.isAuthenticated) {
+      router.replace('/dashboard')
+      return
+    }
   } catch (error: any) {
     if (import.meta.dev) {
       console.debug('[Projects] Failed to fetch projects (may need login):', error.message)
@@ -434,168 +396,4 @@ useSeoMeta({
   background: rgba(66, 103, 255, 0.15);
 }
 
-/* Dashboard Section Styles */
-.dashboard-section {
-  padding: 80px 20px;
-  background: var(--ah-beige-50);
-  border-top: 1px solid var(--ah-beige-200);
-}
-
-.dashboard-section .container {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.dashboard-section .section-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--ah-text-primary);
-  margin: 0 0 40px;
-  text-align: center;
-}
-
-.dashboard-section .block-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--ah-text-primary);
-  margin: 0 0 20px;
-}
-
-.recent-projects-block {
-  margin-bottom: 48px;
-}
-
-.project-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 20px;
-}
-
-.project-card {
-  background: #ffffff;
-  border: 1px solid var(--ah-beige-200);
-  border-radius: 16px;
-  padding: 24px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
-}
-
-.project-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--ah-primary-light);
-}
-
-.project-icon-lg {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  background: var(--ah-primary);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 16px;
-}
-
-.project-name-lg {
-  font-weight: 600;
-  font-size: 16px;
-  color: var(--ah-text-primary);
-  margin-bottom: 8px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.project-desc-lg {
-  font-size: 13px;
-  color: var(--ah-grey-500);
-  line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.quick-actions {
-  text-align: center;
-}
-
-.action-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 16px;
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 28px;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 500;
-  border: 1px solid var(--ah-beige-300);
-  background: #ffffff;
-  color: var(--ah-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: var(--shadow-sm);
-}
-
-.action-btn:hover {
-  border-color: var(--ah-primary);
-  color: var(--ah-primary);
-  box-shadow: var(--shadow-md);
-}
-
-.action-btn.primary {
-  background: var(--ah-primary);
-  border-color: var(--ah-primary);
-  color: #ffffff;
-}
-
-.action-btn.primary:hover {
-  background: var(--ah-primary-dark);
-  border-color: var(--ah-primary-dark);
-}
-
-@media (max-width: 640px) {
-  .prompt-title {
-    font-size: 28px;
-  }
-  .prompt-actions {
-    flex-direction: column;
-  }
-  .prompt-actions .el-button {
-    width: 100%;
-  }
-
-  .dashboard-section {
-    padding: 48px 16px;
-  }
-
-  .dashboard-section .section-title {
-    font-size: 24px;
-    margin-bottom: 28px;
-  }
-
-  .project-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .action-btn {
-    justify-content: center;
-  }
-}
 </style>

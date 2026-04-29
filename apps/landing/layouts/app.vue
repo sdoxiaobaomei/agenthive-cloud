@@ -1,107 +1,146 @@
-<template>
+﻿<template>
   <div class="app-layout">
-    <!-- Left Sidebar - Projects -->
-    <aside class="project-sidebar" :class="{ collapsed: isSidebarCollapsed }">
-      <div class="sidebar-inner">
-        <!-- Sidebar Header -->
-        <div class="sidebar-header">
-          <NuxtLink to="/dashboard" class="logo-link">
-            <div class="logo-icon">A</div>
-            <span class="logo-text">AgentHive</span>
-          </NuxtLink>
-          <button
-            class="new-project-btn"
-            @click="showNewProjectDialog = true"
-          >
+    <!-- Unauthenticated: just render content -->
+    <template v-if="!isAuthenticated">
+      <div class="unauthenticated-content">
+        <slot />
+      </div>
+    </template>
+
+    <!-- Authenticated: sidebar + header + content -->
+    <template v-else>
+    <!-- Left Sidebar -->
+    <aside class="left-sidebar" :class="{ collapsed: isSidebarCollapsed }">
+      <!-- Collapse Toggle -->
+      <div class="sidebar-toggle">
+        <button
+          class="toggle-btn"
+          :title="isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+          @click="toggleSidebar"
+        >
+          <el-icon><Fold v-if="!isSidebarCollapsed" /><Expand v-else /></el-icon>
+        </button>
+      </div>
+
+      <!-- Logo (visible when expanded) -->
+      <div v-if="!isSidebarCollapsed" class="sidebar-logo">
+        <NuxtLink to="/" class="logo-link">
+          <div class="logo-icon">A</div>
+          <span class="logo-text">AgentHive</span>
+        </NuxtLink>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="sidebar-nav">
+        <!-- Marketplace -->
+        <NuxtLink
+          to="/marketplace"
+          class="nav-item"
+          :class="{ active: route.path.startsWith('/marketplace') }"
+        >
+          <div class="nav-icon">
+            <el-icon><Shop /></el-icon>
+          </div>
+          <span v-if="!isSidebarCollapsed" class="nav-label">Marketplace</span>
+        </NuxtLink>
+
+        <!-- My Projects -->
+        <NuxtLink
+          to="/projects"
+          class="nav-item"
+          :class="{ active: route.path === '/projects' || route.path.startsWith('/projects/') }"
+        >
+          <div class="nav-icon">
+            <el-icon><FolderOpened /></el-icon>
+          </div>
+          <span v-if="!isSidebarCollapsed" class="nav-label">My Projects</span>
+        </NuxtLink>
+
+        <!-- New Project -->
+        <NuxtLink
+          to="/dashboard"
+          class="nav-item"
+          :class="{ active: route.path === '/dashboard' }"
+        >
+          <div class="nav-icon">
             <el-icon><Plus /></el-icon>
-            <span>New Project</span>
-          </button>
+          </div>
+          <span v-if="!isSidebarCollapsed" class="nav-label">New Project</span>
+        </NuxtLink>
+      </nav>
+
+      <!-- Recents (max 3) -->
+      <div v-if="!isSidebarCollapsed && recentProjects.length > 0" class="sidebar-recents">
+        <div class="recents-label">Recents</div>
+        <div class="project-icons">
+          <div
+            v-for="project in recentProjects"
+            :key="project.id"
+            class="project-icon-item"
+            :class="{ active: currentProject?.id === project.id }"
+            :title="project.name"
+            @click="selectProject(project)"
+          >
+            <div class="project-icon-avatar">{{ project.name.charAt(0) }}</div>
+            <span class="project-icon-name">{{ project.name }}</span>
+          </div>
         </div>
+        <NuxtLink
+          v-if="recentProjects.length > 0"
+          to="/projects"
+          class="view-all-link"
+        >
+          View All 鈫?        </NuxtLink>
+      </div>
 
-        <!-- Projects Section -->
-        <div class="projects-section">
-          <div class="section-header" @click="toggleProjectsExpanded">
-            <div class="section-title">
-              <el-icon><Folder /></el-icon>
-              <span>My Projects</span>
+      <!-- Sidebar Footer -->
+      <div v-if="!isSidebarCollapsed" class="sidebar-footer">
+        <NuxtLink to="/credits" class="footer-btn" title="Credits">
+          <el-icon><Coin /></el-icon>
+          <span class="footer-btn-label">{{ (mockCredits.account.value?.balance ?? 0).toFixed(0) }}</span>
+        </NuxtLink>
+        <NuxtLink to="/creator" class="footer-btn" title="Creator Center">
+          <el-icon><ShoppingBag /></el-icon>
+        </NuxtLink>
+        <button class="footer-btn" title="Notifications" @click="showNotifications = true">
+          <el-icon><Bell /></el-icon>
+        </button>
+        <button class="footer-btn" title="Settings" @click="showSettings = true">
+          <el-icon><Setting /></el-icon>
+        </button>
+        <div class="footer-avatar" @click="showUserMenu = !showUserMenu">
+          <img v-if="user?.avatar" :src="user.avatar" class="user-avatar-img" alt="user" />
+          <div v-else class="user-avatar-fallback">{{ userInitial }}</div>
+          <!-- User dropdown -->
+          <div v-if="showUserMenu" class="user-dropdown">
+            <div class="dropdown-item" @click="goHome">
+              <el-icon><HomeFilled /></el-icon>
+              <span>Home</span>
             </div>
-            <div class="flex items-center gap-2">
-              <NuxtLink
-                to="/marketplace"
-                class="view-all-btn"
-                title="Marketplace"
-                @click.stop
-              >
-                <el-icon><ShoppingBag /></el-icon>
-              </NuxtLink>
-              <NuxtLink
-                to="/projects"
-                class="view-all-btn"
-                title="View all projects"
-                @click.stop
-              >
-                <el-icon><FolderOpened /></el-icon>
-              </NuxtLink>
-              <button
-                class="view-all-btn"
-                @click.stop="showProjectSearchDialog = true"
-                title="Search projects"
-              >
-                <el-icon><Search /></el-icon>
-              </button>
-              <el-icon class="expand-icon" :class="{ expanded: isProjectsExpanded }">
-                <ArrowRight />
-              </el-icon>
+            <div class="dropdown-divider"></div>
+            <div class="dropdown-item danger" @click="logout">
+              <el-icon><SwitchButton /></el-icon>
+              <span>Logout</span>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div v-show="isProjectsExpanded" class="project-list">
-            <div class="project-group">
-              <div class="group-label">Recents</div>
-            </div>
-            <div
-              v-for="project in recentProjects"
-              :key="project.id"
-              class="project-item"
-              :class="{ active: currentProject?.id === project.id }"
-              @click="selectProject(project)"
-            >
-              <div class="project-info">
-                <div class="project-name">{{ project.name }}</div>
-                <div class="project-desc">{{ project.description }}</div>
-              </div>
-              <button
-                class="workspace-btn"
-                title="Open workspace"
-                @click.stop="openWorkspace(project.id)"
-              >
-                <el-icon><Document /></el-icon>
-              </button>
-            </div>
-            <NuxtLink
-              v-if="recentProjects.length > 0"
-              to="/projects"
-              class="view-all-projects"
-            >
-              View All →
-            </NuxtLink>
-            <div v-if="recentProjects.length === 0" class="empty-projects">
-              <span class="empty-text">No projects yet</span>
-            </div>
-          </div>
+      <!-- Collapsed Footer -->
+      <div v-else class="sidebar-footer-collapsed">
+        <div class="footer-avatar-collapsed" @click="goHome">
+          <img v-if="user?.avatar" :src="user.avatar" class="user-avatar-img" alt="user" />
+          <div v-else class="user-avatar-fallback">{{ userInitial }}</div>
         </div>
       </div>
     </aside>
 
     <!-- Main Content Area -->
     <main class="main-area">
-      <!-- Top Bar -->
+      <!-- Top Header Bar -->
       <header class="top-bar">
         <div class="flex items-center gap-3">
-          <button class="sidebar-toggle-btn" @click="toggleSidebar" title="Toggle sidebar">
-            <el-icon><Menu /></el-icon>
-          </button>
-          <NuxtLink to="/dashboard" class="logo-link">
+          <NuxtLink v-if="isSidebarCollapsed" to="/" class="logo-link">
             <div class="logo-icon">A</div>
             <span class="logo-text">AgentHive</span>
           </NuxtLink>
@@ -109,26 +148,21 @@
 
         <div class="breadcrumb">
           <span v-if="currentProject">{{ currentProject.name }}</span>
-          <span v-else>Dashboard</span>
+          <span v-else-if="route.path === '/'">Dashboard</span>
+          <span v-else-if="route.path.startsWith('/marketplace')">Marketplace</span>
+          <span v-else-if="route.path === '/projects' || route.path.startsWith('/projects/')">Projects</span>
+          <span v-else-if="route.path.startsWith('/chat')">Chat</span>
+          <span v-else-if="route.path.startsWith('/credits')">Credits</span>
+          <span v-else-if="route.path.startsWith('/creator')">Creator Center</span>
+          <span v-else>Workspace</span>
         </div>
 
         <div class="top-actions">
-          <NuxtLink to="/credits" class="credits-badge">
-            <el-icon><Coin /></el-icon>
-            <span>{{ (mockCredits.account.value?.balance ?? 0).toFixed(0) }}</span>
-          </NuxtLink>
-          <NuxtLink to="/creator" class="nav-link" title="Creator Center">
-            <el-icon><ShoppingBag /></el-icon>
-          </NuxtLink>
-          <button class="action-btn" @click="showNewProjectDialog = true">
-            <el-icon><Plus /></el-icon>
-            <span>New Project</span>
-          </button>
-          <div class="user-menu" @click="showUserMenu = !showUserMenu">
+          <div class="user-menu" @click="showUserMenuTop = !showUserMenuTop">
             <img v-if="user?.avatar" :src="user.avatar" class="user-avatar" alt="user" />
             <div v-else class="user-avatar fallback">{{ userInitial }}</div>
             <!-- Dropdown menu -->
-            <div v-if="showUserMenu" class="user-dropdown">
+            <div v-if="showUserMenuTop" class="user-dropdown">
               <div class="dropdown-item" @click="goHome">
                 <el-icon><HomeFilled /></el-icon>
                 <span>Home</span>
@@ -148,116 +182,64 @@
         <slot />
       </div>
     </main>
+    </template>
 
-    <!-- New Project Dialog -->
+    <!-- Notifications Dialog (placeholder) -->
     <el-dialog
-      v-model="showNewProjectDialog"
-      title="New Project"
-      width="420px"
-      :close-on-click-modal="false"
-      class="project-dialog"
+      v-model="showNotifications"
+      title="Notifications"
+      width="400px"
+      :close-on-click-modal="true"
     >
-      <el-form :model="newProject" label-position="top">
-        <el-form-item label="Project Name">
-          <el-input v-model="newProject.name" placeholder="Enter project name" size="large" />
-        </el-form-item>
-        <el-form-item label="Description">
-          <el-input
-            v-model="newProject.description"
-            type="textarea"
-            :rows="3"
-            placeholder="Describe your project (optional)"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showNewProjectDialog = false">Cancel</el-button>
-        <el-button type="primary" :loading="projectStore.loading" @click="addProject">
-          Create
-        </el-button>
-      </template>
+      <div class="placeholder-dialog">
+        <el-icon :size="48"><Bell /></el-icon>
+        <p>No new notifications</p>
+      </div>
     </el-dialog>
 
-    <!-- Project Search Dialog -->
+    <!-- Settings Dialog (placeholder) -->
     <el-dialog
-      v-model="showProjectSearchDialog"
-      title="All Projects"
-      width="600px"
+      v-model="showSettings"
+      title="Settings"
+      width="400px"
       :close-on-click-modal="true"
-      class="project-search-dialog"
     >
-      <div class="project-search-input-wrapper">
-        <el-icon class="search-icon"><Search /></el-icon>
-        <el-input
-          v-model="projectSearchQuery"
-          placeholder="Search projects..."
-          size="large"
-          clearable
-          class="project-search-input"
-        />
+      <div class="placeholder-dialog">
+        <el-icon :size="48"><Setting /></el-icon>
+        <p>Settings will be available soon</p>
       </div>
-
-      <div class="project-search-list">
-        <div
-          v-for="project in filteredProjects"
-          :key="project.id"
-          class="project-search-item"
-          :class="{ active: currentProject?.id === project.id }"
-          @click="selectProjectFromSearch(project)"
-        >
-          <div class="project-search-icon">
-            <el-icon><Folder /></el-icon>
-          </div>
-          <div class="project-search-info">
-            <div class="project-search-name">{{ project.name }}</div>
-            <div class="project-search-desc">{{ project.description }}</div>
-            <div class="project-search-date">{{ formatDate(project.createdAt) }}</div>
-          </div>
-          <el-icon v-if="currentProject?.id === project.id" class="project-search-check"><Check /></el-icon>
-        </div>
-
-        <div v-if="filteredProjects.length === 0" class="project-search-empty">
-          <el-icon :size="48"><Search /></el-icon>
-          <p>No projects found</p>
-        </div>
-      </div>
-
-      <template #footer>
-        <div class="project-search-footer">
-          <span class="project-count">{{ filteredProjects.length }} projects</span>
-          <el-button @click="showProjectSearchDialog = false">Close</el-button>
-        </div>
-      </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   Plus,
-  Folder,
   FolderOpened,
-  ArrowRight,
-  Menu,
-  Search,
-  Check,
   HomeFilled,
   SwitchButton,
-  Document,
-  ShoppingBag,
+  Shop,
+  Fold,
+  Expand,
+  Bell,
+  Setting,
   Coin,
+  ShoppingBag,
 } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { useProjectStore } from '~/stores/project'
+import { useProjectStore, type Project } from '~/stores/project'
 import { useAuthStore } from '~/stores/auth'
 import { useMockCredits } from '~/composables/useMockCredits'
 
 const router = useRouter()
+const route = useRoute()
 const projectStore = useProjectStore()
 const authStore = useAuthStore()
 const mockCredits = useMockCredits()
+
+// Only show sidebar/header for authenticated users
+const isAuthenticated = computed(() => authStore.isAuthenticated)
 
 // Auth
 const user = computed(() => authStore.currentUser)
@@ -265,42 +247,64 @@ const userInitial = computed(() => authStore.userInitial)
 
 const logout = async () => {
   await authStore.logout()
-  router.push('/')
+  router.push('/dashboard')
 }
 
 const goHome = () => {
   router.push('/dashboard')
   showUserMenu.value = false
+  showUserMenuTop.value = false
 }
 
-// User menu
+// User menus
 const showUserMenu = ref(false)
+const showUserMenuTop = ref(false)
 
-// Sidebar state
+// Close user dropdown on click outside
+let userMenuClickHandler: ((e: MouseEvent) => void) | null = null
+onMounted(() => {
+  userMenuClickHandler = (e: MouseEvent) => {
+    const target = e.target as HTMLElement
+    if (!target.closest('.footer-avatar') && !target.closest('.user-menu')) {
+      showUserMenu.value = false
+      showUserMenuTop.value = false
+    }
+  }
+  document.addEventListener('click', userMenuClickHandler)
+})
+onUnmounted(() => {
+  if (userMenuClickHandler) {
+    document.removeEventListener('click', userMenuClickHandler)
+  }
+})
+
+// Sidebar state - persist in localStorage
+const SIDEBAR_KEY = 'agenthive:sidebar-collapsed'
 const isSidebarCollapsed = ref(false)
-const isProjectsExpanded = ref(true)
 
 const toggleSidebar = () => {
   isSidebarCollapsed.value = !isSidebarCollapsed.value
-}
-
-const toggleProjectsExpanded = () => {
-  if (!isSidebarCollapsed.value) {
-    isProjectsExpanded.value = !isProjectsExpanded.value
+  if (import.meta.client) {
+    localStorage.setItem(SIDEBAR_KEY, String(isSidebarCollapsed.value))
   }
 }
+
+onMounted(() => {
+  if (import.meta.client) {
+    const saved = localStorage.getItem(SIDEBAR_KEY)
+    if (saved !== null) {
+      isSidebarCollapsed.value = saved === 'true'
+    }
+  }
+})
 
 // Projects from store
 const currentProject = computed(() => projectStore.currentProject)
 const recentProjects = computed(() => projectStore.activeProjects.slice(0, 3))
 
-const selectProject = (project: any) => {
+const selectProject = (project: Project) => {
   projectStore.setCurrentProject(project)
   router.push(`/workspace/${project.id}`)
-}
-
-const openWorkspace = (projectId: string) => {
-  router.push(`/workspace/${projectId}`)
 }
 
 // Fetch projects on mount
@@ -329,65 +333,9 @@ onUnmounted(() => {
   }
 })
 
-// New project
-const showNewProjectDialog = ref(false)
-const newProject = ref({ name: '', description: '' })
-
-const addProject = async () => {
-  if (!newProject.value.name.trim()) {
-    ElMessage.warning('Please enter a project name')
-    return
-  }
-  try {
-    const project = await projectStore.createProject({
-      name: newProject.value.name.trim(),
-      description: newProject.value.description.trim(),
-    })
-    newProject.value = { name: '', description: '' }
-    showNewProjectDialog.value = false
-    ElMessage.success('Project created')
-    // Navigate to workspace with the new project
-    projectStore.setCurrentProject(project)
-    router.push(`/workspace/${project.id}`)
-  } catch (err: any) {
-    ElMessage.error(err.message || 'Failed to create project')
-  }
-}
-
-// Project Search Dialog
-const showProjectSearchDialog = ref(false)
-const projectSearchQuery = ref('')
-
-const filteredProjects = computed(() => {
-  if (!projectSearchQuery.value.trim()) return projectStore.projects
-  const query = projectSearchQuery.value.toLowerCase()
-  return projectStore.projects.filter(p =>
-    p.name.toLowerCase().includes(query) ||
-    (p.description?.toLowerCase().includes(query) ?? false)
-  )
-})
-
-const selectProjectFromSearch = (project: any) => {
-  selectProject(project)
-  showProjectSearchDialog.value = false
-  projectSearchQuery.value = ''
-}
-
-const formatDate = (date: string | Date) => {
-  const d = typeof date === 'string' ? new Date(date) : date
-  return d.toLocaleDateString()
-}
-
-// Close user dropdown on click outside
-onMounted(() => {
-  const handler = (e: MouseEvent) => {
-    const target = e.target as HTMLElement
-    if (!target.closest('.user-menu')) {
-      showUserMenu.value = false
-    }
-  }
-  document.addEventListener('click', handler)
-})
+// Placeholder dialogs
+const showNotifications = ref(false)
+const showSettings = ref(false)
 </script>
 
 <style scoped>
@@ -399,9 +347,15 @@ onMounted(() => {
   background: #ffffff;
 }
 
+.unauthenticated-content {
+  flex: 1;
+  overflow: auto;
+  min-height: 100vh;
+}
+
 /* Left Sidebar */
-.project-sidebar {
-  width: 280px;
+.left-sidebar {
+  width: 240px;
   flex-shrink: 0;
   background: #f9fafb;
   border-right: 1px solid #e5e7eb;
@@ -409,36 +363,52 @@ onMounted(() => {
   flex-direction: column;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
+  z-index: 50;
 }
 
-.project-sidebar.collapsed {
-  width: 0;
+.left-sidebar.collapsed {
+  width: 56px;
 }
 
-.sidebar-inner {
-  width: 280px;
-  flex-shrink: 0;
+/* Sidebar Toggle */
+.sidebar-toggle {
+  padding: 12px;
   display: flex;
-  flex-direction: column;
-  height: 100%;
+  justify-content: flex-end;
 }
 
-/* Sidebar Header */
-.sidebar-header {
-  padding: 16px;
+.toggle-btn {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.sidebar-header .logo-link {
+.toggle-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+/* Sidebar Logo */
+.sidebar-logo {
+  padding: 0 16px 12px;
+}
+
+.sidebar-logo .logo-link {
   display: flex;
   align-items: center;
   gap: 10px;
   text-decoration: none;
 }
 
-.sidebar-header .logo-icon {
+.sidebar-logo .logo-icon {
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -452,187 +422,268 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.sidebar-header .logo-text {
+.sidebar-logo .logo-text {
   font-size: 16px;
   font-weight: 600;
   color: #111827;
 }
 
-.new-project-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: #4f46e5;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.new-project-btn:hover {
-  background: #4338ca;
-}
-
-/* Projects Section */
-.projects-section {
+/* Sidebar Navigation */
+.sidebar-nav {
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  padding: 0 8px;
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
-.section-header {
+.nav-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #374151;
   cursor: pointer;
+  transition: all 0.15s ease;
   user-select: none;
 }
 
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
+.nav-item:hover {
+  background: #f3f4f6;
   color: #111827;
 }
 
-.expand-icon {
-  font-size: 12px;
-  color: #9ca3af;
-  transition: transform 0.2s ease;
+.nav-item.active {
+  background: #eff6ff;
+  color: #4f46e5;
 }
 
-.expand-icon.expanded {
-  transform: rotate(90deg);
+.nav-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
-.project-list {
-  overflow-y: auto;
-  padding: 0 12px;
+.nav-label {
+  font-size: 13px;
+  font-weight: 500;
+  flex: 1;
 }
 
-.project-group {
-  padding: 4px 12px;
+/* Recents */
+.sidebar-recents {
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px solid #e5e7eb;
 }
 
-.group-label {
+.recents-label {
   font-size: 11px;
   font-weight: 500;
   color: #9ca3af;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  padding-left: 4px;
 }
 
-.project-item {
-  padding: 8px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  margin-bottom: 2px;
-}
-
-.project-item:hover {
-  background: #f3f4f6;
-}
-
-.project-item.active {
-  background: #4f46e5;
-}
-
-.project-item.active .project-name {
-  color: white;
-}
-
-.project-item.active .project-desc {
-  color: rgba(255,255,255,0.7);
-}
-
-.project-item {
+.project-icons {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
-.workspace-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: transparent;
-  cursor: pointer;
+.project-icon-item {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  gap: 4px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  cursor: pointer;
   transition: all 0.15s ease;
+  width: 64px;
 }
 
-.project-item:hover .workspace-btn {
-  color: #9ca3af;
+.project-icon-item:hover {
+  background: #f3f4f6;
 }
 
-.project-item:hover .workspace-btn:hover {
-  background: #e5e7eb;
-  color: #4f46e5;
+.project-icon-item.active {
+  background: #eff6ff;
 }
 
-.project-item.active .workspace-btn:hover {
-  background: rgba(255,255,255,0.2);
+.project-icon-item.active .project-icon-avatar {
+  background: #4f46e5;
   color: white;
 }
 
-.project-name {
-  font-size: 13px;
-  font-weight: 500;
+.project-icon-item.active .project-icon-name {
+  color: #4f46e5;
+}
+
+.project-icon-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #e5e7eb;
   color: #374151;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 600;
+  flex-shrink: 0;
 }
 
-.project-desc {
-  font-size: 11px;
-  color: #9ca3af;
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.empty-projects {
-  padding: 16px;
+.project-icon-name {
+  font-size: 10px;
+  font-weight: 500;
+  color: #6b7280;
   text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.empty-text {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.view-all-projects {
-  display: block;
-  padding: 8px 12px;
+.view-all-link {
   font-size: 12px;
   font-weight: 500;
   color: #4f46e5;
   text-decoration: none;
-  text-align: right;
+  padding: 4px;
   transition: color 0.15s ease;
 }
 
-.view-all-projects:hover {
+.view-all-link:hover {
   color: #4338ca;
   text-decoration: underline;
+}
+
+/* Sidebar Footer */
+.sidebar-footer {
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.footer-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.footer-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.footer-btn-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.footer-avatar {
+  position: relative;
+  cursor: pointer;
+}
+
+.user-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-avatar-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #4267ff;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Collapsed Footer */
+.sidebar-footer-collapsed {
+  padding: 12px 0;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-avatar-collapsed {
+  cursor: pointer;
+}
+
+/* User Dropdown */
+.user-dropdown {
+  position: absolute;
+  bottom: 44px;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  min-width: 160px;
+  padding: 6px;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
+  transition: all 0.15s ease;
+}
+
+.dropdown-item:hover {
+  background: #f3f4f6;
+}
+
+.dropdown-item.danger {
+  color: #ef4444;
+}
+
+.dropdown-item.danger:hover {
+  background: #fef2f2;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
 }
 
 /* Main Content */
@@ -654,26 +705,6 @@ onMounted(() => {
   justify-content: space-between;
   padding: 0 24px;
   flex-shrink: 0;
-}
-
-.sidebar-toggle-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: white;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.sidebar-toggle-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
-  border-color: #d1d5db;
 }
 
 .top-bar .logo-link {
@@ -718,61 +749,6 @@ onMounted(() => {
   gap: 16px;
 }
 
-.credits-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: #fefce8;
-  border: 1px solid #fde68a;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #b45309;
-  text-decoration: none;
-  transition: all 0.15s ease;
-}
-
-.credits-badge:hover {
-  background: #fef3c7;
-}
-
-.nav-link {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  color: #6b7280;
-  text-decoration: none;
-  transition: all 0.15s ease;
-}
-
-.nav-link:hover {
-  background: #f3f4f6;
-  color: #4f46e5;
-}
-
-.action-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: #4f46e5;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.action-btn:hover {
-  background: #4338ca;
-}
-
 .user-menu {
   position: relative;
   display: flex;
@@ -797,7 +773,7 @@ onMounted(() => {
   font-weight: 600;
 }
 
-.user-dropdown {
+.top-bar .user-dropdown {
   position: absolute;
   top: 44px;
   right: 0;
@@ -810,36 +786,6 @@ onMounted(() => {
   padding: 6px;
 }
 
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #374151;
-  transition: all 0.15s ease;
-}
-
-.dropdown-item:hover {
-  background: #f3f4f6;
-}
-
-.dropdown-item.danger {
-  color: #ef4444;
-}
-
-.dropdown-item.danger:hover {
-  background: #fef2f2;
-}
-
-.dropdown-divider {
-  height: 1px;
-  background: #e5e7eb;
-  margin: 4px 0;
-}
-
 /* Content Wrapper */
 .content-wrapper {
   flex: 1;
@@ -848,204 +794,18 @@ onMounted(() => {
   position: relative;
 }
 
-/* View All Button */
-.view-all-btn {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: #9ca3af;
-  cursor: pointer;
+/* Placeholder Dialog */
+.placeholder-dialog {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  transition: all 0.15s ease;
-}
-
-.view-all-btn:hover {
-  background: #f3f4f6;
-  color: #4f46e5;
-}
-
-/* Dialogs */
-:deep(.project-dialog) {
-  border-radius: 12px;
-}
-
-:deep(.project-dialog .el-dialog__header) {
-  padding: 20px;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-:deep(.project-dialog .el-dialog__title) {
-  font-size: 16px;
-  font-weight: 600;
-  color: #111827;
-}
-
-:deep(.project-dialog .el-dialog__body) {
-  padding: 20px;
-}
-
-:deep(.project-dialog .el-dialog__footer) {
-  padding: 16px 20px;
-  border-top: 1px solid #e5e7eb;
-}
-
-:deep(.project-dialog .el-button--primary) {
-  background: #4f46e5;
-  border-color: #4f46e5;
-}
-
-:deep(.project-dialog .el-button--primary:hover) {
-  background: #4338ca;
-  border-color: #4338ca;
-}
-
-/* Project Search Dialog */
-:deep(.project-search-dialog) {
-  border-radius: 16px;
-}
-
-:deep(.project-search-dialog .el-dialog__header) {
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-  margin-right: 0;
-}
-
-:deep(.project-search-dialog .el-dialog__title) {
-  font-size: 18px;
-  font-weight: 600;
-  color: #111827;
-}
-
-:deep(.project-search-dialog .el-dialog__body) {
-  padding: 20px 24px;
-}
-
-.project-search-input-wrapper {
-  position: relative;
-  margin-bottom: 16px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  padding: 40px;
   color: #9ca3af;
-  font-size: 18px;
-  z-index: 1;
-}
-
-:deep(.project-search-input .el-input__inner) {
-  padding-left: 40px;
-  border-radius: 10px;
-  height: 44px;
-}
-
-.project-search-list {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.project-search-item {
-  display: flex;
-  align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  margin-bottom: 4px;
 }
 
-.project-search-item:hover {
-  background: #f3f4f6;
-}
-
-.project-search-item.active {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-}
-
-.project-search-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #6b7280;
-  font-size: 20px;
-}
-
-.project-search-item:hover .project-search-icon {
-  background: #e5e7eb;
-  color: #4f46e5;
-}
-
-.project-search-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.project-search-name {
+.placeholder-dialog p {
   font-size: 14px;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.project-search-desc {
-  font-size: 13px;
-  color: #6b7280;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.project-search-date {
-  font-size: 12px;
-  color: #9ca3af;
-}
-
-.project-search-check {
-  color: #4f46e5;
-  font-size: 20px;
-}
-
-.project-search-empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: #9ca3af;
-}
-
-.project-search-empty p {
-  margin-top: 12px;
-  font-size: 14px;
-}
-
-.project-search-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.project-count {
-  font-size: 13px;
-  color: #6b7280;
-}
-
-:deep(.project-search-dialog .el-dialog__footer) {
-  padding: 16px 24px;
-  border-top: 1px solid #e5e7eb;
 }
 </style>
