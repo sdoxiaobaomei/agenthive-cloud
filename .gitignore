@@ -113,3 +113,14 @@ cert-manager.yaml
 apps/java/.cache/
 apps/java/*/opentelemetry-javaagent-2.6.0.jar
 
+
+# --- Release tooling temp files ---
+_git-*.txt
+_commit-groups*.json
+_group-*.txt
+_ticket-summary.*
+
+# --- Build artifacts ---
+*.class
+__pycache__/
+*.pyc
