@@ -90,6 +90,7 @@ terraform.tfstate*
 # Deployment artifacts
 *.err
 *.sql
+!**/db/migration/*.sql
 *.tar
 kubeconfig-*
 
