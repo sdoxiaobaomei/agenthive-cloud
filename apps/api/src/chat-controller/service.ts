@@ -48,14 +48,23 @@ export const chatService = {
   // ========== Session Management ==========
 
   async createSession(input: CreateSessionInput): Promise<ChatSession> {
+    let projectId: string | null = input.projectId || null
+    // 如果传了 projectId，验证项目是否存在；不存在则降级为 null（避免 FK 错误）
+    if (projectId) {
+      const projectCheck = await pool.query('SELECT id FROM projects WHERE id = $1', [projectId])
+      if ((projectCheck.rowCount ?? 0) === 0) {
+        logger.warn('Project not found for chat session, falling back to null', { projectId, userId: input.userId })
+        projectId = null
+      }
+    }
     const result = await pool.query(
       `INSERT INTO chat_sessions (user_id, project_id, title, status)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [input.userId, input.projectId || null, input.title || '新会话', 'active']
+      [input.userId, projectId, input.title || '新会话', 'active']
     )
     const session = dbRowToSession(result.rows[0])
-    logger.info('Chat session created', { sessionId: session.id, userId: input.userId })
+    logger.info('Chat session created', { sessionId: session.id, userId: input.userId, projectId })
     return session
   },
 
