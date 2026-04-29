@@ -1,0 +1,19 @@
+{{- if and (or .Values.nacos.enabled .Values.javaServices.enabled) .Values.nacos.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.nacos.name }}-data
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "agenthive.labels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ .Values.nacos.name }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.nacos.pvc.size }}
+  {{- if .Values.nacos.pvc.storageClass }}
+  storageClassName: {{ .Values.nacos.pvc.storageClass }}
+  {{- end }}
+{{- end }}

@@ -7,162 +7,179 @@
       <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(rgba(66,103,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(66,103,255,0.5) 1px, transparent 1px); background-size: 60px 60px;" />
     </div>
 
-    <div class="relative z-10 flex flex-col items-center justify-center w-full px-4 sm:px-6 lg:px-8">
-      <!-- 柴犬头像组 -->
-      <div class="flex items-center justify-center mb-8">
-        <div class="flex items-center -space-x-3">
-          <ClientRender>
-            <el-tooltip
-              v-for="(avatar, index) in avatars"
-              :key="index"
-              :content="avatar.tooltip"
-              effect="dark"
-              :show-arrow="false"
-              popper-class="avatar-tooltip"
-              placement="top"
-            >
-              <div
-                class="relative w-14 h-14 rounded-full border-3 border-white shadow-lg overflow-hidden cursor-pointer hover:scale-110 hover:z-10 transition-all duration-300"
+    <div class="relative z-10 flex items-center w-full h-full px-4 sm:px-6 lg:px-8 gap-8">
+      <!-- 左侧：聊天输入区 -->
+      <div class="flex-1 flex flex-col items-center justify-center">
+        <!-- 柴犬头像组 -->
+        <div class="flex items-center justify-center mb-8">
+          <div class="flex items-center -space-x-3">
+            <ClientRender>
+              <el-tooltip
+                v-for="(avatar, index) in avatars"
+                :key="index"
+                :content="avatar.tooltip"
+                effect="dark"
+                :show-arrow="false"
+                popper-class="avatar-tooltip"
+                placement="top"
               >
-                <img
-                  :src="avatar.src"
-                  :alt="avatar.tooltip"
-                  class="w-full h-full object-cover object-center scale-110"
+                <div
+                  class="relative w-14 h-14 rounded-full border-3 border-white shadow-lg overflow-hidden cursor-pointer hover:scale-110 hover:z-10 transition-all duration-300"
+                >
+                  <img
+                    :src="avatar.src"
+                    :alt="avatar.tooltip"
+                    class="w-full h-full object-cover object-center scale-110"
+                  />
+                </div>
+              </el-tooltip>
+            </ClientRender>
+            <ClientRender>
+              <el-tooltip
+                content="更多角色学习中..."
+                effect="dark"
+                :show-arrow="false"
+                popper-class="avatar-tooltip"
+                placement="top"
+              >
+                <div
+                  class="w-14 h-14 rounded-full border-3 border-white shadow-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center cursor-pointer hover:scale-110 hover:z-10 transition-all duration-300 -ml-3"
+                >
+                  <el-icon class="text-white text-xl font-bold"><Plus /></el-icon>
+                </div>
+              </el-tooltip>
+            </ClientRender>
+          </div>
+        </div>
+
+        <!-- 大聊天输入框 -->
+        <div class="max-w-4xl w-full mx-auto">
+          <div class="relative p-5 rounded-[20px] border-2 transition-all duration-300 shadow-xl"
+            :class="isFocused ? 'border-[#4267ff] shadow-2xl shadow-[#4267ff]/15' : 'border-[var(--ah-beige-300)] shadow-xl'"
+            style="background: white;"
+          >
+            <!-- 文本输入区 -->
+            <div class="flex items-start gap-3 mb-2">
+              <div class="flex-1">
+                <textarea
+                  v-model="inputText"
+                  rows="4"
+                  :placeholder="typewriterText"
+                  class="w-full resize-none outline-none text-base bg-transparent leading-relaxed"
+                  style="color: var(--ah-text-primary); min-height: 100px;"
+                  @focus="handleFocus"
+                  @blur="handleBlur"
+                  @keydown.enter.ctrl.prevent="handleSubmit"
                 />
               </div>
-            </el-tooltip>
-          </ClientRender>
-          <ClientRender>
-            <el-tooltip
-              content="更多角色学习中..."
-              effect="dark"
-              :show-arrow="false"
-              popper-class="avatar-tooltip"
-              placement="top"
-            >
-              <div
-                class="w-14 h-14 rounded-full border-3 border-white shadow-lg bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center cursor-pointer hover:scale-110 hover:z-10 transition-all duration-300 -ml-3"
-              >
-                <el-icon class="text-white text-xl font-bold"><Plus /></el-icon>
+            </div>
+
+            <!-- 底部工具栏 -->
+            <div class="flex items-center justify-between pt-2">
+              <div class="flex items-center gap-2">
+                <!-- 主题选择 -->
+                <ClientRender>
+                  <div class="relative">
+                    <button
+                      @click="showThemeDropdown = !showThemeDropdown"
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all hover:border-[#4267ff]"
+                      :class="selectedTheme ? 'border-[#4267ff]/30 bg-[#4267ff]/5' : 'border-gray-200 bg-white'"
+                    >
+                      <el-icon class="text-xs text-[#4267ff]"><Brush /></el-icon>
+                      <span style="color: var(--ah-grey-700);">
+                        {{ selectedTheme ? currentTheme?.label : '主题' }}
+                      </span>
+                      <el-icon class="text-[10px] ml-0.5 text-gray-400"><ArrowDown /></el-icon>
+                    </button>
+                    <div v-if="showThemeDropdown" class="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[100px]">
+                      <button
+                        v-for="theme in themes"
+                        :key="theme.value"
+                        @click="selectedTheme = theme.value; showThemeDropdown = false"
+                        class="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <span class="w-2 h-2 rounded-full" :style="{ background: theme.color }"></span>
+                        <span>{{ theme.label }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </ClientRender>
+
+                <!-- 模型选择 -->
+                <ClientRender>
+                  <div class="relative">
+                    <button
+                      @click="showModelDropdown = !showModelDropdown"
+                      class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-xs transition-all hover:border-[#4267ff]"
+                    >
+                      <el-icon class="text-xs text-[#4267ff]"><Cpu /></el-icon>
+                      <span style="color: var(--ah-grey-700);">{{ currentModel?.label }}</span>
+                      <el-icon class="text-[10px] ml-0.5 text-gray-400"><ArrowDown /></el-icon>
+                    </button>
+                    <div v-if="showModelDropdown" class="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[140px]">
+                      <button
+                        v-for="model in models"
+                        :key="model.value"
+                        @click="selectedModel = model.value; showModelDropdown = false"
+                        class="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors text-left"
+                      >
+                        <el-icon class="text-xs"><Cpu /></el-icon>
+                        <span>{{ model.label }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </ClientRender>
               </div>
-            </el-tooltip>
-          </ClientRender>
-        </div>
-      </div>
 
-      <!-- 大标题 -->
-      <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6 leading-tight tracking-tight text-center" style="font-family: 'IBM Plex Sans', sans-serif; color: var(--ah-text-primary);">
-        <span style="background: linear-gradient(135deg, #4267ff 0%, #6b8cff 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">用自然语言构建</span>
-        <span>你的应用</span>
-      </h1>
-
-      <!-- 大聊天输入框 -->
-      <div class="max-w-4xl w-full mx-auto">
-        <div class="relative p-5 rounded-[20px] border-2 transition-all duration-300 shadow-xl"
-          :class="isFocused ? 'border-[#4267ff] shadow-2xl shadow-[#4267ff]/15' : 'border-[var(--ah-beige-300)] shadow-xl'"
-          style="background: white;"
-        >
-          <!-- 文本输入区 -->
-          <div class="flex items-start gap-3 mb-2">
-            <div class="flex-1">
-              <textarea
-                v-model="inputText"
-                rows="4"
-                :placeholder="typewriterText"
-                class="w-full resize-none outline-none text-base bg-transparent leading-relaxed"
-                style="color: var(--ah-text-primary); min-height: 100px;"
-                @focus="handleFocus"
-                @blur="handleBlur"
-                @keydown.enter.ctrl.prevent="handleSubmit"
-              />
+              <!-- 开始构建按钮 -->
+              <button
+                @click="handleSubmit"
+                :disabled="!inputText.trim() || isLoading"
+                class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-medium text-xs text-white transition-all duration-200"
+                :class="inputText.trim() && !isLoading
+                  ? 'bg-gradient-to-r from-[#4267ff] to-[#5a7fff] hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5'
+                  : 'bg-gray-300 cursor-not-allowed'"
+              >
+                <el-icon v-if="isLoading" class="animate-spin text-sm"><Loading /></el-icon>
+                <span>开始构建</span>
+                <el-icon v-if="!isLoading" class="text-sm"><ArrowRight /></el-icon>
+              </button>
             </div>
           </div>
 
-          <!-- 底部工具栏 -->
-          <div class="flex items-center justify-between pt-2">
-            <div class="flex items-center gap-2">
-              <!-- 主题选择 -->
-              <ClientRender>
-                <div class="relative">
-                  <button
-                    @click="showThemeDropdown = !showThemeDropdown"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs transition-all hover:border-[#4267ff]"
-                    :class="selectedTheme ? 'border-[#4267ff]/30 bg-[#4267ff]/5' : 'border-gray-200 bg-white'"
-                  >
-                    <el-icon class="text-xs text-[#4267ff]"><Brush /></el-icon>
-                    <span style="color: var(--ah-grey-700);">
-                      {{ selectedTheme ? currentTheme?.label : '主题' }}
-                    </span>
-                    <el-icon class="text-[10px] ml-0.5 text-gray-400"><ArrowDown /></el-icon>
-                  </button>
-                  <div v-if="showThemeDropdown" class="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[100px]">
-                    <button
-                      v-for="theme in themes"
-                      :key="theme.value"
-                      @click="selectedTheme = theme.value; showThemeDropdown = false"
-                      class="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors text-left"
-                    >
-                      <span class="w-2 h-2 rounded-full" :style="{ background: theme.color }"></span>
-                      <span>{{ theme.label }}</span>
-                    </button>
-                  </div>
-                </div>
-              </ClientRender>
-
-              <!-- 模型选择 -->
-              <ClientRender>
-                <div class="relative">
-                  <button
-                    @click="showModelDropdown = !showModelDropdown"
-                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-xs transition-all hover:border-[#4267ff]"
-                  >
-                    <el-icon class="text-xs text-[#4267ff]"><Cpu /></el-icon>
-                    <span style="color: var(--ah-grey-700);">{{ currentModel?.label }}</span>
-                    <el-icon class="text-[10px] ml-0.5 text-gray-400"><ArrowDown /></el-icon>
-                  </button>
-                  <div v-if="showModelDropdown" class="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50 min-w-[140px]">
-                    <button
-                      v-for="model in models"
-                      :key="model.value"
-                      @click="selectedModel = model.value; showModelDropdown = false"
-                      class="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-gray-50 transition-colors text-left"
-                    >
-                      <el-icon class="text-xs"><Cpu /></el-icon>
-                      <span>{{ model.label }}</span>
-                    </button>
-                  </div>
-                </div>
-              </ClientRender>
-            </div>
-
-            <!-- 开始构建按钮 -->
+          <!-- 快捷提示 -->
+          <div class="flex flex-wrap items-center justify-center gap-3 mt-5">
+            <span class="text-sm" style="color: var(--ah-grey-400);">试试：</span>
             <button
-              @click="handleSubmit"
-              :disabled="!inputText.trim() || isLoading"
-              class="flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-medium text-xs text-white transition-all duration-200"
-              :class="inputText.trim() && !isLoading
-                ? 'bg-gradient-to-r from-[#4267ff] to-[#5a7fff] hover:shadow-lg hover:shadow-blue-500/25 hover:-translate-y-0.5'
-                : 'bg-gray-300 cursor-not-allowed'"
+              v-for="prompt in quickPrompts"
+              :key="prompt"
+              @click="inputText = prompt"
+              class="text-sm px-3 py-1.5 rounded-full transition-all duration-200 hover:scale-105"
+              style="color: var(--ah-grey-600); background: var(--ah-beige-100); border: 1px solid var(--ah-beige-200);"
             >
-              <el-icon v-if="isLoading" class="animate-spin text-sm"><Loading /></el-icon>
-              <span>开始构建</span>
-              <el-icon v-if="!isLoading" class="text-sm"><ArrowRight /></el-icon>
+              {{ prompt }}
             </button>
           </div>
         </div>
+      </div>
 
-        <!-- 快捷提示 -->
-        <div class="flex flex-wrap items-center justify-center gap-3 mt-5">
-          <span class="text-sm" style="color: var(--ah-grey-400);">试试：</span>
-          <button
-            v-for="prompt in quickPrompts"
-            :key="prompt"
-            @click="inputText = prompt"
-            class="text-sm px-3 py-1.5 rounded-full transition-all duration-200 hover:scale-105"
-            style="color: var(--ah-grey-600); background: var(--ah-beige-100); border: 1px solid var(--ah-beige-200);"
-          >
-            {{ prompt }}
-          </button>
+      <!-- 右侧：最近项目 -->
+      <div v-if="recentProjects.length > 0" class="w-[240px] flex-shrink-0">
+        <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <h3 class="text-sm font-semibold text-gray-900 mb-4">最近项目</h3>
+          <div class="flex flex-col gap-2">
+            <div
+              v-for="project in recentProjects"
+              :key="project.id"
+              class="px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50 transition-all"
+              @click="goToProject(project)"
+            >
+              {{ project.name }}
+            </div>
+          </div>
+          <NuxtLink to="/projects" class="block mt-4 text-xs text-blue-600 hover:text-blue-700 font-medium">
+            查看全部 →
+          </NuxtLink>
         </div>
       </div>
     </div>
@@ -184,6 +201,18 @@ import { useChatStore } from '~/stores/chat'
 const router = useRouter()
 const projectStore = useProjectStore()
 const chatStore = useChatStore()
+
+const recentProjects = computed(() => projectStore.activeProjects.slice(0, 5))
+
+const goToProject = async (project: any) => {
+  await chatStore.loadConversations(project.id)
+  if (chatStore.conversations.length > 0) {
+    router.push('/chat/' + chatStore.conversations[0].id)
+  } else {
+    const conv = await chatStore.createConversation(project.name, project.id)
+    router.push('/chat/' + conv.id)
+  }
+}
 
 const inputText = ref('')
 const isFocused = ref(false)

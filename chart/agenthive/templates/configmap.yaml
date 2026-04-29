@@ -1,0 +1,14 @@
+{{- if .Values.configmap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.configmap.name }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: agenthive
+    app.kubernetes.io/component: config
+data:
+  {{- range $key, $value := .Values.configmap.data }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+{{- end }}

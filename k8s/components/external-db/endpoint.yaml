@@ -1,0 +1,66 @@
+# ============================================================================
+# External Database / Redis Endpoint Mapping
+# TICKET: PLATFORM-009-C
+# Purpose: Allow K3s services to access external DB/Redis via K8s Service DNS
+# Usage: kubectl apply -f k8s/components/external-db/
+# ============================================================================
+
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: postgres
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+subsets:
+  - addresses:
+      - ip: 172.24.146.165
+    ports:
+      - port: 5432
+        name: postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+      name: postgres
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: redis
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+subsets:
+  - addresses:
+      - ip: 172.24.146.165
+    ports:
+      - port: 6379
+        name: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: cache
+spec:
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: redis
+  type: ClusterIP

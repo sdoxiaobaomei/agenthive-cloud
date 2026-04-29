@@ -23,8 +23,7 @@
 | 文档 | 说明 |
 |------|------|
 | [Docker Compose 本地部署](./docker-deployment.md) | `docker-compose.dev.yml` 使用说明 |
-| [Docker Desktop 网络详解](../DOCKER-DESKTOP-NETWORK-EXPLAINED.md) | 网络原理和端口映射 |
-| [Docker Desktop 进程隔离](../DOCKER-DESKTOP-PROCESS-ISOLATION.md) | 容器进程管理 |
+| [Docker 镜像加速配置](./docker/DOCKER-MIRROR-SETUP.md) | 国内镜像源配置 |
 
 ### Kubernetes 部署
 
@@ -38,11 +37,13 @@
 | [Nginx HTTPS 证书](./nginx-https.md) | 阿里云证书部署 + TLS 强制跳转 |
 | [Watchtower 自动更新](./watchtower.md) | CI/CD 镜像自动检测与安全重启 |
 | [Docker 转 K8s 迁移](../archive/DOCKER-TO-K8S-MIGRATION.md) | 完整迁移方案 |
-| [手把手 K8s 迁移](../HANDS-ON-K8S-MIGRATION.md) | 从零开始教程 |
+| [手把手 K8s 迁移](./k8s/HANDS-ON-K8S-MIGRATION.md) | 从零开始教程 |
 | [本地 K8s 部署](../archive/LOCAL-K8S-DOCKER-DESKTOP.md) | Docker Desktop K8s |
 | [K8s 集群搭建](../archive/K8S-CLUSTER-SETUP.md) | Kind/Kubeadm 搭建 |
 | [K8s 架构详解](../archive/K8S-ARCHITECTURE-EXPLAINED.md) | 三种方案对比 |
-| [Kubeadm 概念澄清](../K8S-KUBEADM-CLARIFICATION.md) | 概念解释 |
+| [Kubeadm 概念澄清](./k8s/K8S-KUBEADM-CLARIFICATION.md) | 概念解释 |
+| [K3s 启动配置](./k8s/k3s-bootstrap.md) | K3s 集群初始化配置 |
+| [迁移完成总结](./k8s/migration-completed.md) | Docker 到 K8s 迁移完成报告 |
 
 ### 混合部署
 
@@ -55,9 +56,8 @@
 
 | 文档 | 说明 |
 |------|------|
-| [CI/CD 配置](./ci-cd.md) | GitHub Actions/GitLab CI |
-| [CI 构建优化](../CI-BUILD-OPTIMIZATION.md) | 构建速度和镜像优化 |
-| [npm install 与 Docker](../DOCKER-NPM-INSTALL-EXPLAINED.md) | 多阶段构建详解 |
+| [CI/CD 使用指南](./ci-cd/CI-CD-USAGE.md) | GitHub Actions/GitLab CI |
+| [CI 构建优化](./ci-cd/CI-BUILD-OPTIMIZATION.md) | 构建速度和镜像优化 |
 
 ---
 
@@ -67,7 +67,7 @@
 |------|------|
 | [成本分析](./cost-analysis.md) | 阿里云/AWS/本地对比 |
 | [K8s 成本分析](../archive/K8S-COST-ANALYSIS.md) | EKS vs ACK 成本 |
-| [RFC: 阿里云成本分析](./rfc/RFC-001-Alibaba-Cloud-Cost-Analysis.md) | 详细成本 RFC |
+| [RFC: 阿里云成本分析](../rfc/RFC-001-Alibaba-Cloud-Cost-Analysis.md) | 详细成本 RFC |
 
 ---
 
@@ -75,8 +75,9 @@
 
 | 文档 | 说明 |
 |------|------|
-| [Workspace 管理](../workspace-management.md) | 工作区生命周期管理 |
-| [快速参考](../quick-reference.md) | 常用运维命令 |
+| [K3s 运维手册](../operation/runbook-k3s-ops.md) | K3s 集群日常运维 Runbook |
+| [密钥轮换指南](../operation/security-secret-rotation.md) | 安全密钥轮换操作规范 |
+| [快速参考](../reference/quick-reference.md) | 常用运维命令 |
 
 ---
 
@@ -107,15 +108,15 @@
 
 | 问题 | 解决方案 |
 |------|---------|
-| 镜像拉取失败 | [排查指南](../operation/troubleshooting.md#imagepullbackoff) |
-| Pod 无法启动 | [排查指南](../operation/troubleshooting.md#pod-pending) |
-| 服务无法访问 | [网络排查](../DOCKER-DESKTOP-NETWORK-EXPLAINED.md) |
-| 构建失败 | [CI 优化](../CI-BUILD-OPTIMIZATION.md) |
+| 镜像拉取失败 | [排查指南](../archive/K8S-CHEATSHEET.md#imagepullbackoff) |
+| Pod 无法启动 | [排查指南](../archive/K8S-CHEATSHEET.md#pod-pending) |
+| 服务无法访问 | [K8s 速查表](../archive/K8S-CHEATSHEET.md) |
+| 构建失败 | [CI 优化](./ci-cd/CI-BUILD-OPTIMIZATION.md) |
 
 ---
 
 ## 📖 参考文档
 
-- [K8s 速查表](../reference/k8s-cheatsheet.md)
-- [Docker 速查表](../reference/docker-cheatsheet.md)
-- [运维排查指南](../operation/troubleshooting.md)
+- [K8s 速查表](../archive/K8S-CHEATSHEET.md)
+- [Docker 速查表](../archive/git-cheatsheet.md)
+- [运维排查指南](../operation/README.md)

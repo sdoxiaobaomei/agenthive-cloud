@@ -1,0 +1,31 @@
+{{- if and .Values.landing.enabled .Values.landing.hpa.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "agenthive.landingName" . }}-hpa
+  namespace: {{ include "agenthive.namespace" . }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "agenthive.landingName" . }}
+  minReplicas: {{ .Values.landing.hpa.minReplicas }}
+  maxReplicas: {{ .Values.landing.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.landing.hpa.targetCPUUtilization }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.landing.hpa.targetMemoryUtilization }}
+  {{- if .Values.landing.hpa.behavior }}
+  behavior:
+    {{- toYaml .Values.landing.hpa.behavior | nindent 4 }}
+  {{- end }}
+{{- end }}

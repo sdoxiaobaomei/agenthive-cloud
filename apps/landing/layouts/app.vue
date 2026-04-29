@@ -67,31 +67,24 @@
           </div>
           <span v-if="!isSidebarCollapsed" class="nav-label">New Project</span>
         </NuxtLink>
-      </nav>
 
-      <!-- Recents (max 3) -->
-      <div v-if="!isSidebarCollapsed && recentProjects.length > 0" class="sidebar-recents">
-        <div class="recents-label">Recents</div>
-        <div class="project-icons">
-          <div
-            v-for="project in recentProjects"
-            :key="project.id"
-            class="project-icon-item"
-            :class="{ active: currentProject?.id === project.id }"
-            :title="project.name"
-            @click="selectProject(project)"
-          >
-            <div class="project-icon-avatar">{{ project.name.charAt(0) }}</div>
-            <span class="project-icon-name">{{ project.name }}</span>
+        <!-- Recents (max 3) -->
+        <div v-if="!isSidebarCollapsed && recentProjects.length > 0" class="sidebar-recents">
+          <div class="recents-label">Recents</div>
+          <div class="recent-list">
+            <div
+              v-for="project in recentProjects"
+              :key="project.id"
+              class="recent-name"
+              :class="{ active: currentProject?.id === project.id }"
+              :title="project.name"
+              @click="selectProject(project)"
+            >
+              {{ project.name }}
+            </div>
           </div>
         </div>
-        <NuxtLink
-          v-if="recentProjects.length > 0"
-          to="/projects"
-          class="view-all-link"
-        >
-          View All 鈫?        </NuxtLink>
-      </div>
+      </nav>
 
       <!-- Sidebar Footer -->
       <div v-if="!isSidebarCollapsed" class="sidebar-footer">
@@ -488,10 +481,11 @@ const showSettings = ref(false)
 
 /* Recents */
 .sidebar-recents {
-  padding: 12px 8px;
+  margin-top: 8px;
+  padding-top: 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   border-top: 1px solid #e5e7eb;
 }
 
@@ -504,78 +498,33 @@ const showSettings = ref(false)
   padding-left: 4px;
 }
 
-.project-icons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.project-icon-item {
+.recent-list {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 6px;
-  border-radius: 10px;
+  gap: 2px;
+}
+
+.recent-name {
+  padding: 6px 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease;
-  width: 64px;
-}
-
-.project-icon-item:hover {
-  background: #f3f4f6;
-}
-
-.project-icon-item.active {
-  background: #eff6ff;
-}
-
-.project-icon-item.active .project-icon-avatar {
-  background: #4f46e5;
-  color: white;
-}
-
-.project-icon-item.active .project-icon-name {
-  color: #4f46e5;
-}
-
-.project-icon-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: #e5e7eb;
-  color: #374151;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: 600;
-  flex-shrink: 0;
-}
-
-.project-icon-name {
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
-  color: #6b7280;
-  text-align: center;
-  width: 100%;
+  color: #374151;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: all 0.15s ease;
 }
 
-.view-all-link {
-  font-size: 12px;
-  font-weight: 500;
+.recent-name:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.recent-name.active {
+  background: #eff6ff;
   color: #4f46e5;
-  text-decoration: none;
-  padding: 4px;
-  transition: color 0.15s ease;
-}
-
-.view-all-link:hover {
-  color: #4338ca;
-  text-decoration: underline;
 }
 
 /* Sidebar Footer */

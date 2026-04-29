@@ -1,0 +1,21 @@
+{{- if .Values.javaServices.enabled }}
+{{- range $key, $svc := .Values.javaServices.services }}
+{{- if and $svc.enabled $svc.pdb $svc.pdb.enabled }}
+{{- $javaName := include "agenthive.prefixedName" (list $ $svc.name) }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $javaName }}
+  namespace: {{ include "agenthive.namespace" $ }}
+  labels:
+    app.kubernetes.io/name: {{ $javaName }}
+    app.kubernetes.io/component: {{ $svc.component }}
+spec:
+  minAvailable: {{ $svc.pdb.minAvailable | default 1 }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $javaName }}
+{{- end }}
+{{- end }}
+{{- end }}

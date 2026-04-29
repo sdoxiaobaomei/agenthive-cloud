@@ -1,24 +1,17 @@
-name: Deploy to ECS
+# ⚠️ DEPRECATED — 此工作流已废弃
+# 请使用 deploy-k3s.yml 进行 K3s 部署
+# 保留此文件作为回退方案（2 周后删除）
+#
+# 原功能：Docker Compose 部署到 ECS
+# 替代方案：.github/workflows/deploy-k3s.yml
+
+name: '[DEPRECATED] Deploy to ECS via Docker Compose'
 
 on:
-  # 在 ACR 镜像构建成功后自动触发部署
-  workflow_run:
-    workflows: ["Deploy to Alibaba Cloud"]
-    types: [completed]
-    branches: [master, main]
-  # 支持手动触发
   workflow_dispatch:
     inputs:
       rebuild:
         description: '强制重新构建镜像 (no-cache)'
-        required: false
-        default: 'false'
-      java_profile:
-        description: '同时启动 Java 微服务'
-        required: false
-        default: 'false'
-      monitoring_profile:
-        description: '同时启动监控栈'
         required: false
         default: 'false'
 
@@ -29,122 +22,12 @@ env:
 
 jobs:
   deploy:
-    name: Deploy to 8C16G ECS
+    name: '[DEPRECATED] Deploy to ECS'
     runs-on: ubuntu-latest
-    # 手动触发时直接运行；自动触发时仅在上游 workflow 成功才运行
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     steps:
-      # ---------- 0. 设置 SSH known_hosts ----------
-      - name: Setup SSH known_hosts
+      - name: ⚠️ Deprecated
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H 39.107.87.106 >> ~/.ssh/known_hosts 2>/dev/null || true
-
-      # ---------- 1. 拉取代码并部署 ----------
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 39.107.87.106
-          username: root
-          key: ${{ secrets.ECS_SSH_KEY }}
-          script: |
-            set -e
-            cd /opt/agenthive-cloud
-
-            echo "=== [0/6] 停止现有 prod 容器 ==="
-            docker compose -f docker-compose.prod.yml down 2>/dev/null || true
-
-            echo "=== [1/6] 修复 Git 代理配置并拉取最新代码 ==="
-            # 清除失效的 ghp.ci 代理配置
-            git config --global --unset-regexp url."https://ghp.ci/" 2>/dev/null || true
-            git config --local --unset-regexp url."https://ghp.ci/" 2>/dev/null || true
-            # 确保 remote 使用官方 GitHub 地址
-            git remote set-url origin https://github.com/sdoxiaobaomei/agenthive-cloud.git 2>/dev/null || true
-            git fetch origin
-            # 兼容 main 和 master 分支
-            DEFAULT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-            git reset --hard origin/${DEFAULT_BRANCH}
-            echo "当前 commit: $(git rev-parse --short HEAD)"
-
-            echo "=== [1.5/6] 检查生产环境配置 ==="
-            if [ ! -f .env.prod ]; then
-                echo "❌ .env.prod 不存在，请手动在 ECS 上创建该文件"
-                echo "示例位置: /opt/agenthive-cloud/.env.prod"
-                echo "必须包含: DB_PASSWORD, REDIS_PASSWORD, JWT_SECRET, NACOS_PASSWORD 等"
-                exit 1
-            fi
-            chmod 600 .env.prod
-            echo "✅ .env.prod 已存在，继续部署"
-
-            echo "=== [2/6] 登录阿里云 ACR ==="
-            # 尝试登录 ACR（ECS 可能已登录，失败不阻塞）
-            set +e
-            docker login ${{ env.REGISTRY }} \
-              -u "${{ secrets.ACR_USERNAME }}" \
-              -p "${{ secrets.ACR_PASSWORD }}" 2>/dev/null
-            LOGIN_RESULT=$?
-            set -e
-            if [ $LOGIN_RESULT -eq 0 ]; then
-              echo "✅ ACR 登录成功"
-            else
-              echo "⚠️ ACR 登录失败，尝试使用已有凭证继续..."
-            fi
-
-            echo "=== [3/6] 拉取镜像并启动服务 ==="
-            COMPOSE_CMD="docker compose -f ${{ env.COMPOSE_FILE }} --env-file ${{ env.ENV_FILE }}"
-            
-            # 拉取最新镜像（忽略需要本地构建的服务）
-            $COMPOSE_CMD pull --ignore-buildable
-            
-            # 启动基础服务
-            $COMPOSE_CMD up -d
-            
-            # 可选：启动 Java 微服务
-            if [ "${{ github.event.inputs.java_profile }}" == "true" ]; then
-              echo "启动 Java 微服务..."
-              $COMPOSE_CMD --profile java up -d
-            fi
-            
-            # 可选：启动监控栈
-            if [ "${{ github.event.inputs.monitoring_profile }}" == "true" ]; then
-              echo "启动监控栈..."
-              $COMPOSE_CMD --profile monitoring up -d
-            fi
-
-            echo "=== [4/6] 等待服务启动 ==="
-            sleep 8
-
-            echo "=== [5/6] 容器状态 ==="
-            $COMPOSE_CMD ps
-
-            echo "=== [6/6] 健康检查 ==="
-            MAX_RETRY=6
-            RETRY=0
-            while [ $RETRY -lt $MAX_RETRY ]; do
-              if curl -sf http://localhost:3001/api/health > /dev/null 2>&1; then
-                echo "✅ API 健康检查通过"
-                break
-              fi
-              RETRY=$((RETRY + 1))
-              echo "⏳ API 未就绪，重试 ($RETRY/$MAX_RETRY)..."
-              sleep 5
-            done
-            
-            if [ $RETRY -eq $MAX_RETRY ]; then
-              echo "❌ API 健康检查失败"
-              $COMPOSE_CMD logs --tail=30 api
-              exit 1
-            fi
-
-            echo "=== 🎉 部署完成 ==="
-
-      # ---------- 3. 清理旧镜像 ----------
-      - name: Cleanup old images
-        uses: appleboy/ssh-action@v1
-        with:
-          host: 39.107.87.106
-          username: root
-          key: ${{ secrets.ECS_SSH_KEY }}
-          script: |
-            docker image prune -af --filter "until=24h" || true
-            docker builder prune -f || true
+          echo "⚠️ 此工作流已废弃。请使用 deploy-k3s.yml 进行 K3s 部署。"
+          echo "如需回退到 Docker Compose，请手动在 ECS 上执行："
+          echo "  docker compose -f docker-compose.prod.yml up -d"
+          exit 1

@@ -1,0 +1,19 @@
+{{- if and .Values.redis.enabled .Values.redis.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "agenthive.prefixedName" (list . .Values.redis.name) }}-data
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.redis.name) }}
+    app.kubernetes.io/component: cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.redis.pvc.size }}
+  {{- if .Values.redis.pvc.storageClass }}
+  storageClassName: {{ .Values.redis.pvc.storageClass }}
+  {{- end }}
+{{- end }}

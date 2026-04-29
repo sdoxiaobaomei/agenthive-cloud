@@ -1,0 +1,12 @@
+{{- if and .Values.landing.enabled .Values.landing.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "agenthive.landingName" . }}
+  namespace: {{ include "agenthive.namespace" . }}
+spec:
+  minAvailable: {{ .Values.landing.pdb.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "agenthive.landingName" . }}
+{{- end }}

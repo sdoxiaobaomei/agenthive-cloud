@@ -1,0 +1,21 @@
+{{- if or .Values.nacos.enabled .Values.javaServices.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agenthive.prefixedName" (list . .Values.nacos.name) }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.nacos.name) }}
+    app.kubernetes.io/component: service-discovery
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.nacos.name) }}
+  ports:
+    - port: {{ .Values.nacos.service.ports.http }}
+      targetPort: {{ .Values.nacos.service.ports.http }}
+      name: http
+    - port: {{ .Values.nacos.service.ports.grpc }}
+      targetPort: {{ .Values.nacos.service.ports.grpc }}
+      name: grpc
+  type: {{ .Values.nacos.service.type }}
+{{- end }}

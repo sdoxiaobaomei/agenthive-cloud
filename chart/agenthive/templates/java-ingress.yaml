@@ -1,0 +1,43 @@
+{{- if and .Values.javaServices.enabled .Values.javaServices.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.javaServices.ingress.name | default "agenthive-java-ingress" }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: agenthive
+    app.kubernetes.io/component: java-gateway
+  {{- if .Values.javaServices.ingress.annotations }}
+  annotations:
+    {{- range $key, $value := .Values.javaServices.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- if .Values.javaServices.ingress.className }}
+  ingressClassName: {{ .Values.javaServices.ingress.className }}
+  {{- end }}
+  {{- if .Values.javaServices.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        {{- range .Values.javaServices.ingress.tls.hosts }}
+        - {{ . }}
+        {{- end }}
+      secretName: {{ .Values.javaServices.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    {{- range .Values.javaServices.ingress.hosts }}
+    - host: {{ .host }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "agenthive.prefixedName" (list $ .service) }}
+                port:
+                  number: {{ .port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

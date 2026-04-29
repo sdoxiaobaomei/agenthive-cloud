@@ -1,0 +1,17 @@
+apiVersion: v2
+name: agenthive
+description: AgentHive Cloud - AI-driven multi-agent collaboration platform
+type: application
+version: 0.1.0
+appVersion: "1.1.0"
+keywords:
+  - agenthive
+  - ai
+  - microservices
+  - platform
+home: https://agenthive.cloud
+sources:
+  - https://github.com/agenthive-cloud/agenthive-cloud
+maintainers:
+  - name: AgentHive Platform Team
+    email: platform@agenthive.cloud

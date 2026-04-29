@@ -122,7 +122,7 @@ const handleCompleteProfile = async () => {
   // TODO: 如需绑定用户名密码，可在此调用 auth.register() 走 Java 注册接口
   showProfileModal.value = false
   const redirect = route.query.redirect as string
-  const targetPath = redirect || '/chat'
+  const targetPath = redirect || '/'
   await router.push(targetPath)
 }
 

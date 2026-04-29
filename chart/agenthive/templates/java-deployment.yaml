@@ -1,0 +1,149 @@
+{{- if .Values.javaServices.enabled }}
+{{- range $key, $svc := .Values.javaServices.services }}
+{{- if $svc.enabled }}
+{{- $javaName := include "agenthive.prefixedName" (list $ $svc.name) }}
+{{- $svcImage := default dict $svc.image }}
+{{- $image := dict "registry" (default $.Values.javaServices.defaults.image.registry $svcImage.registry) "repository" (default (printf "%s/%s" $.Values.javaServices.defaults.image.repositoryPrefix $svc.name) $svcImage.repository) "tag" (default $.Values.javaServices.defaults.image.tag $svcImage.tag) "pullPolicy" (default $.Values.javaServices.defaults.image.pullPolicy $svcImage.pullPolicy) }}
+{{- $resources := default $.Values.javaServices.defaults.resources $svc.resources }}
+{{- $replicas := default $.Values.javaServices.defaults.replicas $svc.replicas }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $javaName }}
+  namespace: {{ include "agenthive.namespace" $ }}
+  labels:
+    app.kubernetes.io/name: {{ $javaName }}
+    app.kubernetes.io/component: {{ $svc.component }}
+    {{- include "agenthive.labels" $ | nindent 4 }}
+spec:
+  replicas: {{ $replicas }}
+  {{- if $.Values.javaServices.defaults.strategy }}
+  strategy:
+    {{- toYaml $.Values.javaServices.defaults.strategy | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $javaName }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ $javaName }}
+        app.kubernetes.io/component: {{ $svc.component }}
+        {{- include "agenthive.labels" $ | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ $svc.port }}"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: {{ $javaName }}
+      securityContext:
+        {{- toYaml $.Values.global.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: wait-for-nacos
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z nacos 8848; do echo waiting for nacos; sleep 2; done;']
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 10m
+            limits:
+              memory: 32Mi
+              cpu: 50m
+          securityContext:
+            {{- toYaml $.Values.global.containerSecurityContext | nindent 12 }}
+      containers:
+        - name: {{ $svc.component }}
+          image: {{ include "agenthive.image" (list $ $image) }}
+          imagePullPolicy: {{ $image.pullPolicy }}
+          ports:
+            - containerPort: {{ $svc.port }}
+              name: http
+          {{- if $svc.env }}
+          env:
+            {{- range $svc.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+            {{- range $svc.envFromSecret }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.secret.name }}
+                  key: {{ .key }}
+            {{- end }}
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+            - name: SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED
+              value: "false"
+            - name: NACOS_HOST
+              value: "nacos"
+            - name: NACOS_PORT
+              value: "8848"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR
+              value: "nacos:8848"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_USERNAME
+              value: "nacos"
+            - name: SPRING_CLOUD_NACOS_CONFIG_USERNAME
+              value: "nacos"
+            - name: SPRING_DATA_REDIS_HOST
+              value: "redis"
+            - name: SPRING_DATA_REDIS_PORT
+              value: "6379"
+            - name: SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.secret.name }}
+                  key: NACOS_PASSWORD
+            - name: SPRING_CLOUD_NACOS_CONFIG_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.secret.name }}
+                  key: NACOS_PASSWORD
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.secret.name }}
+                  key: REDIS_PASSWORD
+            - name: OTEL_SERVICE_NAME
+              value: {{ $svc.name | quote }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector-gateway.monitoring:4317"
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.namespace=agenthive,deployment.environment={{ $.Values.global.labels.environment }}"
+            - name: OTEL_TRACES_EXPORTER
+              value: "otlp"
+            - name: OTEL_METRICS_EXPORTER
+              value: "otlp"
+            - name: OTEL_LOGS_EXPORTER
+              value: "otlp"
+            - name: OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES
+              value: "true"
+            - name: LOGGING_PATTERN_CONSOLE
+              value: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
+            {{- if $.Values.javaServices.defaults.jvmOptions }}
+            - name: JAVA_OPTS
+              value: {{ $.Values.javaServices.defaults.jvmOptions | quote }}
+            {{- end }}
+          {{- end }}
+          securityContext:
+            {{- toYaml $.Values.global.containerSecurityContext | nindent 12 }}
+          resources:
+            {{- toYaml $resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ $svc.probes.liveness.path }}
+              port: {{ $svc.probes.liveness.port }}
+            initialDelaySeconds: {{ $svc.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ $svc.probes.liveness.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: {{ $svc.probes.readiness.path }}
+              port: {{ $svc.probes.readiness.port }}
+            initialDelaySeconds: {{ $svc.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ $svc.probes.readiness.periodSeconds }}
+{{- end }}
+{{- end }}
+{{- end }}

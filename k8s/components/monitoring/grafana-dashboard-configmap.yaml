@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agenthive-dashboards
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: agenthive-dashboards
+    app.kubernetes.io/component: grafana
+    grafana_dashboard: "1"
+data:
+  agenthive-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "AgentHive Cloud — Overview",
+        "tags": ["agenthive", "overview"],
+        "timezone": "Asia/Shanghai",
+        "schemaVersion": 36,
+        "refresh": "30s",
+        "panels": [
+          {
+            "id": 1,
+            "title": "API Request Rate",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{job=~\"agenthive-api\"}[5m]))",
+                "legendFormat": "req/s"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "API Error Rate",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{job=~\"agenthive-api\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=~\"agenthive-api\"}[5m]))",
+                "legendFormat": "error %"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "API P95 Latency",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=~\"agenthive-api\"}[5m])) by (le))",
+                "legendFormat": "P95"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 4,
+            "title": "Pod CPU Usage",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"agenthive\"}[5m])) by (pod)",
+                "legendFormat": "{{ pod }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Pod Memory Usage",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "sum(container_memory_working_set_bytes{namespace=\"agenthive\"}) by (pod)",
+                "legendFormat": "{{ pod }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 6,
+            "title": "HPA Current Replicas",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"agenthive\"}",
+                "legendFormat": "{{ horizontalpodautoscaler }}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+          }
+        ]
+      }
+    }

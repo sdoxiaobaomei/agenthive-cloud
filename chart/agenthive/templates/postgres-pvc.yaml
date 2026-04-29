@@ -1,0 +1,19 @@
+{{- if and .Values.postgres.enabled .Values.postgres.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "agenthive.prefixedName" (list . .Values.postgres.name) }}-data
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.postgres.name) }}
+    app.kubernetes.io/component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.postgres.pvc.size }}
+  {{- if .Values.postgres.pvc.storageClass }}
+  storageClassName: {{ .Values.postgres.pvc.storageClass }}
+  {{- end }}
+{{- end }}

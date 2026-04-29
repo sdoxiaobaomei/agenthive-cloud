@@ -1,0 +1,9 @@
+{{- if .Values.namespace.create }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.namespace.name | default "agenthive" }}
+  labels:
+    {{- include "agenthive.labels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ .Values.namespace.name | default "agenthive" }}
+{{- end }}

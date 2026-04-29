@@ -1,0 +1,25 @@
+{{- if .Values.javaServices.enabled }}
+{{- range $key, $svc := .Values.javaServices.services }}
+{{- if $svc.enabled }}
+{{- $javaName := include "agenthive.prefixedName" (list $ $svc.name) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $javaName }}
+  namespace: {{ include "agenthive.namespace" $ }}
+  labels:
+    app.kubernetes.io/name: {{ $javaName }}
+    app.kubernetes.io/component: {{ $svc.component }}
+    {{- include "agenthive.labels" $ | nindent 4 }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ $javaName }}
+  ports:
+    - port: {{ $svc.port }}
+      targetPort: {{ $svc.port }}
+      name: http
+  type: {{ default "ClusterIP" $svc.serviceType }}
+{{- end }}
+{{- end }}
+{{- end }}

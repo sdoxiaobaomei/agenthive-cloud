@@ -13,12 +13,8 @@ out/
 
 # Environment files
 .env
-.env.local
-.env.development
-.env.production
-.env.prod
-.env.prod.local
-*.env
+.env.*
+!.env.*.example
 
 # IDE
 .vscode/
@@ -108,7 +104,6 @@ cert-manager.yaml
 **/BOOT-INF/
 **/target/classes/
 
-.env.dev
 
 # OTel Java Agent cache (pre-downloaded for China dev environment)
 apps/java/.cache/
@@ -125,3 +120,12 @@ _ticket-summary.*
 *.class
 __pycache__/
 *.pyc
+
+# Python cache in scripts directory
+scripts/__pycache__/
+scripts/**/*.pyc
+scripts/**/*.pyo
+
+helm.exe
+.kimi/
+

@@ -137,7 +137,7 @@ cp .env.example .env
 
 ### 4️⃣ 启动平台
 
-**方式 A: Docker Compose（推荐新手）**
+**方式 A: Docker Compose（本地开发，推荐新手）**
 
 ```bash
 # 本地开发模式（使用宿主机 Ollama）
@@ -149,6 +149,30 @@ docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -
 # 查看日志
 docker-compose logs -f
 ```
+
+**方式 A': K3s + Helm（生产环境，推荐）**
+
+```bash
+# 1. 安装 K3s（首次）
+bash scripts/bootstrap-k3s-ecs.sh
+
+# 2. 验证 K3s
+bash scripts/verify-k3s.sh
+
+# 3. 部署 AgentHive
+bash scripts/deploy-k3s.sh
+
+# 4. 验证部署
+bash scripts/verify-deployment.sh
+
+# 回滚（如需要）
+bash scripts/rollback-k3s.sh
+```
+
+> 详细文档：
+> - [K3s 部署指南](docs/k3s-bootstrap.md)
+> - [运维手册](docs/runbook-k3s-ops.md)
+> - [迁移完成报告](docs/migration-completed.md)
 
 **方式 B: 本地开发**
 
@@ -212,9 +236,11 @@ npx tsx orchestrator.ts --resume T001
 ### 基础设施
 | 用途 | 技术 |
 |------|------|
-| **容器化** | Docker + Docker Compose |
-| **编排** | Kubernetes 1.28+ |
-| **反向代理** | Nginx |
+| **容器化** | Docker + Docker Compose (dev) |
+| **编排** | K3s + Helm (prod) |
+| **反向代理** | ingress-nginx |
+| **监控** | Prometheus + Grafana + Loki + Tempo |
+| **Secret 管理** | External Secrets Operator + 阿里云 KMS |
 | **监控** | Prometheus + Grafana (可选) |
 
 ---

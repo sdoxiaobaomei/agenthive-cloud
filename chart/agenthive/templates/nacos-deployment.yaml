@@ -1,0 +1,92 @@
+{{- if or .Values.nacos.enabled .Values.javaServices.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agenthive.prefixedName" (list . .Values.nacos.name) }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.nacos.name) }}
+    app.kubernetes.io/component: service-discovery
+spec:
+  replicas: {{ .Values.nacos.replicas }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.nacos.name) }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.nacos.name) }}
+        app.kubernetes.io/component: service-discovery
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: nacos
+          image: {{ include "agenthive.image" (list . .Values.nacos.image) }}
+          imagePullPolicy: {{ .Values.nacos.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.nacos.service.ports.http }}
+              name: http
+              protocol: TCP
+            - containerPort: {{ .Values.nacos.service.ports.grpc }}
+              name: grpc
+              protocol: TCP
+          {{- if .Values.nacos.env }}
+          env:
+            {{- range .Values.nacos.env }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+            {{- if .Values.nacos.auth.enabled }}
+            - name: NACOS_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.nacos.name }}-auth
+                  key: NACOS_AUTH_TOKEN
+            - name: NACOS_AUTH_IDENTITY_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.nacos.name }}-auth
+                  key: NACOS_AUTH_IDENTITY_KEY
+            - name: NACOS_AUTH_IDENTITY_VALUE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.nacos.name }}-auth
+                  key: NACOS_AUTH_IDENTITY_VALUE
+            {{- end }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.nacos.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.nacos.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /nacos/v1/console/health/readiness
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 10
+          readinessProbe:
+            httpGet:
+              path: /nacos/v1/console/health/readiness
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 10
+          {{- if .Values.nacos.pvc.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /home/nacos/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "agenthive.prefixedName" (list . .Values.nacos.name) }}-data
+          {{- end }}
+{{- end }}

@@ -1,8 +1,8 @@
-# IMPORTANT: Run `bash scripts/setup-dev-env.sh` before first startup
+# IMPORTANT: Run `bash scripts/dev/setup-dev-env.sh` before first startup
 # to generate required secrets and verify environment variables.
 #
-# After `docker compose up`, run `bash scripts/health-check-dev.sh` (or
-# `.\scripts\health-check-dev.ps1` on Windows) to verify all services.
+# After `docker compose up`, run `bash scripts/ops/health-check-dev.sh` (or
+# `.\scripts\ops\health-check-dev.ps1` on Windows) to verify all services.
 #
 # ============================================================================
 # AgentHive Cloud - Development Stack

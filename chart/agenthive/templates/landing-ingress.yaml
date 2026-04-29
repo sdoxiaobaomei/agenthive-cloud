@@ -1,0 +1,44 @@
+{{- if and .Values.ingress.enabled .Values.landing.enabled .Values.landing.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "agenthive.landingName" . }}-ingress
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.landingName" . }}
+    app.kubernetes.io/component: {{ .Values.landing.component }}
+    {{- include "agenthive.labels" . | nindent 4 }}
+  {{- with .Values.landing.ingress.annotations }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  {{- if .Values.landing.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        {{- range .Values.landing.ingress.tls.hosts }}
+        - {{ . }}
+        {{- end }}
+      secretName: {{ .Values.landing.ingress.tls.secretName }}
+  {{- end }}
+  rules:
+    {{- range .Values.landing.ingress.hosts }}
+    - host: {{ .host }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "agenthive.landingName" $ }}
+                port:
+                  number: {{ .port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

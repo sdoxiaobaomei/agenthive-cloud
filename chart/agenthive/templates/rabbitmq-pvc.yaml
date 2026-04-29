@@ -1,0 +1,19 @@
+{{- if and .Values.rabbitmq.enabled .Values.rabbitmq.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.rabbitmq.name }}-data
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    {{- include "agenthive.labels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ .Values.rabbitmq.name }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.rabbitmq.pvc.size }}
+  {{- if .Values.rabbitmq.pvc.storageClass }}
+  storageClassName: {{ .Values.rabbitmq.pvc.storageClass }}
+  {{- end }}
+{{- end }}

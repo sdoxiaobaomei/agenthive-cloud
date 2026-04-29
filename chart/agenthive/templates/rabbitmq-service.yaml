@@ -1,0 +1,21 @@
+{{- if .Values.rabbitmq.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agenthive.prefixedName" (list . .Values.rabbitmq.name) }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.rabbitmq.name) }}
+    app.kubernetes.io/component: messaging
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.rabbitmq.name) }}
+  ports:
+    - port: {{ .Values.rabbitmq.service.ports.amqp }}
+      targetPort: {{ .Values.rabbitmq.service.ports.amqp }}
+      name: amqp
+    - port: {{ .Values.rabbitmq.service.ports.management }}
+      targetPort: {{ .Values.rabbitmq.service.ports.management }}
+      name: management
+  type: {{ .Values.rabbitmq.service.type }}
+{{- end }}

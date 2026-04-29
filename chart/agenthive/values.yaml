@@ -1,0 +1,912 @@
+# AgentHive Cloud - Base Values (Development)
+# ============================================================================
+
+nameOverride: "agenthive"
+fullnameOverride: ""
+
+# ----------------------------------------------------------------------------
+# Global settings
+# ----------------------------------------------------------------------------
+global:
+  namespace: agenthive
+  namePrefix: ""
+  imageRegistry: ""
+  imagePullPolicy: IfNotPresent
+
+  labels:
+    environment: development
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+# ----------------------------------------------------------------------------
+# ServiceAccount
+# ----------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  name: ""
+  automountServiceAccountToken: false
+
+# ----------------------------------------------------------------------------
+# Namespace
+# ----------------------------------------------------------------------------
+namespace:
+  create: true
+  name: agenthive
+  labels:
+    app.kubernetes.io/name: agenthive
+
+# ----------------------------------------------------------------------------
+# API Service
+# ----------------------------------------------------------------------------
+api:
+  enabled: true
+  name: api
+  component: backend
+  replicas: 2
+
+  image:
+    registry: ""
+    repository: agenthive/api
+    tag: "dev"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 3001
+
+  serviceAccount:
+    create: true
+    name: api
+    automountServiceAccountToken: false
+
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 10
+            periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 0
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+          - type: Pods
+            value: 4
+            periodSeconds: 15
+        selectPolicy: Max
+
+  ingress:
+    enabled: false
+    annotations: {}
+    tls:
+      enabled: false
+      secretName: ""
+      hosts: []
+    hosts: []
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+
+  probes:
+    liveness:
+      path: /api/health
+      port: http
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      path: /api/health
+      port: http
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      path: /api/health
+      port: http
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 12
+
+  env:
+    - name: PORT
+      value: "3001"
+
+  envFromConfigMap:
+    - name: NODE_ENV
+      key: NODE_ENV
+    - name: DB_HOST
+      key: DB_HOST
+    - name: DB_PORT
+      key: DB_PORT
+    - name: DB_NAME
+      key: DB_NAME
+    - name: DB_USER
+      key: DB_USER
+    - name: REDIS_HOST
+      key: REDIS_HOST
+    - name: LLM_BASE_URL
+      key: LLM_BASE_URL
+    - name: LLM_MODEL
+      key: LLM_MODEL
+    - name: LLM_USER_AGENT
+      key: LLM_USER_AGENT
+    - name: OLLAMA_URL
+      key: OLLAMA_URL
+    - name: OLLAMA_MODEL
+      key: OLLAMA_MODEL
+    - name: DEV_USER_ID
+      key: DEV_USER_ID
+    - name: OTEL_SERVICE_NAME
+      key: OTEL_SERVICE_NAME
+    - name: OTEL_EXPORTER_OTLP_ENDPOINT
+      key: OTEL_EXPORTER_OTLP_ENDPOINT
+    - name: OTEL_RESOURCE_ATTRIBUTES
+      key: OTEL_RESOURCE_ATTRIBUTES
+    - name: OTEL_TRACES_SAMPLER
+      key: OTEL_TRACES_SAMPLER
+    - name: OTEL_TRACES_SAMPLER_ARG
+      key: OTEL_TRACES_SAMPLER_ARG
+    - name: OTEL_LOG_LEVEL
+      key: OTEL_LOG_LEVEL
+    - name: OTEL_SDK_DISABLED
+      key: OTEL_SDK_DISABLED
+    - name: OTEL_TRACES_EXPORTER
+      key: OTEL_TRACES_EXPORTER
+    - name: OTEL_METRICS_EXPORTER
+      key: OTEL_METRICS_EXPORTER
+    - name: OTEL_LOGS_EXPORTER
+      key: OTEL_LOGS_EXPORTER
+    - name: STRUCTURED_LOGGING
+      key: STRUCTURED_LOGGING
+    - name: CORS_ORIGIN
+      key: CORS_ORIGIN
+    - name: JAVA_PAYMENT_URL
+      key: JAVA_PAYMENT_URL
+    - name: UV_THREADPOOL_SIZE
+      key: UV_THREADPOOL_SIZE
+
+  envFromSecret:
+    - name: DB_PASSWORD
+      key: DB_PASSWORD
+    - name: JWT_SECRET
+      key: JWT_SECRET
+    - name: LLM_API_KEY
+      key: LLM_API_KEY
+    - name: REDIS_PASSWORD
+      key: REDIS_PASSWORD
+
+  # initContainers moved to template (conditional on postgres.enabled)
+
+  volumes:
+    - name: tmp
+      emptyDir: {}
+    - name: workspace
+      emptyDir: {}
+
+  volumeMounts:
+    - name: tmp
+      mountPath: /tmp
+    - name: workspace
+      mountPath: /data/workspaces
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - api
+            topologyKey: kubernetes.io/hostname
+
+# ----------------------------------------------------------------------------
+# Landing Service
+# ----------------------------------------------------------------------------
+landing:
+  enabled: true
+  name: landing
+  component: frontend
+  replicas: 2
+
+  image:
+    registry: ""
+    repository: agenthive/landing
+    tag: "dev"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  serviceAccount:
+    create: true
+    name: landing
+    automountServiceAccountToken: false
+
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 250m
+
+  pdb:
+    enabled: true
+    minAvailable: 1
+
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilization: 70
+    targetMemoryUtilization: 80
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 10
+            periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 0
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+        selectPolicy: Max
+
+  ingress:
+    enabled: false
+    annotations: {}
+    tls:
+      enabled: false
+      secretName: ""
+      hosts: []
+    hosts: []
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+
+  probes:
+    liveness:
+      path: /
+      port: http
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      path: /
+      port: http
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+    startup:
+      path: /
+      port: http
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 12
+
+  envFromConfigMap:
+    - name: API_URL
+      key: API_URL
+    - name: GATEWAY_URL
+      key: GATEWAY_URL
+    - name: NITRO_PORT
+      key: NITRO_PORT
+    - name: NODE_ENV
+      key: NODE_ENV
+    - name: OTEL_SDK_DISABLED
+      key: OTEL_SDK_DISABLED
+
+  volumes:
+    - name: tmp
+      emptyDir: {}
+    - name: cache
+      emptyDir: {}
+
+  volumeMounts:
+    - name: tmp
+      mountPath: /tmp
+    - name: cache
+      mountPath: /app/.cache
+
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchExpressions:
+                - key: app.kubernetes.io/name
+                  operator: In
+                  values:
+                    - landing
+            topologyKey: kubernetes.io/hostname
+
+# ----------------------------------------------------------------------------
+# Java Microservices
+# ----------------------------------------------------------------------------
+javaServices:
+  enabled: true
+
+  ingress:
+    enabled: false
+    name: agenthive-java-ingress
+    className: traefik
+    annotations: {}
+    tls:
+      enabled: false
+      secretName: ""
+      hosts: []
+    hosts: []
+
+  defaults:
+    replicas: 2
+    image:
+      registry: ""
+      repositoryPrefix: agenthive
+      tag: "dev"
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 250m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+    serviceType: ClusterIP
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 0
+    jvmOptions: ""
+
+    hpa:
+      enabled: false
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilization: 70
+      targetMemoryUtilization: 80
+
+    pdb:
+      enabled: false
+      minAvailable: 1
+
+  services:
+    gateway:
+      enabled: true
+      name: gateway-service
+      component: gateway
+      port: 8080
+      serviceType: LoadBalancer
+      env:
+        - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+      envFromSecret:
+        - name: JWT_SECRET
+          key: JWT_SECRET
+      probes:
+        liveness:
+          path: /health
+          port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readiness:
+          path: /health
+          port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+    auth:
+      enabled: true
+      name: auth-service
+      component: auth
+      port: 8081
+      env:
+        - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: DB_HOST
+          value: "postgres-auth"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "auth_db"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+      envFromSecret:
+        - name: DB_USER
+          key: DB_USER
+        - name: DB_PASSWORD
+          key: DB_PASSWORD
+        - name: JWT_SECRET
+          key: JWT_SECRET
+      probes:
+        liveness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readiness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+    user:
+      enabled: true
+      name: user-service
+      component: user
+      port: 8082
+      env:
+        - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: DB_HOST
+          value: "postgres-user"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "user_db"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+      envFromSecret:
+        - name: DB_USER
+          key: DB_USER
+        - name: DB_PASSWORD
+          key: DB_PASSWORD
+      probes:
+        liveness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readiness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+    payment:
+      enabled: true
+      name: payment-service
+      component: payment
+      port: 8083
+      env:
+        - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: DB_HOST
+          value: "postgres-business"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "payment_db"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+      envFromSecret:
+        - name: DB_USER
+          key: DB_USER
+        - name: DB_PASSWORD
+          key: DB_PASSWORD
+      probes:
+        liveness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readiness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+    order:
+      enabled: true
+      name: order-service
+      component: order
+      port: 8084
+      env:
+        - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: DB_HOST
+          value: "postgres-business"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "order_db"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+      envFromSecret:
+        - name: DB_USER
+          key: DB_USER
+        - name: DB_PASSWORD
+          key: DB_PASSWORD
+      probes:
+        liveness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readiness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+    cart:
+      enabled: true
+      name: cart-service
+      component: cart
+      port: 8085
+      env:
+        - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: DB_HOST
+          value: "postgres-business"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "cart_db"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+      envFromSecret:
+        - name: DB_USER
+          key: DB_USER
+        - name: DB_PASSWORD
+          key: DB_PASSWORD
+      probes:
+        liveness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readiness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+    logistics:
+      enabled: true
+      name: logistics-service
+      component: logistics
+      port: 8086
+      env:
+        - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: DB_HOST
+          value: "postgres-business"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: "logistics_db"
+        - name: REDIS_HOST
+          value: "redis"
+        - name: REDIS_PORT
+          value: "6379"
+      envFromSecret:
+        - name: DB_USER
+          key: DB_USER
+        - name: DB_PASSWORD
+          key: DB_PASSWORD
+      probes:
+        liveness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readiness:
+          path: /actuator/health
+          port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+# ----------------------------------------------------------------------------
+# Ingress
+# ----------------------------------------------------------------------------
+ingress:
+  enabled: true
+  name: agenthive-ingress
+  className: traefik
+  annotations: {}
+  tls:
+    enabled: false
+    secretName: ""
+    hosts: []
+  hosts:
+    - host: agenthive.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /socket.io
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /
+          pathType: Prefix
+          service: landing
+          port: 3000
+
+# ----------------------------------------------------------------------------
+# PostgreSQL (local dev only, disabled by default)
+# ----------------------------------------------------------------------------
+postgres:
+  enabled: false
+  name: postgres
+  image:
+    registry: ""
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 5432
+  pvc:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  env:
+    user: "agenthive"
+    database: "agenthive"
+    multipleDatabases: "auth_db,user_db,payment_db,order_db,cart_db,logistics_db,agenthive"
+
+# ----------------------------------------------------------------------------
+# Redis (local dev only, disabled by default)
+# ----------------------------------------------------------------------------
+redis:
+  enabled: false
+  name: redis
+  image:
+    registry: ""
+    repository: redis
+    tag: "7-alpine"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 6379
+  pvc:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 250m
+
+# ----------------------------------------------------------------------------
+# ConfigMap
+# ----------------------------------------------------------------------------
+configmap:
+  enabled: true
+  name: app-config
+  data:
+    NODE_ENV: "development"
+    DB_HOST: "postgres"
+    DB_PORT: "5432"
+    DB_NAME: "agenthive"
+    DB_USER: "agenthive"
+    REDIS_URL: "redis://redis:6379"
+    REDIS_HOST: "redis"
+    API_URL: "http://gateway-service:8080"
+    GATEWAY_URL: "http://gateway-service:8080"
+    APP_NAME: "AgentHive Cloud"
+    LOG_LEVEL: "info"
+    API_VERSION: "v1"
+    MAX_CONNECTIONS: "100"
+    REQUEST_TIMEOUT: "30000"
+    CACHE_TTL: "3600"
+    UV_THREADPOOL_SIZE: "4"
+    CORS_ORIGIN: "http://localhost,https://localhost"
+    JAVA_PAYMENT_URL: "http://payment-service:8083"
+    NITRO_PORT: "3000"
+    LLM_BASE_URL: "https://api.kimi.com/coding/v1"
+    LLM_MODEL: "kimi-for-coding"
+    LLM_USER_AGENT: "claude-code/0.1.0"
+    OLLAMA_URL: ""
+    OLLAMA_MODEL: "qwen3:14b"
+    OTEL_SERVICE_NAME: "agenthive-api"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-gateway.monitoring:4317"
+    OTEL_EXPORTER_OTLP_INSECURE: "true"
+    OTEL_RESOURCE_ATTRIBUTES: "service.namespace=agenthive,deployment.environment=development"
+    OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
+    OTEL_TRACES_SAMPLER_ARG: "0.1"
+    OTEL_LOG_LEVEL: "warn"
+    OTEL_SDK_DISABLED: "false"
+    OTEL_TRACES_EXPORTER: "otlp"
+    OTEL_METRICS_EXPORTER: "otlp"
+    OTEL_LOGS_EXPORTER: "otlp"
+    STRUCTURED_LOGGING: "true"
+    # Java shared
+    SPRING_PROFILES_ACTIVE: "docker"
+    SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
+    NACOS_HOST: "nacos"
+    NACOS_PORT: "8848"
+    SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: "nacos:8848"
+    SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: "nacos:8848"
+    NACOS_USERNAME: "nacos"
+    OTEL_TRACES_EXPORTER_JAVA: "otlp"
+    OTEL_METRICS_EXPORTER_JAVA: "otlp"
+    OTEL_LOGS_EXPORTER_JAVA: "otlp"
+    LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
+
+# ----------------------------------------------------------------------------
+# Secret (template references existing secrets; actual secret managed externally)
+# ----------------------------------------------------------------------------
+secret:
+  enabled: false
+  name: app-secrets
+  externalSecret:
+    enabled: false
+
+# ----------------------------------------------------------------------------
+# NetworkPolicy
+# ----------------------------------------------------------------------------
+networkPolicy:
+  enabled: true
+
+# ----------------------------------------------------------------------------
+# Nacos (inline for Phase 1)
+# ----------------------------------------------------------------------------
+nacos:
+  enabled: false  # 当 javaServices.enabled=true 时自动启用，无需手动修改
+  name: nacos
+  replicas: 1
+  image:
+    registry: ""
+    repository: nacos/nacos-server
+    tag: v2.3.0
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    ports:
+      http: 8848
+      grpc: 9848
+  pvc:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 500m
+  env:
+    - name: MODE
+      value: "standalone"
+    - name: PREFER_HOST_MODE
+      value: "hostname"
+    - name: NACOS_AUTH_ENABLE
+      value: "true"
+
+  auth:
+    enabled: true
+    token: "<NACOS_AUTH_TOKEN>"
+    identityKey: "agenthive"
+    identityValue: "agenthive-secret-2024"
+
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL
+
+# ----------------------------------------------------------------------------
+# RabbitMQ (inline for Phase 1)
+# ----------------------------------------------------------------------------
+rabbitmq:
+  enabled: false
+  name: rabbitmq
+  replicas: 1
+  image:
+    registry: ""
+    repository: rabbitmq
+    tag: 3.13-management-alpine
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    ports:
+      amqp: 5672
+      management: 15672
+  pvc:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 250m
+  env:
+    - name: RABBITMQ_DEFAULT_USER
+      value: "agenthive"
+    - name: RABBITMQ_DEFAULT_PASS
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: RABBITMQ_PASSWORD
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: false
+    capabilities:
+      drop:
+        - ALL

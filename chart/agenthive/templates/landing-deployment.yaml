@@ -1,0 +1,89 @@
+{{- if .Values.landing.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agenthive.landingName" . }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.landingName" . }}
+    app.kubernetes.io/component: {{ .Values.landing.component }}
+    {{- include "agenthive.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.landing.replicas }}
+  {{- if .Values.landing.strategy }}
+  strategy:
+    {{- toYaml .Values.landing.strategy | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "agenthive.landingName" . }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "agenthive.landingName" . }}
+        app.kubernetes.io/component: {{ .Values.landing.component }}
+        {{- include "agenthive.labels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: {{ include "agenthive.landingName" . }}
+      securityContext:
+        {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Values.landing.name }}
+          {{- include "agenthive.containerImage" (list . .Values.landing.image) | nindent 10 }}
+          ports:
+            - containerPort: {{ .Values.landing.service.port }}
+              name: http
+              protocol: TCP
+          env:
+            {{- range .Values.landing.envFromConfigMap }}
+            - name: {{ .name }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $.Values.configmap.name }}
+                  key: {{ .key }}
+            {{- end }}
+          securityContext:
+            {{- toYaml .Values.global.containerSecurityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.landing.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.landing.probes.liveness.path }}
+              port: {{ .Values.landing.probes.liveness.port }}
+            initialDelaySeconds: {{ .Values.landing.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.landing.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.landing.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.landing.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.landing.probes.readiness.path }}
+              port: {{ .Values.landing.probes.readiness.port }}
+            initialDelaySeconds: {{ .Values.landing.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.landing.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.landing.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.landing.probes.readiness.failureThreshold }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.landing.probes.startup.path }}
+              port: {{ .Values.landing.probes.startup.port }}
+            initialDelaySeconds: {{ .Values.landing.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.landing.probes.startup.periodSeconds }}
+            timeoutSeconds: {{ .Values.landing.probes.startup.timeoutSeconds }}
+            failureThreshold: {{ .Values.landing.probes.startup.failureThreshold }}
+          {{- if .Values.landing.volumeMounts }}
+          volumeMounts:
+            {{- toYaml .Values.landing.volumeMounts | nindent 12 }}
+          {{- end }}
+      {{- if .Values.landing.volumes }}
+      volumes:
+        {{- toYaml .Values.landing.volumes | nindent 8 }}
+      {{- end }}
+      {{- if .Values.landing.affinity }}
+      affinity:
+        {{- toYaml .Values.landing.affinity | nindent 8 }}
+      {{- end }}
+{{- end }}

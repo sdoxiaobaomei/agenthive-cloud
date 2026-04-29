@@ -1,0 +1,42 @@
+{{- if .Values.javaServices.enabled }}
+{{- range $key, $svc := .Values.javaServices.services }}
+{{- if and $svc.enabled $svc.hpa $svc.hpa.enabled }}
+{{- $javaName := include "agenthive.prefixedName" (list $ $svc.name) }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ $javaName }}-hpa
+  namespace: {{ include "agenthive.namespace" $ }}
+  labels:
+    app.kubernetes.io/name: {{ $javaName }}
+    app.kubernetes.io/component: {{ $svc.component }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ $javaName }}
+  minReplicas: {{ $svc.hpa.minReplicas | default 2 }}
+  maxReplicas: {{ $svc.hpa.maxReplicas | default 8 }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $svc.hpa.targetCPUUtilization | default 70 }}
+    {{- if $svc.hpa.targetMemoryUtilization }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $svc.hpa.targetMemoryUtilization }}
+    {{- end }}
+  {{- if $svc.hpa.behavior }}
+  behavior:
+    {{- toYaml $svc.hpa.behavior | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

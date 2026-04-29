@@ -1,0 +1,93 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agenthive.prefixedName" (list . .Values.postgres.name) }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.postgres.name) }}
+    app.kubernetes.io/component: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.postgres.name) }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.postgres.name) }}
+        app.kubernetes.io/component: database
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+        - name: postgres
+          image: {{ include "agenthive.image" (list . .Values.postgres.image) }}
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.postgres.service.port }}
+              name: postgres
+              protocol: TCP
+          env:
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.env.user | quote }}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.secret.name }}
+                  key: DB_PASSWORD
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.env.database | quote }}
+            - name: POSTGRES_MULTIPLE_DATABASES
+              value: {{ .Values.postgres.env.multipleDatabases | quote }}
+            - name: PGDATA
+              value: "/var/lib/postgresql/data/pgdata"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            {{- toYaml .Values.postgres.resources | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgres.env.user | quote }}
+                - -d
+                - {{ .Values.postgres.env.database | quote }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgres.env.user | quote }}
+                - -d
+                - {{ .Values.postgres.env.database | quote }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init-scripts
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+      volumes:
+        - name: data
+          {{- if .Values.postgres.pvc.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "agenthive.prefixedName" (list . .Values.postgres.name) }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: init-scripts
+          configMap:
+            name: {{ include "agenthive.prefixedName" (list . .Values.postgres.name) }}-init
+{{- end }}

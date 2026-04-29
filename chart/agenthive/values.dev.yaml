@@ -1,0 +1,218 @@
+# AgentHive Cloud — Development Values Override
+# ============================================================================
+# Usage: helm install agenthive-dev ./chart/agenthive -f values.yaml -f values.dev.yaml
+# Purpose: Local development with embedded PostgreSQL + Redis
+# ============================================================================
+
+global:
+  labels:
+    environment: development
+
+# ----------------------------------------------------------------------------
+# Local PostgreSQL + Redis (dev only)
+# ----------------------------------------------------------------------------
+postgres:
+  enabled: true
+
+redis:
+  enabled: true
+
+# ----------------------------------------------------------------------------
+# API Service — Dev
+# ----------------------------------------------------------------------------
+api:
+  replicas: 1
+  image:
+    tag: "dev"
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  hpa:
+    enabled: false
+  pdb:
+    enabled: false
+
+# ----------------------------------------------------------------------------
+# Landing Service — Dev
+# ----------------------------------------------------------------------------
+landing:
+  replicas: 1
+  image:
+    tag: "dev"
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 250m
+  hpa:
+    enabled: false
+  pdb:
+    enabled: false
+
+# ----------------------------------------------------------------------------
+# Java Services — Dev
+# ----------------------------------------------------------------------------
+javaServices:
+  defaults:
+    image:
+      tag: "dev"
+    replicas: 1
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 250m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+    jvmOptions: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -Djava.security.egd=file:/dev/./urandom"
+  services:
+    gateway:
+      enabled: true
+      hpa:
+        enabled: false
+      pdb:
+        enabled: false
+    auth:
+      enabled: true
+      hpa:
+        enabled: false
+      pdb:
+        enabled: false
+    user:
+      enabled: true
+      hpa:
+        enabled: false
+      pdb:
+        enabled: false
+    payment:
+      enabled: false
+      hpa:
+        enabled: false
+      pdb:
+        enabled: false
+    order:
+      enabled: false
+      hpa:
+        enabled: false
+      pdb:
+        enabled: false
+    cart:
+      enabled: false
+      hpa:
+        enabled: false
+      pdb:
+        enabled: false
+    logistics:
+      enabled: false
+      hpa:
+        enabled: false
+      pdb:
+        enabled: false
+
+# ----------------------------------------------------------------------------
+# Ingress — Dev (localhost only)
+# ----------------------------------------------------------------------------
+ingress:
+  tls:
+    enabled: false
+  hosts:
+    - host: agenthive.local
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /socket.io
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /
+          pathType: Prefix
+          service: landing
+          port: 3000
+
+# ----------------------------------------------------------------------------
+# ConfigMap — Dev
+# ----------------------------------------------------------------------------
+configmap:
+  data:
+    NODE_ENV: "development"
+    DB_HOST: "postgres"
+    DB_PORT: "5432"
+    DB_NAME: "agenthive"
+    DB_USER: "agenthive"
+    REDIS_URL: "redis://redis:6379"
+    REDIS_HOST: "redis"
+    API_URL: "http://gateway-service:8080"
+    GATEWAY_URL: "http://gateway-service:8080"
+    APP_NAME: "AgentHive Cloud"
+    LOG_LEVEL: "info"
+    API_VERSION: "v1"
+    MAX_CONNECTIONS: "100"
+    REQUEST_TIMEOUT: "30000"
+    CACHE_TTL: "3600"
+    UV_THREADPOOL_SIZE: "4"
+    CORS_ORIGIN: "http://localhost,https://localhost"
+    JAVA_PAYMENT_URL: "http://payment-service:8083"
+    NITRO_PORT: "3000"
+    LLM_BASE_URL: "https://api.kimi.com/coding/v1"
+    LLM_MODEL: "kimi-for-coding"
+    LLM_USER_AGENT: "claude-code/0.1.0"
+    OLLAMA_URL: "http://host.k3d.internal:11434"
+    DEV_USER_ID: "5ab7d370-8900-41a8-a9ca-37dbdcb45b5a"
+    OLLAMA_MODEL: "qwen3:14b"
+    OTEL_SERVICE_NAME: "agenthive-api"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-gateway.monitoring:4317"
+    OTEL_EXPORTER_OTLP_INSECURE: "true"
+    OTEL_RESOURCE_ATTRIBUTES: "service.namespace=agenthive,deployment.environment=development"
+    OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
+    OTEL_TRACES_SAMPLER_ARG: "0.1"
+    OTEL_LOG_LEVEL: "warn"
+    OTEL_SDK_DISABLED: "true"
+    OTEL_TRACES_EXPORTER: "otlp"
+    OTEL_METRICS_EXPORTER: "otlp"
+    OTEL_LOGS_EXPORTER: "otlp"
+    STRUCTURED_LOGGING: "true"
+    SPRING_PROFILES_ACTIVE: "docker"
+    SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
+    NACOS_HOST: "nacos"
+    NACOS_PORT: "8848"
+    SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: "nacos:8848"
+    SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: "nacos:8848"
+    NACOS_USERNAME: "nacos"
+    OTEL_TRACES_EXPORTER_JAVA: "otlp"
+    OTEL_METRICS_EXPORTER_JAVA: "otlp"
+    OTEL_LOGS_EXPORTER_JAVA: "otlp"
+    LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
+
+# ----------------------------------------------------------------------------
+# Secret — Dev (fallback placeholder, replace with real values)
+# ----------------------------------------------------------------------------
+secret:
+  enabled: false
+  externalSecret:
+    enabled: false
+
+# ----------------------------------------------------------------------------
+# NetworkPolicy — Dev
+# ----------------------------------------------------------------------------
+networkPolicy:
+  enabled: false
+
+# ----------------------------------------------------------------------------
+# Nacos — Dev
+# ----------------------------------------------------------------------------
+nacos:
+  enabled: true
+
+# ----------------------------------------------------------------------------
+# RabbitMQ — Dev
+# ----------------------------------------------------------------------------
+rabbitmq:
+  enabled: true

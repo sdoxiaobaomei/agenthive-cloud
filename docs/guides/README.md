@@ -42,38 +42,36 @@ open http://localhost
 
 | 指南 | 说明 | 预计时间 |
 |------|------|---------|
-| [开发环境完整搭建](./development-setup.md) | Windows/Mac/Linux 环境配置 | 30分钟 |
-| [Docker Desktop 配置](./docker-desktop-setup.md) | Windows 专用配置指南 | 15分钟 |
-| [K8s 本地集群搭建](./local-k8s-setup.md) | Kind/Kubeadm/Docker Desktop K8s | 20分钟 |
+| [WSL2 网络配置](./WSL2-NETWORK-SETUP.md) | Windows WSL2 网络环境配置 | 15分钟 |
+| [Docker 镜像加速配置](../deployment/docker/DOCKER-MIRROR-SETUP.md) | 国内 Docker 镜像源配置 | 10分钟 |
 
 ### 开发工作流
 
 | 指南 | 说明 |
 |------|------|
-| [Git 工作流](./git-workflow.md) | 分支策略、提交规范 |
-| [代码审查指南](./code-review.md) | PR 流程、审查清单 |
-| [Debug 技巧](./debugging.md) | 常见问题排查 |
+| [开发文档](../development/README.md) | 开发规范、API 文档、前端指南 |
+| [系统架构总览](../ARCHITECTURE.md) | 了解整体系统设计 |
 
 ### 部署操作
 
 | 指南 | 说明 |
 |------|------|
-| [Docker 部署](./../deployment/docker-deployment.md) | 本地 Docker Compose |
-| [K8s 部署](./../deployment/k8s-deployment.md) | 生产环境 K8s |
-| [CI/CD 流程](./../deployment/ci-cd.md) | 自动化部署 |
+| [部署文档](../deployment/README.md) | Docker / K8s / 混合部署入口 |
+| [K8s 部署指南](../deployment/k8s-deployment.md) | 生产环境 K8s 部署 |
+| [CI/CD 使用指南](../deployment/ci-cd/CI-CD-USAGE.md) | 自动化部署 |
 
 ---
 
 ## 🆘 常见问题
 
 ### Q: Windows 上 Docker 启动失败？
-A: 参考 [Docker Desktop Windows 指南](../archive/K8S-WINDOWS-GUIDE.md)
+A: 参考 [WSL2 网络配置](./WSL2-NETWORK-SETUP.md) 和 [Docker 镜像加速配置](../deployment/docker/DOCKER-MIRROR-SETUP.md)
 
 ### Q: 端口冲突？
 A: 检查 80, 3001, 5432, 6379 端口占用情况
 
 ### Q: 镜像构建失败？
-A: 参考 [CI 构建优化](../CI-BUILD-OPTIMIZATION.md)
+A: 参考 [CI 构建优化](../deployment/ci-cd/CI-BUILD-OPTIMIZATION.md)
 
 ---
 

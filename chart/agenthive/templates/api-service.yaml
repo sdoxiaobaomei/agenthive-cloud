@@ -1,0 +1,18 @@
+{{- if .Values.api.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agenthive.apiName" . }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.apiName" . }}
+    app.kubernetes.io/component: {{ .Values.api.component }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "agenthive.apiName" . }}
+  ports:
+    - port: {{ .Values.api.service.port }}
+      targetPort: {{ .Values.api.service.port }}
+      name: http
+  type: {{ .Values.api.service.type }}
+{{- end }}

@@ -1,0 +1,133 @@
+# ============================================================================
+# kube-prometheus-stack Helm Values
+# TICKET: PLATFORM-009
+# Purpose: Production-ready Prometheus + Grafana + AlertManager
+# Install: helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#          helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#            -f kube-prometheus-stack-values.yaml -n monitoring --create-namespace
+# ============================================================================
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    retentionSize: "10GB"
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 250m
+      limits:
+        memory: 1Gi
+        cpu: 500m
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    enableAdminAPI: false
+    walCompression: true
+
+grafana:
+  enabled: true
+  admin:
+    existingSecret: "app-secrets"
+    passwordKey: "GRAFANA_ADMIN_PASSWORD"
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hosts:
+      - grafana.agenthive.cloud
+    tls:
+      - secretName: grafana-tls
+        hosts:
+          - grafana.agenthive.cloud
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 250m
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://kube-prometheus-stack-prometheus:9090
+          access: proxy
+          isDefault: true
+        - name: Loki
+          type: loki
+          url: http://kube-prometheus-stack-loki:3100
+          access: proxy
+        - name: Tempo
+          type: tempo
+          url: http://kube-prometheus-stack-tempo:3200
+          access: proxy
+          jsonData:
+            tracesToLogs:
+              datasourceUid: loki
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+        - name: agenthive
+          orgId: 1
+          folder: AgentHive
+          type: configmap
+          disableDeletion: false
+          editable: true
+          options:
+            path: /var/lib/grafana/dashboards/agenthive
+  dashboardsConfigMaps:
+    agenthive: agenthive-dashboards
+
+alertmanager:
+  enabled: true
+  config:
+    global:
+      smtp_smarthost: 'localhost:587'
+      smtp_from: 'alert@agenthive.cloud'
+    route:
+      receiver: 'default'
+      group_by: ['alertname', 'severity']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+    receivers:
+      - name: 'default'
+        webhook_configs:
+          - url: 'http://agenthive-alerts:8080/webhook'
+            send_resolved: true
+
+prometheus-node-exporter:
+  enabled: true
+
+kube-state-metrics:
+  enabled: true
+
+loki:
+  enabled: true
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 250m
+  persistence:
+    enabled: true
+    size: 10Gi
+
+tempo:
+  enabled: true
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 250m
+  persistence:
+    enabled: true
+    size: 10Gi

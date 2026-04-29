@@ -1,0 +1,18 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agenthive.prefixedName" (list . .Values.redis.name) }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.redis.name) }}
+    app.kubernetes.io/component: cache
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.redis.name) }}
+  ports:
+    - port: {{ .Values.redis.service.port }}
+      targetPort: {{ .Values.redis.service.port }}
+      name: redis
+  type: {{ .Values.redis.service.type }}
+{{- end }}

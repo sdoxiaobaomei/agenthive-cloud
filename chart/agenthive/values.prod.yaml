@@ -1,0 +1,397 @@
+# ============================================================================
+# AgentHive Cloud — Production Values Override
+# Usage: helm upgrade --install agenthive chart/agenthive -f values.prod.yaml
+# ============================================================================
+
+global:
+  labels:
+    environment: production
+
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
+
+# ----------------------------------------------------------------------------
+# API Service — Production
+# ----------------------------------------------------------------------------
+api:
+  replicas: 3
+
+  image:
+    tag: "1.1.0"
+
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 500m
+    limits:
+      memory: 1Gi
+      cpu: 1000m
+
+  pdb:
+    enabled: true
+    minAvailable: 2
+
+  hpa:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilization: 60
+    targetMemoryUtilization: 75
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 10
+            periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 0
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+          - type: Pods
+            value: 4
+            periodSeconds: 15
+        selectPolicy: Max
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+
+# ----------------------------------------------------------------------------
+# Landing Service — Production
+# ----------------------------------------------------------------------------
+landing:
+  replicas: 3
+
+  image:
+    tag: "1.1.0"
+
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 200m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+
+  pdb:
+    enabled: true
+    minAvailable: 2
+
+  hpa:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 12
+    targetCPUUtilization: 60
+    targetMemoryUtilization: 75
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 10
+            periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 0
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 15
+          - type: Pods
+            value: 4
+            periodSeconds: 15
+        selectPolicy: Max
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 0
+
+# ----------------------------------------------------------------------------
+# Java Microservices — Production
+# ----------------------------------------------------------------------------
+javaServices:
+  defaults:
+    image:
+      tag: "1.1.0"
+    replicas: 3
+    resources:
+      requests:
+        memory: 512Mi
+        cpu: 500m
+      limits:
+        memory: 1Gi
+        cpu: 1000m
+    jvmOptions: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -Djava.security.egd=file:/dev/./urandom"
+
+  services:
+    gateway:
+      replicas: 3
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 500m
+        limits:
+          memory: 1Gi
+          cpu: 1000m
+      hpa:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 10
+        targetCPUUtilization: 60
+        targetMemoryUtilization: 75
+      pdb:
+        enabled: true
+        minAvailable: 2
+
+    auth:
+      replicas: 3
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 500m
+        limits:
+          memory: 1Gi
+          cpu: 1000m
+      hpa:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 10
+        targetCPUUtilization: 60
+        targetMemoryUtilization: 75
+      pdb:
+        enabled: true
+        minAvailable: 2
+
+    user:
+      replicas: 3
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 500m
+        limits:
+          memory: 1Gi
+          cpu: 1000m
+      hpa:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 10
+        targetCPUUtilization: 60
+        targetMemoryUtilization: 75
+      pdb:
+        enabled: true
+        minAvailable: 2
+
+    payment:
+      replicas: 3
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 500m
+        limits:
+          memory: 1Gi
+          cpu: 1000m
+      hpa:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 8
+        targetCPUUtilization: 60
+        targetMemoryUtilization: 75
+      pdb:
+        enabled: true
+        minAvailable: 2
+
+    order:
+      replicas: 3
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 500m
+        limits:
+          memory: 1Gi
+          cpu: 1000m
+      hpa:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 8
+        targetCPUUtilization: 60
+        targetMemoryUtilization: 75
+      pdb:
+        enabled: true
+        minAvailable: 2
+
+    cart:
+      replicas: 3
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 500m
+        limits:
+          memory: 1Gi
+          cpu: 1000m
+      hpa:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 8
+        targetCPUUtilization: 60
+        targetMemoryUtilization: 75
+      pdb:
+        enabled: true
+        minAvailable: 2
+
+    logistics:
+      replicas: 3
+      resources:
+        requests:
+          memory: 512Mi
+          cpu: 500m
+        limits:
+          memory: 1Gi
+          cpu: 1000m
+      hpa:
+        enabled: true
+        minReplicas: 3
+        maxReplicas: 8
+        targetCPUUtilization: 60
+        targetMemoryUtilization: 75
+      pdb:
+        enabled: true
+        minAvailable: 2
+
+# ----------------------------------------------------------------------------
+# Ingress — Production (HTTPS + Domain)
+# ----------------------------------------------------------------------------
+ingress:
+  tls:
+    enabled: true
+    secretName: agenthive-tls
+    hosts:
+      - api.agenthive.cloud
+      - agenthive.cloud
+      - www.agenthive.cloud
+
+  hosts:
+    - host: api.agenthive.cloud
+      paths:
+        - path: /
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+    - host: agenthive.cloud
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /socket.io
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /
+          pathType: Prefix
+          service: landing
+          port: 3000
+    - host: www.agenthive.cloud
+      paths:
+        - path: /
+          pathType: Prefix
+          service: landing
+          port: 3000
+
+# ----------------------------------------------------------------------------
+# Java Services Ingress — Production
+# ----------------------------------------------------------------------------
+javaServices:
+  ingress:
+    enabled: true
+    tls:
+      enabled: true
+      secretName: agenthive-java-tls
+      hosts:
+        - java.agenthive.cloud
+    hosts:
+      - host: java.agenthive.cloud
+        paths:
+          - path: /gateway
+            pathType: Prefix
+            service: gateway-service
+            port: 8080
+          - path: /auth
+            pathType: Prefix
+            service: auth-service
+            port: 8081
+          - path: /user
+            pathType: Prefix
+            service: user-service
+            port: 8082
+
+# ----------------------------------------------------------------------------
+# ConfigMap — Production
+# ----------------------------------------------------------------------------
+configmap:
+  data:
+    NODE_ENV: "production"
+    API_URL: "https://api.agenthive.cloud"
+    LOG_LEVEL: "warn"
+    OTEL_TRACES_SAMPLER_ARG: "0.05"
+    OTEL_LOG_LEVEL: "error"
+
+# ----------------------------------------------------------------------------
+# Secret — Production (External Secrets Operator)
+# ----------------------------------------------------------------------------
+secret:
+  enabled: true
+  name: app-secrets
+  externalSecret:
+    enabled: true
+
+# ----------------------------------------------------------------------------
+# NetworkPolicy — Production
+# ----------------------------------------------------------------------------
+networkPolicy:
+  enabled: true
+
+# ----------------------------------------------------------------------------
+# Nacos — Production (Phase 1: enabled if needed)
+# ----------------------------------------------------------------------------
+nacos:
+  enabled: false
+  replicas: 1
+  resources:
+    requests:
+      memory: 1Gi
+      cpu: 500m
+    limits:
+      memory: 2Gi
+      cpu: 1000m
+
+# ----------------------------------------------------------------------------
+# RabbitMQ — Production (Phase 1: enabled if needed)
+# ----------------------------------------------------------------------------
+rabbitmq:
+  enabled: false
+  replicas: 1
+  resources:
+    requests:
+      memory: 512Mi
+      cpu: 250m
+    limits:
+      memory: 1Gi
+      cpu: 500m

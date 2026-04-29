@@ -207,6 +207,7 @@ const props = defineProps<{
   currentProject?: Project | null
   projectId?: string
   embedded?: boolean
+  chatId?: string
 }>()
 
 const emit = defineEmits<{
@@ -507,7 +508,34 @@ onMounted(() => {
   creditsStore.fetchBalance()
   // 解析项目名（仅 projectId 时）
   fetchProjectName()
+
+  // 如果提供了 chatId，立即设置 session 并连接 WebSocket
+  if (props.chatId) {
+    sessionId.value = props.chatId
+    connectWebSocket(props.chatId)
+    // 加载该会话的消息历史
+    loadSessionMessages(props.chatId)
+  }
 })
+
+const loadSessionMessages = async (sid: string) => {
+  try {
+    const res = await chatApi.getMessages(sid)
+    if (res.success && res.data?.messages) {
+      messages.value = res.data.messages.map((msg: any) => ({
+        id: msg.id || `msg-${Date.now()}`,
+        role: msg.role as 'user' | 'assistant' | 'system' | 'agent',
+        content: msg.content,
+        createdAt: msg.timestamp || msg.createdAt,
+        metadata: msg.metadata,
+      }))
+    }
+  } catch (err: any) {
+    if (import.meta.dev) {
+      console.debug('[ChatPanel] Failed to load messages:', err.message)
+    }
+  }
+}
 
 watch(() => props.projectId, fetchProjectName)
 

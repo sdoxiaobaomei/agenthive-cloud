@@ -42,18 +42,24 @@ kubectl exec -it deployment/api -n agenthive -- sh
 
 ## 📚 运维文档
 
-### 网络相关
+### 数据库运维
 
 | 文档 | 说明 |
 |------|------|
-| [Docker Desktop 网络详解](../DOCKER-DESKTOP-NETWORK-EXPLAINED.md) | 端口映射原理 |
-| [Docker Desktop 进程隔离](../DOCKER-DESKTOP-PROCESS-ISOLATION.md) | 进程管理 |
+| [PostgreSQL 备份恢复](./postgres-backup-restore.md) | 数据库备份与恢复操作手册 |
+
+### K8s 运维
+
+| 文档 | 说明 |
+|------|------|
+| [K3s 运维手册](./runbook-k3s-ops.md) | K3s 集群日常运维 Runbook |
+| [密钥轮换指南](./security-secret-rotation.md) | 安全密钥轮换操作规范 |
 
 ### 故障排查
 
 | 文档 | 说明 |
 |------|------|
-| [运维排查指南](./troubleshooting.md) | 常见问题 FAQ |
+| [K8s 速查表](../archive/K8S-CHEATSHEET.md) | 常见问题 FAQ 和 kubectl 命令 |
 | [快速参考](../reference/quick-reference.md) | 常用命令 |
 
 ---
@@ -119,6 +125,6 @@ kubectl describe pod <pod-name> -n agenthive
 
 ## 📖 相关文档
 
-- [K8s 速查表](../reference/k8s-cheatsheet.md)
-- [Docker 速查表](../reference/docker-cheatsheet.md)
+- [K8s 速查表](../archive/K8S-CHEATSHEET.md)
+- [Docker 速查表](../archive/git-cheatsheet.md)
 - [快速参考](../reference/quick-reference.md)

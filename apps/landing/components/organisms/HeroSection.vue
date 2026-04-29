@@ -324,7 +324,7 @@ async function handleSubmit() {
 
   if (!isAuthenticated()) {
     sessionStorage.setItem('chat:pending-message', text)
-    router.push(`/login?redirect=${encodeURIComponent('/chat')}`)
+    router.push(`/login?redirect=${encodeURIComponent('/')}`)
     return
   }
 
@@ -332,7 +332,7 @@ async function handleSubmit() {
   
   try {
     await new Promise(resolve => setTimeout(resolve, 1000))
-    router.push('/chat')
+    router.push('/')
   } catch (error) {
     console.error('Failed to start project:', error)
   } finally {

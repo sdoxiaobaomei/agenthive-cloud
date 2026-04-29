@@ -1,6 +1,0 @@
-#!/bin/bash
-# Git post-checkout hook
-# 在切换分支后自动清理旧工作区
-
-echo "🧹 检查工作区清理..."
-node scripts/cleanup-workspaces.js
