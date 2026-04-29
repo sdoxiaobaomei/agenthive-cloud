@@ -113,6 +113,7 @@ import { ElMessage } from 'element-plus'
 import { MagicStick, FolderOpened, Plus, ShoppingBag } from '@element-plus/icons-vue'
 import { useAuthStore } from '~/stores/auth'
 import { useProjectStore, type Project } from '~/stores/project'
+import { useChatStore } from '~/stores/chat'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -163,11 +164,18 @@ onMounted(async () => {
   }
 })
 
-const selectProject = (project: Project) => {
+const selectProject = async (project: Project) => {
   projectStore.setCurrentProject(project)
   sessionStorage.setItem('pending-project', JSON.stringify(project))
   showProjectDialog.value = false
-  router.push(`/workspace/${project.id}`)
+  const chatStore = useChatStore()
+  await chatStore.loadConversations(project.id)
+  if (chatStore.conversations.length > 0) {
+    router.push('/chat/' + chatStore.conversations[0].id)
+  } else {
+    const conv = await chatStore.createConversation(project.name, project.id)
+    router.push('/chat/' + conv.id)
+  }
 }
 
 // 从需求描述创建项目

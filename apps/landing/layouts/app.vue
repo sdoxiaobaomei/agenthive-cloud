@@ -230,6 +230,7 @@ import {
 } from '@element-plus/icons-vue'
 import { useProjectStore, type Project } from '~/stores/project'
 import { useAuthStore } from '~/stores/auth'
+import { useChatStore } from '~/stores/chat'
 import { useMockCredits } from '~/composables/useMockCredits'
 
 const router = useRouter()
@@ -302,9 +303,17 @@ onMounted(() => {
 const currentProject = computed(() => projectStore.currentProject)
 const recentProjects = computed(() => projectStore.activeProjects.slice(0, 3))
 
-const selectProject = (project: Project) => {
+const selectProject = async (project: Project) => {
   projectStore.setCurrentProject(project)
-  router.push(`/workspace/${project.id}`)
+  const chatStore = useChatStore()
+  // 加载该项目的已有 chat sessions
+  await chatStore.loadConversations(project.id)
+  if (chatStore.conversations.length > 0) {
+    router.push('/chat/' + chatStore.conversations[0].id)
+  } else {
+    const conv = await chatStore.createConversation(project.name, project.id)
+    router.push('/chat/' + conv.id)
+  }
 }
 
 // Fetch projects on mount
