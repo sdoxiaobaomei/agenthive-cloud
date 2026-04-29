@@ -10,10 +10,10 @@ resources:
 images:
   - name: agenthive/api
     newName: registry.cn-hangzhou.aliyuncs.com/agenthive/api
-    newTag: v1.0.0
+    newTag: v1.1.0
   - name: agenthive/landing
     newName: registry.cn-hangzhou.aliyuncs.com/agenthive/landing
-    newTag: v1.0.0
+    newTag: v1.1.0
 
 # 生产副本数
 replicas:

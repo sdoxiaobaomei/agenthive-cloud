@@ -6,16 +6,12 @@
 #
 # ============================================================================
 # AgentHive Cloud - Development Stack
-# 本地开发统一配置：Node.js + Java 微服务 + Monitoring
+# 鏈湴寮€鍙戠粺涓€閰嶇疆锛歂ode.js + Java 寰湇鍔?+ Monitoring
 #
-# 默认启动最简栈（PostgreSQL + Redis + API + Landing）
-# Profile 扩展：
-#   --profile java        → Nacos + RabbitMQ + 7 Java 微服务
-#   --profile monitoring  → Prometheus + Grafana + Tempo + Loki + OTel
-#   --profile with-nginx  → Nginx 反向代理
+# 榛樿鍚姩鏈€绠€鏍堬紙PostgreSQL + Redis + API + Landing锛?# Profile 鎵╁睍锛?#   --profile java        鈫?Nacos + RabbitMQ + 7 Java 寰湇鍔?#   --profile monitoring  鈫?Prometheus + Grafana + Tempo + Loki + OTel
+#   --profile with-nginx  鈫?Nginx 鍙嶅悜浠ｇ悊
 #
-# 启动命令：
-#   docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
+# 鍚姩鍛戒护锛?#   docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 # ============================================================================
 
 services:
@@ -323,6 +319,7 @@ services:
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
@@ -388,6 +385,7 @@ services:
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
@@ -459,6 +457,7 @@ services:
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
@@ -529,6 +528,7 @@ services:
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
@@ -608,6 +608,7 @@ services:
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
@@ -685,6 +686,7 @@ services:
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
@@ -761,6 +763,7 @@ services:
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
+      NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
