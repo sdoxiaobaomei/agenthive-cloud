@@ -8,12 +8,15 @@ spring:
     redis:
       host: ${SPRING_DATA_REDIS_HOST:redis}
       port: ${SPRING_DATA_REDIS_PORT:6379}
-      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      password: ${SPRING_DATA_REDIS_PASSWORD}
   cloud:
     nacos:
       config:
+        enabled: true
         import-check:
           enabled: false
+      discovery:
+        enabled: true
 
 order-service:
   url: http://order-service:8084
