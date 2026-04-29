@@ -234,7 +234,7 @@ services:
       redis:
         condition: service_healthy
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - workspace_data:/data/workspaces
     healthcheck:
@@ -354,7 +354,7 @@ services:
       nacos:
         condition: service_healthy
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
       interval: 20s
@@ -433,7 +433,7 @@ services:
       redis:
         condition: service_healthy
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
       interval: 20s
@@ -506,7 +506,7 @@ services:
       redis:
         condition: service_healthy
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
       interval: 20s
@@ -588,7 +588,7 @@ services:
       rabbitmq:
         condition: service_healthy
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8083/actuator/health"]
       interval: 20s
@@ -668,7 +668,7 @@ services:
       rabbitmq:
         condition: service_healthy
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
       interval: 20s
@@ -747,7 +747,7 @@ services:
       rabbitmq:
         condition: service_healthy
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
       interval: 20s
@@ -824,7 +824,7 @@ services:
       rabbitmq:
         condition: service_healthy
       otel-collector:
-        condition: service_started
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health"]
       interval: 20s
@@ -984,7 +984,10 @@ services:
         compress: "true"
 
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.96.0
+    build:
+      context: ./docker/otel-collector
+      dockerfile: Dockerfile
+    image: agenthive/otel-collector:0.96.0-alpine
     container_name: agenthive-otel-collector-dev
     restart: unless-stopped
     dns:
@@ -1004,6 +1007,12 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:13133/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     logging:
       driver: "json-file"
       options:
