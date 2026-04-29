@@ -1,0 +1,25 @@
+ticket_id: TICKET-FE-UI-REFACTOR-001
+review_decision: approved
+review_score: 0.93
+issues: []
+next_action: none
+reviewed_by: lead
+reviewed_at: "2025-04-29T01:25:00+08:00"
+comments: >-
+  All 11 user requirements verified in code:
+  1) No border-bottom on chat-header (divider removed)
+  2) Dedicated chat-header at 48px (narrower than 64px)
+  3) Logo removed from main header
+  4) Sidebar collapse/expand toggle present
+  5) Project name in chat-header left
+  6) Project header section removed
+  7) User avatar in sidebar footer with Home/Notifications/Settings
+  8) Marketplace visible in sidebar (syncs across pages)
+  9) Marketplace and Projects are top-level siblings
+  10) My Projects button + Recents always visible
+  11) Projects as 40px icon avatars, title moved to chat-header
+  
+  Tab button design: inactive=circular icon-only (32px, border-radius 16px,
+  padding 0), active=elongated pill with icon+text (padding 0 12px).
+  Pinia store extended with activeTab field — clean domain-driven approach.
+  Build passes, SSR-safe, zero new type errors. Approved.

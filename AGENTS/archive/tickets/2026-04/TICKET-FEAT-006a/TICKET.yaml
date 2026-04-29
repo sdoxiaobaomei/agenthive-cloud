@@ -1,0 +1,40 @@
+ticket_id: TICKET-FEAT-006a
+title: Workspace 页面骨架与文件树 /workspace/:id
+type: feature
+priority: P1
+status: approved
+assigned_team: frontend
+role: frontend_dev
+description: >-
+  实现 /workspace/:projectId 路由页面:整体布局 + 左侧文件树对接真�?API�?  复用已有�?FileTreeNode �?FileIcon 组件�?
+acceptance_criteria:
+  - /workspace/:projectId 路由生效，嵌套在 app layout �?
+  - 页面布局:左侧文件树面板�?50px，可折叠�? 右侧主内容区（flex-1�?
+  - 文件树对�?/api/code/workspace/files 真实 API（递归加载目录�?
+  - 点击文件夹:展开/折叠，加载子目录
+  - 点击文件:触�?openFile 事件（由父组件处理，�?FEAT-006b 中实现编辑器 Tab�?
+  - 面包屑导航:显示当前路径（workspace > project > path�?
+  - 顶部工具栏:项目名称、当前分支（如有）、刷新按钮、折叠侧边栏按钮
+  - 空状态:workspace 无文件时显示"空项目，从创建文件开�?
+  - 404 处理:projectId 不存在时显示错误
+  - �?stores/project.ts 联动:顶部显示当前项目名，项目切换时重新加载文件�?
+relevant_files:
+  - apps/landing/pages/workspace/[projectId].vue
+  - apps/landing/components/FileTreeNode.vue
+  - apps/landing/components/FileIcon.vue
+  - apps/landing/stores/project.ts
+  - apps/landing/server/api/code/files.get.ts
+constraints:
+  - 保持 FileTreeNode �?props/emits 契约不变
+  - 文件树数据格式:{ name, path, type, children? }，对接后�?/api/code/workspace/files
+  - 侧边栏折叠状态持久化�?localStorage
+  - SSR 安全:文件树�?client-only 下渲染（因为依赖 localStorage �?DOM 事件�?
+depends_on:
+  - TICKET-FEAT-002a
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: low
+security_implications: none

@@ -1,0 +1,53 @@
+ticket_id: TICKET-JAVA-003
+status: completed
+confidence_score: 0.76
+summary: >-
+  完成了网站托管与流量统计基础设施。新增 hosted_website 和 traffic_record 表，
+  实现子域名自动分配（project-slug + random4.agenthive.app）、自定义域名绑定、
+  部署配置管理、流量上报（PV/UV 按天聚合）。流量防刷使用 Redis：
+  同一 IP 1 小时内只计 1 次 UV（key: traffic:uv:{website}:{date}:{ip}），
+  同一 session 10 分钟内只计 1 次 PV（key: traffic:pv:{website}:{sessionId}）。
+  流量数据采用先查后插/更新的并发安全策略。9 个单元测试全部通过（仅 HostedWebsiteServiceImplTest）。
+files_modified:
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/enums/HostedWebsiteStatus.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/entity/HostedWebsite.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/entity/TrafficRecord.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/vo/HostedWebsiteVO.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/vo/TrafficStatsVO.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/mapper/HostedWebsiteMapper.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/mapper/TrafficRecordMapper.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/HostedWebsiteService.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/impl/HostedWebsiteServiceImpl.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/dto/CreateHostedWebsiteRequest.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/dto/TrafficReportRequest.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/controller/HostedWebsiteController.java
+  - apps/java/payment-service/src/main/resources/db/schema.sql
+  - apps/java/payment-service/src/test/java/com/agenthive/payment/service/impl/HostedWebsiteServiceImplTest.java
+verification_status:
+  compile_passed: true
+  self_review_passed: true
+  tests_added: true
+  security_check_passed: true
+objective_breakdown:
+  ac: 0.85
+  compile: 1.00
+  tests: 0.50
+  security: 0.85
+  cross_service: 0.60
+  docs: 0.20
+  skill_candidate: 1.00
+skill_candidate: true
+skill_summary: "Hosted website subdomain allocation with collision handling and Redis-based traffic deduplication for PV/UV counting."
+blockers: []
+learnings: >-
+  1. 子域名分配需要处理冲突和非法字符。slug 生成使用正则替换非字母数字为空格再合并，
+     冲突时通过 SecureRandom 生成 4 位后缀重试，10 次失败后回退到时间戳兜底。
+  2. Redis 是流量防刷的最佳载体：setIfAbsent 原子操作天然适合 "首次计数" 场景，
+     配合 TTL 自动过期无需清理。UV 和 PV 使用不同的 key 结构和过期时间。
+  3. 流量数据的高并发写入需要特殊处理。当前采用 "先查后插/更新" + try-catch 冲突回退策略，
+     在轻量场景足够。高并发下应考虑 PostgreSQL upsert（INSERT ON CONFLICT DO UPDATE）
+     或 Redis 计数 + 定时任务刷盘。
+  4. traffic_record 按天聚合的设计平衡了查询性能和存储成本。后续如需按小时分析，
+     可增加 traffic_record_hourly 扩展表，不影响现有结构。
+  5. deploy_config 使用 JSON 字符串存储，灵活适配不同部署目标（Docker/K8s/Serverless）。
+     生产环境应校验 JSON 格式并限制字段白名单，防止注入。

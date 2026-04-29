@@ -1,0 +1,11 @@
+ticket_id: TICKET-FEAT-001a
+review_decision: APPROVED
+review_score: 0.94
+reviewer: lead
+reviewed_at: '2026-04-27T23:10:00Z'
+issues: []
+notes: >-
+  数据库迁移脚本含完整回滚（down.sql），旧数据兼容性处理（DEFAULT 值）到位。
+  ON CONFLICT 幂等邀请设计为后续 FEAT-001b 奠定了基础。
+  类型扩展与 service/controller 同步更新，无类型断裂。
+next_action: none

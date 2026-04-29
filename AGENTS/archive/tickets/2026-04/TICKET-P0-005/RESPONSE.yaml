@@ -1,0 +1,26 @@
+ticket_id: TICKET-P0-005
+status: completed
+confidence_score: 0.92
+summary: >-
+  已完成 PostgreSQL 自动备份策略全部配置：
+  1. 新建 scripts/backup-postgres.sh（Docker 宿主机 cron 用）：遍历 7 个数据库执行 pg_dump
+     → gzip → AES-256 加密 → 上传 MinIO，保留 7 天自动清理；
+  2. 新建 scripts/restore-postgres.sh（通用）：支持本地/MinIO 下载备份、解密、
+     交互确认后恢复至目标数据库；
+  3. 新建 k8s/base/11-backup-cronjob.yaml（K8s CronJob，每日 02:00 UTC），
+     Secret 引用 app-secrets 中的加密密钥和 MinIO 凭证；
+  4. 更新 k8s/base/kustomization.yaml 添加 CronJob 资源；
+  5. 新建 docs/operation/postgres-backup-restore.md（完整备份/恢复操作手册）。
+files_modified:
+  - created: scripts/backup-postgres.sh
+  - created: scripts/restore-postgres.sh
+  - created: k8s/base/11-backup-cronjob.yaml
+  - modified: k8s/base/kustomization.yaml
+  - created: docs/operation/postgres-backup-restore.md
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+blockers: []
+learnings: "备份加密密钥原依赖 P0-003 ESO，因 P0-003 取消，改用 Docker .env / K8s Secret 直接管理，方案更简洁。"

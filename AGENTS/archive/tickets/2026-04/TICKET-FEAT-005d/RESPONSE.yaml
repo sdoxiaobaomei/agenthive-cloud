@@ -1,0 +1,29 @@
+ticket_id: TICKET-FEAT-005d
+status: completed
+confidence_score: 0.90
+summary: >-
+  实现了 /projects/:id/settings 项目设置页：基本信息编辑（名称/描述，即时保存）、
+  成员管理卡片（成员列表表格、角色下拉修改、邀请成员弹窗、移除成员确认）、
+  危险操作卡片（归档项目确认弹窗、删除项目二次确认需输入完整项目名称）。
+  权限控制完善：非 owner/admin 隐藏成员管理和危险操作；owner 可改任何角色，
+  admin 只能改 member/viewer；移除权限按角色层级控制。删除操作成功后跳转
+  /projects，归档后项目变为只读状态。
+files_modified:
+  - apps/landing/pages/projects/[id]/settings.vue
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. 删除项目的二次确认要求输入完整项目名称是防止误操作的极佳实践，比单纯的
+     确认弹窗更安全。ElMessageBox.prompt 配合 inputValidator 可实现。
+  2. 角色权限矩阵需要在前端提前拦截：owner > admin > member > viewer，每个
+     层级只能操作下级角色。当前用 computed 属性（isOwner/isAdmin/canChangeRole/
+     canRemoveMember）实现，清晰可维护。
+  3. 成员表格中的角色下拉直接绑定 row.role 并监听 @change 存在风险：API 失败
+     时 UI 已变更。当前通过 catch 后重新 fetchMembers 恢复状态，更 robust 的
+     方式是先调 API 成功后更新本地状态。
+  4. 危险操作区域使用红色边框+浅红背景（border-color: #fecaca; background:
+     #fef2f2）在视觉上有效警示用户，GitHub/GitLab 均采用此模式。

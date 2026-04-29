@@ -1,0 +1,38 @@
+ticket_id: TICKET-FEAT-006b
+title: Monaco 编辑器多 Tab 集成
+type: feature
+priority: P1
+status: approved
+assigned_team: frontend
+role: frontend_dev
+description: >-
+  �?Workspace 页面集成 Monaco Editor，支持多 Tab 打开、语法高亮、编辑器状态管理�?  使用 @monaco-editor/vue �?monaco-editor 直接引入（client-only 动态导入）�?
+acceptance_criteria:
+  - 点击文件树中的文件:在编辑器区域打开�?Tab
+  - Tab 栏:显示文件�?+ 关闭按钮，支�?Tab 切换
+  - 已打开的文件再次点击:切换到对�?Tab，不重复打开
+  - Monaco Editor:根据文件扩展名自动设置 language mode
+  - 支持的语法高亮:ts/js/vue/html/css/json/yaml/md/java/go/python/rust/sql（覆盖常见类型）
+  - 编辑器主题与系统主题一致（light/dark�?
+  - 编辑器配置:minimap 显示、行号、自动括号匹�?
+  - 未选择文件时:显示欢迎页（项目 Logo + 快捷键提示）
+  - Tab 状态持久化:刷新页面后恢复已打开的文件（可选，先实现基础功能�?
+  - SSR 安全�?Monaco 仅在客户端渲染，服务端返回占�?div
+relevant_files:
+  - apps/landing/pages/workspace/[projectId].vue
+  - apps/landing/components/MonacoEditor.vue（新建）
+  - apps/landing/components/FileTreeNode.vue
+constraints:
+  - Monaco 使用动态导入:const MonacoEditor = defineAsyncComponent(() => import('...'))
+  - 单个 Monaco 实例内存占用控制在合理范围（Tab 关闭时销毁编辑器实例�?
+  - 大文件（> 1MB）打开时显示警告并只读（防止卡顿）
+  - 不实�?diff 编辑器（Phase 2 扩展�?
+depends_on:
+  - TICKET-FEAT-006a
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: medium
+security_implications: none

@@ -1,0 +1,21 @@
+ticket_id: TICKET-SEC-001
+status: approved
+title: 'Remove password plaintext leak from login.vue console.log'
+type: security
+priority: P0
+description: >-
+  login.vue contains 13 console.log statements leaking plaintext passwords
+  and sensitive auth data to browser console.
+acceptance_criteria:
+  - Remove all console.log from login.vue
+  - Preserve console.error for error handling
+  - Build passes without new type errors
+relevant_files:
+  - apps/landing/pages/login.vue
+constraints:
+  - Do NOT break login functionality
+  - Do NOT remove console.error
+depends_on: []
+confidence_threshold: 0.85
+risk_assessment: low
+security_implications: critical

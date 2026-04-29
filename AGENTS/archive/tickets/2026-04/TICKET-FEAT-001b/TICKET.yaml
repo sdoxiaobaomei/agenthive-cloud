@@ -1,0 +1,34 @@
+ticket_id: TICKET-FEAT-001b
+title: Project 成员管理 API
+type: feature
+priority: P1
+status: approved
+assigned_team: node
+role: backend_dev
+description: >-
+  实现项目成员管理�?REST API:查询成员列表、邀请成员、更新角色、移除成员�?  权限控制:仅 owner �?admin 可管理成员，viewer 不可被提升为 admin�?
+acceptance_criteria:
+  - GET /api/projects/:id/members 返回成员列表（含 user 基本信息 join�?
+  - POST /api/projects/:id/members 邀请成员（传入 user_id/email + role�?
+  - PATCH /api/projects/:id/members/:userId 更新角色（owner/admin/member/viewer�?
+  - DELETE /api/projects/:id/members/:userId 移除成员
+  - 权限校验:非 owner/admin 调用管理端点返回 403
+  - 每个项目至少保留 1 �?owner，禁止移除最后一�?owner
+  - 成员变动记录到项目活动日志（可先�?logger，后续扩展为 activity_log 表）
+relevant_files:
+  - apps/api/src/project/routes.ts
+  - apps/api/src/project/controller.ts
+  - apps/api/src/project/service.ts
+  - apps/api/src/project/types.ts
+constraints:
+  - 邀请方式先�?user_id（后�?Phase 2 扩展�?email 邀请链接）
+  - 返回数据脱敏:不包含密码哈希等敏感字�?
+depends_on:
+  - TICKET-FEAT-001a
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.9
+risk_assessment: medium
+security_implications: review_required

@@ -1,0 +1,39 @@
+ticket_id: TICKET-FEAT-005a
+title: Project 列表�?/projects
+type: feature
+priority: P1
+status: approved
+assigned_team: frontend
+role: frontend_dev
+description: >-
+  实现 /projects 路由页面，展示项目列表。支持卡�?表格双视图切换、搜索、状态过滤�?  对接 stores/project.ts �?BFF API�?
+acceptance_criteria:
+  - 访问 /projects 显示项目列表页面
+  - 双视图切换:卡片视图（大卡片，含项目图标/名称/描述/成员数）和表格视图（紧凑列表�?
+  - 搜索框:按项目名称实时过�?
+  - 状态过滤:全部 / 活跃 / 归档（tabs 或下拉）
+  - 分页或无限滚动（根据项目数量选择�?
+  - 每个项目卡片显示:名称、描述（截断）、状态标签、成员数、最后更新时�?
+  - 点击项目卡片进入 /projects/:id Dashboard
+  - 页面顶部�?新建项目"按钮，跳转到 /projects/create
+  - SSR 安全，使�?Pinia store 管理状�?
+  - 空状态:无项目时显示引导插画 + "创建第一个项�?按钮
+relevant_files:
+  - apps/landing/pages/projects/index.vue
+  - apps/landing/stores/project.ts
+  - apps/landing/server/api/projects.get.ts
+  - apps/landing/layouts/app.vue
+constraints:
+  - 使用 Element Plus 组件（ElCard/ElTable/ElPagination/ElTag�?
+  - 视觉风格与现�?Chat 页面保持一致（颜色/圆角/阴影�?
+  - 响应式:1280px+ 桌面端为主，不强制适配移动�?
+  - 成员数先使用 store 中的 memberCount（mock 数据），等待 FEAT-001b 真实 API
+depends_on:
+  - TICKET-FEAT-001a
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.9
+risk_assessment: low
+security_implications: none

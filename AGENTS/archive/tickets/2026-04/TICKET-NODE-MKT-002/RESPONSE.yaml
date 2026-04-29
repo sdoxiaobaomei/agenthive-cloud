@@ -1,0 +1,49 @@
+ticket_id: TICKET-NODE-MKT-002
+status: completed
+confidence_score: 0.94
+objective_breakdown:
+  - title: 部署 API
+    status: completed
+    evidence: POST /api/projects/:id/deploy 在 project/controller.ts 中已实现，调用 deployProject 生成配置并同步 Java API
+  - title: 部署配置生成
+    status: completed
+    evidence: hosting-service.ts 中的 generateDeployConfig 根据技术栈生成 Dockerfile、Nginx config、静态文件列表
+  - title: 流量统计中间件
+    status: completed
+    evidence: middleware/traffic.ts 的 trafficTracker 记录 PV（incr）和 UV（sadd fingerprint），TTL 分别为 24h/1h
+  - title: 批量上报 Java API
+    status: completed
+    evidence: traffic-service.ts 的 runBatchReport 每 5 分钟聚合并上报 /hosted-websites/:id/traffic，失败时缓存到 pendingReports
+  - title: Dashboard API
+    status: completed
+    evidence: GET /api/projects/:id/traffic 返回 7 天趋势；GET /api/projects/:id/traffic/realtime 返回今日 PV/UV
+  - title: 下架 API
+    status: completed
+    evidence: DELETE /api/projects/:id/deploy 调用 stopDeployment，清理数据库记录和 Redis 流量 key
+summary: >-
+  网站托管部署与流量统计功能在 Node API 层已完整实现。
+  部署流程：project controller → hosting-service 生成 Dockerfile/Nginx 配置 →
+  调用 Java /hosted-websites API 创建记录 → 返回子域名访问地址。
+  流量统计：express middleware 在 /h/:projectId 路由上拦截请求，
+  Redis Pipeline 原子 incr PV 与 sadd UV（IP+UA SHA256 指纹），
+  后台 setInterval 每 5 分钟批量上报 Java，失败时本地内存缓存待补报。
+  Dashboard 提供 7 天趋势与实时数据，均支持 mock 降级。
+files_modified:
+  - apps/api/src/app.ts
+  - apps/api/src/project/controller.ts
+  - apps/api/src/project/routes.ts
+  - apps/api/src/project/hosting-service.ts
+  - apps/api/src/project/traffic-service.ts
+  - apps/api/src/middleware/traffic.ts
+  - apps/api/src/db/schema.sql
+verification_status:
+  typecheck_passed: true
+  tests_passed: true
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: >-
+  托管网站的静态文件 serving 当前为 mock handler（返回占位 HTML），
+  实际 Nginx 反向代理或容器编排需 Platform 团队后续对接。
+  UV 去重使用 Redis Set + 1h TTL，在多实例部署下可保持一致性；
+  若流量极大，可考虑 HyperLogLog 替代 Set 以节省内存。

@@ -1,0 +1,10 @@
+ticket_id: TICKET-FEAT-002c
+review_decision: APPROVED
+review_score: 0.95
+reviewer: lead
+reviewed_at: '2026-04-27T23:10:00Z'
+issues: []
+notes: >-
+  git status --porcelain 格式解析稳定，10s 超时防 hang 合理。
+  ahead/behind 分别 try/catch 处理无 upstream 分支，返回 null 而非抛错，用户体验友好。
+next_action: none

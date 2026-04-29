@@ -1,0 +1,56 @@
+ticket_id: TICKET-FE-MKT-002-UI-1
+status: completed
+confidence_score: 0.95
+objective_breakdown:
+  creator_dashboard_overview: 1.0
+  earnings_trend_chart: 1.0
+  recent_sales_table: 1.0
+  earnings_detail_page: 1.0
+  date_range_filter: 1.0
+  csv_export: 1.0
+  non_seller_guidance: 1.0
+  dark_mode_support: 1.0
+summary: >-
+  创作者中心首页（/creator）和收益明细页（/creator/earnings）已完成。
+  
+  /creator 页面包含：
+  - 4 个数据概览卡片（在售商品数/总销量/总收益/本月收益），使用 DataCard 组件
+  - 收益趋势图（近 30 天），使用 TrendChart 组件，支持 7D/30D/90D 切换
+  - 最近 5 条销售记录列表，使用 DataTable 组件，展示商品/买家/售价/净收益/时间
+  - 非卖家角色引导页："成为创作者"按钮 + 平台优势说明（80%分成/全球触达/自动交付）
+  
+  /creator/earnings 页面包含：
+  - 销售流水完整列表（时间/商品/买家/售价/平台抽成/实得），使用 DataTable
+  - 日期范围筛选（近 7 天/30 天/90 天/自定义），支持日期选择器
+  - 导出 CSV 按钮，mock 生成并下载 CSV 文件
+  - 汇总卡片（总收益/平台手续费/净收益）
+  
+  所有数据使用 mock 数据（30 条销售记录、6 个在售商品），暗色模式通过 .dark class 支持。
+files_modified:
+  - apps/landing/pages/creator/index.vue
+  - apps/landing/pages/creator/earnings.vue
+  - apps/landing/composables/useMockApi.ts
+  - apps/landing/composables/useMockSales.ts
+  - apps/landing/composables/useMockCredits.ts
+  - apps/landing/composables/useMockTransactions.ts
+  - apps/landing/composables/__tests__/useMockApi.spec.ts
+  - apps/landing/pages/economy-preview.vue
+  - apps/landing/components/economy/DataCard.vue
+  - apps/landing/components/economy/DataTable.vue
+  - apps/landing/components/economy/TrendChart.vue
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. Mock 数据层使用 interface + composable 模式，后端 API 就绪时只需替换实现文件。
+  2. useMockApi.ts 集中定义了 useMockCredits 和 useMockCreator，通过单独文件 re-export 避免 auto-import 冲突。
+  3. DataCard/DataTable/TrendChart 等通用组件已具备良好的暗色模式和响应式支持。
+  4. 创作者中心的非卖家引导页使用 mock 权限切换（MOCK_IS_SELLER），便于测试两种状态。
+skill_candidate:
+  - pattern: Mock API Composable with Interface Contract
+    description: 使用 interface 定义 API 契约，mock composable 实现该契约，后端就绪时无痛替换
+  - pattern: Dual-State Page (Seller vs Non-Seller)
+    description: 同一页面根据权限状态渲染不同内容（仪表盘 vs 引导页）

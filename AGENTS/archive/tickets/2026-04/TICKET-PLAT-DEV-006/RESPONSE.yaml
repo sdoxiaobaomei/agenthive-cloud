@@ -1,0 +1,51 @@
+ticket_id: TICKET-PLAT-DEV-006
+status: completed
+confidence_score: 0.92
+summary: >-
+  Created scripts/config-consistency-check.py to automate alignment checks
+  between docker-compose.dev.yml environment variables and all application
+  configuration files (application-docker.yml, bootstrap.yml, Node API source).
+
+  The script:
+  - Parses docker-compose.dev.yml per service to extract injected env vars
+  - Parses all Java service application-docker.yml + bootstrap.yml for ${VAR} refs
+  - Scans Node API / Landing TypeScript sources for process.env.XXX refs
+  - Detects unused injections, missing required injections, missing optional injections,
+    and variable name mismatches
+  - Validates .env.dev.example coverage for all required variables
+  - Outputs a structured report to stdout and scripts/config-consistency-report.txt
+  - Returns exit codes: 0=all aligned, 1=warnings, 2=errors (CI-friendly)
+
+  Key real-world inconsistencies discovered on first run:
+  - cart-service & logistics-service bootstrap.yml expect NACOS_HOST/NACOS_PORT
+    but docker-compose injects NACOS_SERVER
+  - NACOS_NAMESPACE is missing from docker-compose for 6/7 Java services
+  - auth-service application-docker.yml references 15+ ALIYUN_SMS_* variables
+    but docker-compose only injects ALIYUN_SMS_ENABLED
+  - JWT_SECRET is injected into api service but not consumed by current TS source
+  - 5 required variables missing from .env.dev.example
+
+files_modified:
+  - scripts/config-consistency-check.py
+  - scripts/config-consistency-report.txt
+  - AGENTS/workspace/TICKET-PLAT-DEV-006/RESPONSE.yaml
+
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+
+blockers: []
+
+learnings: >-
+  Spring Boot relaxed binding means many SPRING_* env vars are consumed directly
+  by the framework even when not referenced in application.yml via ${...}.
+  The script differentiates between "unused injection" (no app config reference)
+  and "runtime injection" (consumed by JVM/framework directly) to reduce noise
+  while still catching real mismatches like NACOS_SERVER vs NACOS_HOST.
+
+  For Node/TS services, scanning only process.env.XXX (not ${VAR} template literals)
+  avoids false positives from JS string interpolation. Heuristics for default
+  detection (||, if-conditions, comparisons) keep the optional/required split
+  practical without requiring full AST parsing.

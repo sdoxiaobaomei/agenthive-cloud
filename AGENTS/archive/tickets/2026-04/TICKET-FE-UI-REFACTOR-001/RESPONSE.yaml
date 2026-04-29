@@ -1,0 +1,47 @@
+ticket_id: TICKET-FE-UI-REFACTOR-001
+status: completed
+confidence_score: 0.93
+summary: >-
+  Comprehensive UI refactor of chat page layout, header, and sidebar completed.
+  Key changes: (1) Removed horizontal divider from chat-header — no border-bottom.
+  (2) Removed logo from main header entirely. (3) Created dedicated chat-header
+  (48px height, narrower than previous 64px) with project name on left and
+  Preview/Files/Editor tab buttons in center — inactive buttons are circular
+  icon-only (32px), active buttons are elongated pills with icon+text. (4) Added
+  collapse/expand toggle to chat-sidebar (ChatPanel sidebar). (5) Chat sidebar
+  now syncs with other pages via redesigned left sidebar in layout — Marketplace
+  link is visible and navigable. (6) Sidebar redesigned: Marketplace and Projects
+  are top-level siblings; Projects section is below Marketplace and expandable;
+  "My Projects" button replaces "View all projects"; Recents always visible;
+  projects displayed as large icon avatars (40px) with names; Projects title
+  removed from sidebar and moved to chat-header. (7) Removed project header
+  section (return home / switch project buttons) from chat page — navigation
+  now handled by sidebar. (8) User avatar moved to sidebar bottom footer
+  alongside Home, Notifications, and Settings buttons.
+files_modified:
+  - apps/landing/layouts/chat.vue
+  - apps/landing/pages/chat.vue
+  - apps/landing/stores/chat.ts
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+objective_breakdown:
+  ac: 0.95
+  compile: 1.00
+  tests: 0.85
+  security: 1.00
+  cross_service: 1.00
+  docs: 0.80
+  skill_candidate: 0.85
+learnings: >-
+  The tab-sync between layout and page is cleanly solved by extending the
+  existing Pinia chat store with an activeTab field rather than introducing
+  new provide/inject or URL state. This keeps the architecture domain-driven
+  and avoids prop drilling. The sidebar collapse pattern (width transition +
+  conditional content) works well with Tailwind and scoped CSS. For SSR safety,
+  all window/document access is guarded inside onMounted hooks. A reusable
+  pattern emerged: the circular-to-pill button transition for active states
+  can be extracted as a composable or component in future tickets.

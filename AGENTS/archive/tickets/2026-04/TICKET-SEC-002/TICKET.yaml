@@ -1,0 +1,24 @@
+ticket_id: TICKET-SEC-002
+status: approved
+title: 'Fix auth-service entity serialization and logging leaks'
+type: security
+priority: P0
+description: >-
+  SysUser entity uses @Data which includes password in toString/equals/hashCode.
+  LoginRequest DTOs also leak passwords. MyBatis logs SQL parameters to stdout.
+acceptance_criteria:
+  - Replace @Data with explicit Lombok annotations excluding password
+  - Add @JsonIgnore on password field
+  - Switch MyBatis log-impl from StdOutImpl to Slf4jImpl
+  - Add behavioral tests for serialization exclusion
+relevant_files:
+  - apps/java/auth-service/src/main/java/com/agenthive/auth/domain/entity/SysUser.java
+  - apps/java/auth-service/src/main/java/com/agenthive/auth/service/dto/*.java
+  - apps/java/auth-service/src/main/resources/application.yml
+constraints:
+  - Do NOT break existing auth API contracts
+  - Tests must not require Spring context
+depends_on: []
+confidence_threshold: 0.85
+risk_assessment: medium
+security_implications: critical

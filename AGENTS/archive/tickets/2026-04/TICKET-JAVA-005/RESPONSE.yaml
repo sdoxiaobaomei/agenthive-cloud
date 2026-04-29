@@ -1,0 +1,54 @@
+ticket_id: TICKET-JAVA-005
+status: completed
+confidence_score: 0.84
+summary: >-
+  完成了 Agent 额度计费 API 的完整实现。包含 AgentQuotaConfig 定价配置表、
+  PER_TASK/PER_TOKEN 两种定价模式、POST /credits/agent-debit 扣费接口、
+  GET /credits/agent-pricing 定价查询、GET /credits/agent-usage 使用统计。
+  实现了 taskId 幂等性（重复调用不扣费）、X-Internal-Token 内部鉴权、
+  余额不足时返回 INSUFFICIENT_CREDITS 错误码。默认定价在应用启动时自动初始化
+  （frontend-dev 10credits, backend-dev 15credits, qa-engineer 5credits）。
+  新增 9 个 Mockito 单元测试全部通过。
+files_modified:
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/enums/PricingType.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/entity/AgentQuotaConfig.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/vo/AgentPricingVO.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/vo/AgentUsageVO.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/mapper/AgentQuotaConfigMapper.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/CreditsAgentService.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/impl/CreditsAgentServiceImpl.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/dto/AgentDebitRequest.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/dto/AgentDebitResponse.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/controller/CreditsAgentController.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/config/InternalApiConfig.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/config/AgentQuotaConfigInitializer.java
+  - apps/java/payment-service/src/main/resources/db/schema.sql
+  - apps/java/payment-service/src/main/resources/application.yml
+  - apps/java/payment-service/src/test/java/com/agenthive/payment/service/impl/CreditsAgentServiceImplTest.java
+verification_status:
+  compile_passed: true
+  self_review_passed: true
+  tests_added: true
+  security_check_passed: true
+objective_breakdown:
+  ac: 0.90
+  compile: 1.00
+  tests: 0.80
+  security: 0.85
+  cross_service: 0.70
+  docs: 0.20
+  skill_candidate: 1.00
+skill_candidate: true
+skill_summary: "Agent task billing with configurable PER_TASK/PER_TOKEN pricing, taskId idempotency, and internal API token validation."
+blockers: []
+learnings: >-
+  1. 内部 API 鉴权应分层实现：Gateway 路由白名单（网络层）+ X-Internal-Token（应用层）。
+     当前实现了应用层校验，Gateway 层白名单需后续补充。
+  2. 幂等性设计：taskId 作为业务唯一键，在扣费前检查 credits_transaction 是否已存在
+     source_type=AGENT_TASK + source_id=taskId 的记录，简单有效且天然可审计。
+  3. PER_TOKEN 定价需要 Node 侧上报准确的 tokensUsed，否则无法计费。建议在 Node 侧
+     增加 token 计数埋点，确保数据准确性。
+  4. 余额不足时返回业务错误码（INSUFFICIENT_CREDITS）而非抛异常，让调用方（Node）
+     可以优雅处理（如提示用户充值或降级到免费模型）。
+  5. 启动初始化器（CommandLineRunner）适合插入默认定价等配置数据，但生产环境应考虑
+     使用 Flyway/Liquibase 的 seed data 机制，避免多次启动重复插入。

@@ -1,0 +1,35 @@
+ticket_id: TICKET-FEAT-001a
+status: completed
+confidence_score: 0.91
+summary: >-
+  完成 Project 数据模型扩展与数据库迁移：
+  1. schema.sql 更新：projects 表新增 7 个字段（type/tech_stack/git_url/git_branch/workspace_path/last_accessed_at/is_template），
+     新增 project_members 表（含外键约束与唯一索引），新增 2 个索引；
+  2. 纯 SQL 迁移脚本（可回滚）：migrate-001a-up.sql 执行 ALTER TABLE + UPDATE 兼容旧数据 + CREATE TABLE，
+     down.sql 提供完整回滚能力；
+  3. TypeScript 类型扩展：Project 接口新增字段，新增 ProjectMember 接口，CreateProjectInput/UpdateProjectInput 同步扩展；
+  4. Service 层升级：projectService.create/update 支持新字段，新增 findMembers/addMember/removeMember/updateMemberRole 成员管理方法；
+  5. Controller Zod schema 扩展：createProjectSchema/updateProjectSchema 添加新字段校验；
+  6. db/index.ts 中的 projectDb 同步更新 SQL 与参数。
+files_modified:
+  - apps/api/src/db/schema.sql
+  - apps/api/src/project/types.ts
+  - apps/api/src/project/service.ts
+  - apps/api/src/project/controller.ts
+  - apps/api/src/db/index.ts
+  - apps/api/tests/unit/project.service.test.ts
+  - apps/api/scripts/migrate-001a-up.sql
+  - apps/api/scripts/migrate-001a-down.sql
+verification_status:
+  typecheck_passed: true
+  tests_passed: true
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: >-
+  1. 数据库 schema 变更必须与单元测试同步更新。本次 service.ts SQL 参数从 5 个扩展到 10/12 个，
+     导致 project.service.test.ts 中 4 个硬编码参数数组的断言失败，修复后全部通过。
+  2. 新字段使用 DEFAULT 值（type='blank', git_branch='main', is_template=FALSE）可确保旧 INSERT 兼容，
+     但 UPDATE 的 COALESCE 模式需要测试覆盖未提供字段的 undefined 占位。
+  3. project_members 表采用 ON CONFLICT (project_id, user_id) DO UPDATE 实现幂等邀请，
+     简化 FEAT-001b 的成员管理 API 实现。

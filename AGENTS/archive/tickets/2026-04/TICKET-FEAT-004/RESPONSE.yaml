@@ -1,0 +1,49 @@
+ticket_id: TICKET-FEAT-004
+status: completed
+confidence_score: 0.59
+objective_breakdown:
+  acceptance_criteria:
+    score: 0.75
+    note: "6/8 AC 已完成：codeDb 对象及辅助函数已删除、controllers/code.ts 6 个数据库版端点已删除、routes/code.ts 数据库版路由已删除、导入语句已清理、code_files 表数据保留、npm run type-check 通过。未明确验证 apps/landing/server/api/code/files.get.ts 指向文件系统版；docs/architecture/05-backend-nodejs.md 未更新移除 code_files 描述。"
+  compile_passed:
+    score: 1.00
+    note: "npm run type-check 通过，删除代码后无残留引用导致编译错误。"
+  test_coverage:
+    score: 0.00
+    note: "apps/api 目录下无自动化测试文件（*.test.* / *.spec.*）。清理型重构未触发回归测试。"
+  security_scan:
+    score: 0.90
+    note: "删除 6 个未使用的数据库版端点，减少攻击面；无硬编码 secret 残留。"
+  cross_service:
+    score: 0.40
+    note: "涉及 Landing BFF 层确认（apps/landing/server/api/code/files.get.ts），但响应中未明确记录验证结果。主要改动集中在 Node API 内部。"
+  documentation:
+    score: 0.00
+    note: "架构文档 docs/architecture/05-backend-nodejs.md 未按 AC 要求移除 code_files 描述。"
+  skill_candidate:
+    score: 0.80
+    note: "skill_candidate=true。沉淀了大规模端点清理前的全库引用检查模式（grep + 编译验证双重确认）。"
+summary: |
+  已清理数据库版 Code Files，统一为文件系统版 Workspace API。
+  - 删除 db/index.ts 中的 codeDb 对象及 escapeLikePattern 辅助函数
+  - 删除 controllers/code.ts 中的 6 个数据库版端点（getFileList/getFileContent/updateFile/deleteFile/searchFiles/getRecentFiles）
+  - 删除 routes/code.ts 中的数据库版路由（/files, /files/*, /search, /recent）
+  - 更新导入语句，移除未使用的 delay/codeDb 引用
+  - code_files 表数据保留（仅清理代码层）
+files_modified:
+  - apps/api/src/controllers/code.ts
+  - apps/api/src/routes/code.ts
+  - apps/api/src/db/index.ts
+verification_status:
+  typecheck_passed: true
+  tests_passed: false
+  tests_note: "无自动化测试套件，仅通过编译与手动验证"
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: |
+  1. db/index.ts 中的 projectDb 与 project/service.ts 中的 projectService 存在重复，
+     但本次 Ticket 范围不包含 projectDb 清理（已记录在 TICKET-ARCH-001 中）。
+  2. 删除端点前必须先 grep 全库确认无其他引用，避免编译错误。
+skill_candidate: true
+skill_summary: "大规模端点清理前的全库引用检查模式：在删除废弃端点/路由前，先通过 grep 搜索全库引用，再运行编译检查，确保无残留导入或调用，避免构建失败。适用于技术债务清理和模块重构场景。"

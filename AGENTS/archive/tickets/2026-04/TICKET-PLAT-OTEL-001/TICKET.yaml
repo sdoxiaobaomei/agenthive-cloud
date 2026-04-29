@@ -1,0 +1,42 @@
+ticket_id: TICKET-PLAT-OTEL-001
+status: approved
+title: 'OpenTelemetry unified observability: dev/prod parity'
+type: feature
+priority: P1
+description: >-
+  Current observability gaps:
+  1) Logs: per-service stdout, no aggregation â€?troubleshooting requires
+     docker logs on each container.
+  2) Traces: Gateway has Micrometer but no distributed trace propagation;
+     cross-service call chains are invisible.
+  3) Metrics: Spring Boot Actuator / Prometheus endpoints exist but are not
+     wired to a unified collector in dev.
+
+  Goal: dev and prod use the SAME OTel instrumentation stack, differing only
+  in exporter endpoint (dev â†?local collector, prod â†?centralized backend).
+acceptance_criteria:
+  - Java services (7) auto-instrumented via OTel Java Agent (no code changes)
+  - Node API instrumented via @opentelemetry/sdk-node + auto-instrumentations
+  - Gateway propagates trace context (W3C TraceContext) downstream
+  - Nginx passes traceparent header through to upstream
+  - Dev stack includes OTel Collector + Jaeger/Tempo for trace visualization
+  - Prod profile uses OTLP exporter to centralized backend (configurable)
+  - Log correlation: trace_id injected into all service logs (MDC / pino)
+  - docker-compose.dev.yml updated with otel-collector service
+  - Single Grafana dashboard (or Jaeger UI) showing end-to-end traces in dev
+relevant_files:
+  - docker-compose.dev.yml
+  - apps/java/*/Dockerfile
+  - apps/api/Dockerfile
+  - nginx/nginx.dev.conf
+  - scripts/setup-dev-env.sh
+  - .env.dev.example
+constraints:
+  - Dev and prod instrumentation code must be identical; only exporter config differs
+  - Must not add noticeable latency to dev environment (< 5% overhead acceptable)
+  - Must not require application code changes for Java services (agent-based)
+  - Collector config should support easy switching between Jaeger/Tempo/Cloud
+depends_on: []
+confidence_threshold: 0.85
+risk_assessment: medium
+security_implications: review_required

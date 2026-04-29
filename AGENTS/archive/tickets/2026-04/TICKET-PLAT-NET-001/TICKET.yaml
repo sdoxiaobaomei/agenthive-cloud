@@ -1,0 +1,37 @@
+ticket_id: TICKET-PLAT-NET-001
+status: approved
+title: 'Docker container network optimization for China dev environment'
+type: platform
+priority: P1
+description: >-
+  Dev environment suffers from slow network inside Docker containers:
+  - GitHub downloads fail with EOF (otel agent, raw files)
+  - Maven Central dependency downloads are slow
+  - DNS resolution is unstable (default 8.8.8.8)
+  - WSL2 adds extra NAT layer hurting throughput
+  
+  Goal: implement multi-layer network optimization so builds, image pulls,
+  and external API calls are fast and reliable.
+acceptance_criteria:
+  - Docker registry mirrors configured (daemon.json template or docs)
+  - docker-compose.dev.yml includes DNS config (223.5.5.5, 114.114.114.114)
+  - Maven settings.xml with Aliyun mirror created in apps/java/
+  - OTel Java Agent pre-downloaded locally; Dockerfile uses COPY not ADD
+  - Maven cache volume mounted in docker-compose.dev.yml for Java services
+  - WSL2 .wslconfig template with mirrored networking created
+  - All changes documented in a single setup script or markdown guide
+relevant_files:
+  - docker-compose.dev.yml
+  - apps/java/auth-service/Dockerfile
+  - apps/java/gateway-service/Dockerfile
+  - apps/java/*/Dockerfile
+  - scripts/setup-dev-env.sh
+constraints:
+  - Do NOT break existing docker-compose services
+  - Do NOT commit hardcoded proxy credentials
+  - COPY-based agent approach must work offline after first download
+  - WSL2 config must be a template (user copies to %USERPROFILE%)
+depends_on: []
+confidence_threshold: 0.85
+risk_assessment: low
+security_implications: none

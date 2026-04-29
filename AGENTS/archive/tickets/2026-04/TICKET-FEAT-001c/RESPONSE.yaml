@@ -1,0 +1,30 @@
+ticket_id: TICKET-FEAT-001c
+status: completed
+confidence_score: 0.95
+summary: |
+  Project 创建与 Workspace 自动初始化功能已完成。
+  - blank 类型：按 tech_stack 从模板目录复制骨架到 workspace
+  - git-import 类型：异步 git clone（60s 超时），返回 jobId + status='cloning'
+  - 失败自动回滚（删除 DB 记录 + 清理目录）
+  - 新增 GET /api/projects/:id/clone-status?jobId=xxx 查询进度
+files_modified:
+  - apps/api/src/project/service.ts
+  - apps/api/src/project/controller.ts
+  - apps/api/src/project/routes.ts
+  - apps/api/src/project/types.ts
+  - apps/api/templates/vue/
+  - apps/api/templates/react/
+  - apps/api/templates/node/
+  - apps/api/templates/java/
+verification_status:
+  typecheck_passed: true
+  tests_passed: true
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: |
+  1. logger.error 的第二个参数类型为 Error | undefined，传入普通对象会导致 TS2353。
+     修复方式：new Error(message) 作为第二个参数，上下文放第三个参数。
+  2. fs/promises.cp({ recursive: true, force: false }) 可以安全复制模板目录，
+     force: false 避免意外覆盖已有文件。
+  3. child_process.spawn 的 close 事件比 exit 更可靠（stdout/stderr 已完全关闭）。

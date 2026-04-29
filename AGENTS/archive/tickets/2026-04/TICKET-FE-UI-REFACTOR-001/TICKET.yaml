@@ -1,0 +1,50 @@
+ticket_id: TICKET-FE-UI-REFACTOR-001
+status: approved
+title: 'Chat page UI refactor: header, sidebar, project nav redesign'
+type: feature
+priority: P1
+description: >-
+  Comprehensive UI refactor of the chat page layout, header, and sidebar
+  navigation. The goal is to create a dedicated chat-header, consolidate
+  project navigation, unify sidebar behavior across all pages, and modernize
+  the visual design.
+acceptance_criteria:
+  - "1. Remove horizontal divider/border between main header and page content"
+  - "2. Create dedicated chat-header (narrower than current header):"
+  - "   - Left: project name (replaces logo position)"
+  - "   - Center: appviewer / files / editor buttons"
+  - "   - Buttons: inactive = circular icon only; active = elongated pill with icon + text"
+  - "   - Button size smaller than current"
+  - "3. Remove logo from main header (project name moves to chat-header)"
+  - "4. chat-sidebar supports collapse/expand toggle"
+  - "5. Remove project header section (return home, switch project) â€?sidebar handles this"
+  - "6. Move user avatar to sidebar bottom as sidebar-footer"
+  - "   - sidebar-footer contains: Home, Settings, Notifications buttons"
+  - "7. Chat sidebar syncs with other pages: marketplace and enterprise pages visible"
+  - "8. Sidebar redesign:"
+  - "   - Marketplace and Projects are top-level siblings"
+  - "   - Projects section below Marketplace, expandable project list"
+  - "   - 'View all projects' renamed to 'My Projects' button action"
+  - "   - Recents section always visible (no collapse)"
+  - "   - Projects displayed as large icons, no view-mode toggle"
+  - "   - Projects title removed from sidebar (moved to chat-header)"
+relevant_files:
+  - apps/landing/layouts/app.vue
+  - apps/landing/components/ChatPanel.vue
+  - apps/landing/components/AppSidebar.vue
+  - apps/landing/components/AppHeader.vue
+  - apps/landing/pages/chat.vue
+  - apps/landing/pages/index.vue
+  - apps/landing/stores/project.ts
+constraints:
+  - Use Element Plus components where available
+  - Preserve existing Pinia store logic (project store, auth store)
+  - Maintain responsive behavior (mobile sidebar should still work)
+  - Do NOT break existing routes or page navigation
+  - Icon library: use existing @element-plus/icons-vue
+  - Color scheme: preserve current theme variables
+  - TypeScript strict mode: no new type errors
+depends_on: []
+confidence_threshold: 0.85
+risk_assessment: medium
+security_implications: none

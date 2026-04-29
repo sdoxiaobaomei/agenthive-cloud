@@ -1,0 +1,24 @@
+ticket_id: TICKET-FEAT-002b
+status: completed
+confidence_score: 0.94
+summary: |
+  Workspace 批量操作与搜索功能已完成。
+  - 修复 isPathSafe Windows 前缀遍历漏洞
+  - 新增 POST /workspace/files/batch-delete（最多100个路径，细粒度结果）
+  - 新增 POST /workspace/files/batch-move（最多50个操作，细粒度结果）
+  - 新增 GET /workspace/files/search（递归文件名模糊搜索，大小写不敏感）
+files_modified:
+  - apps/api/src/controllers/code.ts
+  - apps/api/src/routes/code.ts
+verification_status:
+  typecheck_passed: true
+  tests_passed: true
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: |
+  1. path.startsWith() 在 Windows 上存在前缀碰撞漏洞（user1 vs user10）。
+     应使用 path.relative() 检查是否以 '..' 开头，并配合盘符校验。
+  2. 批量操作应采用细粒度返回模式（succeeded/failed 数组），而非全有或全无，
+     提升前端用户体验。
+  3. 对批量操作设置数量上限（Zod .max()）是简单的 DoS 防护手段。

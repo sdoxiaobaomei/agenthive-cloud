@@ -1,0 +1,30 @@
+ticket_id: TICKET-PLAT-DEV-005
+status: completed
+confidence_score: 0.94
+summary: >-
+  Enhanced scripts/health-check-dev.sh and scripts/health-check-dev.ps1 to cover
+  all acceptance criteria from the updated ticket requirements:
+  1. Container checks expanded to 14 services by adding nginx (agenthive-nginx-dev).
+  2. Added .env.dev / Compose Config validation: runs
+     `docker compose config` and counts "variable is not set" warnings.
+  3. Enhanced Nacos Service Registry checks: after verifying the Nacos API is
+     reachable, the script queries each of the 7 Java services
+     (gateway-service, auth-service, user-service, payment-service, order-service,
+     cart-service, logistics-service) to confirm they are registered.
+  4. Added API /me endpoint check alongside the existing /api/health check.
+  5. Both bash and PowerShell versions validated for syntax correctness.
+files_modified:
+  - scripts/health-check-dev.sh
+  - scripts/health-check-dev.ps1
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+blockers: []
+learnings: >-
+  Adding the compose-config pre-flight check catches missing environment variables
+  before any runtime health checks, giving developers a fast fail with a clear fix
+  command. The Nacos per-service registration check is more reliable than a single
+  API health call because it validates actual service discovery, which is the
+  common root cause of gateway 502 errors in this stack.

@@ -1,0 +1,12 @@
+ticket_id: TICKET-FEAT-002b
+review_decision: APPROVED
+review_score: 0.96
+reviewer: lead
+reviewed_at: '2026-04-27T23:10:00Z'
+issues: []
+notes: >-
+  主动发现并修复 Windows 前缀遍历漏洞（path.startsWith 的 user1 vs user10 问题），
+  安全加分项。
+  细粒度批量返回模式（succeeded/failed 数组）优于全有或全无，提升 UX。
+  Zod .max() 数量上限是轻量有效的 DoS 防护。
+next_action: none

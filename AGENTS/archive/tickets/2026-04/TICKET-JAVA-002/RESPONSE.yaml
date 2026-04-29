@@ -1,0 +1,61 @@
+ticket_id: TICKET-JAVA-002
+status: completed
+confidence_score: 0.75
+summary: >-
+  完成了 Marketplace 核心能力：商品发布/搜索/购买/平台抽成。
+  新增 marketplace_product / marketplace_order / marketplace_purchase 三张表，
+  Product API（CRUD + 多维度搜索过滤）、Order API（创建/支付/退款）。
+  支持 Credits 和法币双渠道支付，平台抽成 20%（配置化），
+  交易完成后自动分配 seller_earn 和 platform_fee 到对应 credits 账户，
+  记录购买关系防止重复购买，退款支持幂等性校验。9 个单元测试全部通过（仅 MarketplaceOrderServiceImplTest）。
+files_modified:
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/enums/ProductType.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/enums/MarketplaceProductStatus.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/enums/MarketplaceOrderStatus.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/enums/PayChannel.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/entity/MarketplaceProduct.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/entity/MarketplaceOrder.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/entity/MarketplacePurchase.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/vo/MarketplaceProductVO.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/vo/MarketplaceOrderVO.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/mapper/MarketplaceProductMapper.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/mapper/MarketplaceOrderMapper.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/mapper/MarketplacePurchaseMapper.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/MarketplaceProductService.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/impl/MarketplaceProductServiceImpl.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/MarketplaceOrderService.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/impl/MarketplaceOrderServiceImpl.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/dto/CreateProductRequest.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/dto/ProductQueryRequest.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/dto/CreateOrderRequest.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/controller/MarketplaceProductController.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/controller/MarketplaceOrderController.java
+  - apps/java/payment-service/src/main/resources/db/schema.sql
+  - apps/java/payment-service/src/main/resources/application.yml
+  - apps/java/payment-service/src/test/java/com/agenthive/payment/service/impl/MarketplaceOrderServiceImplTest.java
+verification_status:
+  compile_passed: true
+  self_review_passed: true
+  tests_added: true
+  security_check_passed: true
+objective_breakdown:
+  ac: 0.80
+  compile: 1.00
+  tests: 0.45
+  security: 0.85
+  cross_service: 0.75
+  docs: 0.20
+  skill_candidate: 1.00
+skill_candidate: true
+skill_summary: "Marketplace order lifecycle with dual-channel payment, platform fee distribution, and seller earnings credit."
+blockers: []
+learnings: >-
+  1. 跨模块复用（CreditsAccountService）极大降低了代码复杂度，Marketplace 订单支付只需调用已有 Service，
+     无需重复实现乐观锁和流水记录。
+  2. 平台抽成比例配置化（platform.fee.rate）是必要设计，不同运营阶段可能需要调整抽成比例。
+  3. 购买关系的幂等性检查（buyer_id + product_id UNIQUE）应在 createOrder 时前置校验，
+     避免创建无效订单后再拦截。
+  4. 法币支付的退款实现较为复杂（涉及第三方网关），当前简化版直接返回 credits 等价物，
+     生产环境需接入真实支付网关的退款回调。
+  5. Marketplace 订单与电商订单（order-service）的物理隔离通过独立表 + 独立 Service 实现，
+     避免了状态机混淆，但未来如有统一订单中心需求，可能需要抽象一层。

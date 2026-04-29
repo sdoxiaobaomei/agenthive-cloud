@@ -1,0 +1,33 @@
+ticket_id: TICKET-P0-NEW-001
+title: Docker 日志轮转与磁盘监�?
+type: infrastructure
+priority: P0
+status: approved
+assigned_team: platform
+role: backend_dev
+description: >-
+  配置 Docker 容器日志轮转，防止长期运行后日志占满磁盘导致服务崩溃�?  当前 docker-compose.prod.yml 未配置日志限制，存在磁盘占满风险�?
+acceptance_criteria:
+  - docker-compose.prod.yml 中所有服务添�?logging 配置�?    ```yaml    logging:      driver: "json-file"      options:        max-size: "100m"        max-file: "5"        compress: "true"    ```
+  - docker-compose.dev.yml 同步添加相同配置（防止开发环境磁盘占满）
+  - 验证:启动容器后�?var/lib/docker/containers/<id>/*-json.log 文件大小不超�?100MB
+  - 磁盘监控脚本（scripts/disk-monitor.sh）:    - 检�?Docker 数据目录磁盘使用率（默认 /var/lib/docker�?    - 使用�?> 80% 时发送告警（钉钉 webhook 或邮件）    - 使用�?> 90% 时自动清理已停止容器和未使用镜像（docker system prune -f�?
+  - 文档更新:docs/deployment/docker-logging.md（日志配�?+ 监控 + 清理指南�?
+relevant_files:
+  - docker-compose.prod.yml
+  - docker-compose.dev.yml
+  - docker-compose.demo.yml
+  - scripts/disk-monitor.sh
+constraints:
+  - 日志驱动保持 json-file（与现有 ELK/Loki 收集兼容�?
+  - 单容器日志保�?5×100M = 500M，全部容器（�?15 个）总计�?7.5G，需确保磁盘空间充足
+  - 磁盘监控脚本使用 bash，兼�?Ubuntu/CentOS
+  - 告警 webhook URL 从环境变量读取，�?hardcode
+depends_on: []
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:18:00Z'
+retry_count: 0
+confidence_threshold: 0.9
+risk_assessment: high
+security_implications: none

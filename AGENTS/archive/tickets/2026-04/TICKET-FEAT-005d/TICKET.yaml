@@ -1,0 +1,34 @@
+ticket_id: TICKET-FEAT-005d
+title: Project 设置�?/projects/:id/settings
+type: feature
+priority: P1
+status: approved
+assigned_team: frontend
+role: frontend_dev
+description: >-
+  实现项目设置页面:基本信息编辑、成员管理、归档与删除（二次确认）�?
+acceptance_criteria:
+  - 基本信息卡片:编辑名称、描述，保存后即时更新（调用 patch API�?
+  - 成员管理卡片:成员列表表格（头像/名称/角色/加入时间�?    - owner/admin 显示"邀请成�?按钮（输�?user_id，选择角色�?    - owner/admin 显示"移除"按钮（viewer/member 可被移除，admin �?owner 可移除）    - 角色下拉修改（owner 可改任何角色，admin 只能�?member/viewer�?
+  - 危险操作卡片�?    - 归档项目:确认弹窗，归档后项目变为只�?    - 删除项目:二次确认（输入项目名称确认），删除后跳转到 /projects
+  - 权限控制:非 owner/admin 访问设置页时隐藏成员管理和危险操�?
+  - 所有操作有 loading 状态和错误提示
+relevant_files:
+  - apps/landing/pages/projects/[id]/settings.vue
+  - apps/landing/stores/project.ts
+  - apps/landing/server/api/projects/
+constraints:
+  - 归档/删除的二次确认使�?ElMessageBox
+  - 删除确认要求用户输入完整项目名称（防止误操作�?
+  - 成员邀请的 user_id 输入先不做自动补全（后续优化�?
+  - 权限不足时前端提前拦截，不发送无效请�?
+depends_on:
+  - TICKET-FEAT-005c
+  - TICKET-FEAT-001b
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: medium
+security_implications: review_required

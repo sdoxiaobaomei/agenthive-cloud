@@ -1,0 +1,44 @@
+ticket_id: TICKET-P0-006
+title: Redis 持久化确认与配置完善
+type: infrastructure
+priority: P0
+status: completed
+assigned_team: platform
+role: backend_dev
+description: >-
+  【调整范围】生产环境使用远端 Redis（172.24.146.165），不在 Docker Compose 中。
+  本任务聚焦：确认远端 Redis 持久化配置 + 完善本地开发/演示环境的 Redis 持久化。
+acceptance_criteria:
+  - 确认远端 Redis（172.24.146.165）持久化状态：
+    - 检查 appendonly 是否为 yes（AOF）
+    - 检查 save 配置（RDB 快照）
+    - 确认 appendfsync 为 everysec 或 always
+    - 输出配置检查报告
+  - 如远端 Redis 是阿里云云数据库 Redis 版：
+    - 确认已开启数据持久化（AOF + RDB）
+    - 确认已配置自动备份策略
+    - 记录备份保留周期
+  - 本地 docker-compose.dev.yml 已配置 AOF+RDB，验证生效：
+    - docker exec redis redis-cli CONFIG GET appendonly → 返回 yes
+    - 重启 Redis 容器后数据不丢失（测试：SET key value → 重启 → GET key）
+  - docker-compose.demo.yml 中 Redis 同步添加持久化配置（如缺少）
+  - 文档更新：docs/deployment/redis-persistence.md（配置说明 + 检查命令）
+relevant_files:
+  - docker-compose.dev.yml
+  - docker-compose.demo.yml
+  - .env.prod
+constraints:
+  - 生产远端 Redis 仅做配置确认，不修改远端配置（由 DBA/云厂商管理）
+  - 本地环境修改需验证数据不丢失
+  - 不引入 Redis Sentinel 或 Cluster（Phase 2 内容）
+depends_on: []
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:10:00Z'
+retry_count: 0
+confidence_threshold: 0.9
+risk_assessment: medium
+security_implications: review_required
+notes: >-
+  原范围包含 K8s emptyDir 替换为 PVC，现已删除 K8s 相关内容。
+  远端 Redis 持久化主要由云厂商保障，本任务以确认和文档化为主。

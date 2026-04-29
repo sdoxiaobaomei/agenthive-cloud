@@ -1,0 +1,32 @@
+ticket_id: TICKET-FEAT-006c
+status: completed
+confidence_score: 0.89
+summary: >-
+  实现了 Workspace 文件操作菜单与自动保存：新建 ContextMenu.vue 组件（自定义
+  右键菜单，支持 New File/New Folder/Rename/Copy Path/Delete），集成到文件树
+  节点右键交互。实现了自动保存（debounce 1s）和手动保存（Ctrl+S），保存状态
+  通过 Tab 标题旁的 "●" 指示。同时新增了文件操作 BFF 路由（save.post.ts）和
+  workspace store 的 saveFile action。重命名和删除操作会自动同步已打开的 Tab
+  状态（关闭被删除文件的 Tab，更新被重命名文件的路径）。
+files_modified:
+  - apps/landing/components/ContextMenu.vue
+  - apps/landing/stores/workspace.ts
+  - apps/landing/pages/workspace/[projectId].vue
+  - apps/landing/server/api/code/files/save.post.ts
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. Nuxt server/api 中多层嵌套路由的相对 import 路径容易出错：
+     `server/api/code/files/*.ts` 到 `server/utils/` 是 `../../../`，不是 `../../../../`。
+     两次犯同样错误，应在项目文档中记录 BFF 文件相对路径规则。
+  2. VueUse 的 `useDebounceFn` 非常适合编辑器自动保存场景，1s 延迟既避免频繁
+     请求，又给用户足够的反馈时间。
+  3. 右键菜单使用 Teleport to body 避免被父容器的 overflow hidden 裁剪，同时
+     overlay 层处理点击外部关闭，体验接近原生 context menu。
+  4. 重命名已打开的文件时，需要同步更新 openedFiles 数组中的 path/name，否则
+     Tab 会丢失关联。删除文件时同样需要关闭对应的 Tab。
+  5. 自动保存失败不应阻塞编辑（仅 Toast 提示），这是 IDE 的基本体验要求。

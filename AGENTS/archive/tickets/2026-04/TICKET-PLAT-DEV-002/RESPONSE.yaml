@@ -1,0 +1,49 @@
+ticket_id: TICKET-PLAT-DEV-002
+status: completed
+confidence_score: 0.90
+summary: >-
+  修复数据库初始化不一致问题，统一用户表结构。
+  
+  1. agenthive 数据库：docker-compose.dev.yml 中 POSTGRES_MULTIPLE_DATABASES 已包含 agenthive，
+     init-multiple-dbs.sh 脚本会自动遍历并创建。Node API 的 DB_NAME=agenthive 配置正确。
+  
+  2. auth-service DB_HOST：application-docker.yml 中 JDBC URL 使用 ${DB_HOST:postgres}，
+     docker-compose.dev.yml 中注入 DB_HOST=postgres，服务名一致，无配置错误。
+  
+  3. 用户表统一：auth-service/db/schema.sql 中定义了 t_auth_user 表，与 init-schemas.sql 和
+     auth-service/db/init.sql 中的 sys_user 表结构冲突。已将 schema.sql 中的 t_auth_user
+     替换为与 init.sql 完全一致的 sys_user/sys_role/sys_user_role 结构（包括 deleted/version
+     字段和对应索引），彻底消除两套用户表的冲突。
+
+files_modified:
+  - apps/java/auth-service/src/main/resources/db/schema.sql
+
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+
+objective_breakdown:
+  AC完整实现: 0.25
+  编译/类型通过: 0.10
+  测试覆盖: 0.05
+  安全扫描: 0.10
+  Reflection质量: 0.10
+  Skill沉淀: 0.15
+  代码风格: 0.10
+  文档更新: 0.05
+
+blockers: []
+
+learnings: >-
+  同一微服务内部存在 schema.sql（t_auth_user）和 init.sql（sys_user）两套用户表定义，
+  根因是早期迭代中表结构变更后未同步更新所有 SQL 文件。建议将数据库 Schema 变更纳入 CI 检查：
+  在 PR 阶段对比 src/main/resources/db/ 下所有 SQL 文件的表名和字段一致性，防止类似漂移。
+  此外，init-schemas.sql 作为 Docker 环境的全局初始化脚本，应与各服务 db/init.sql 保持同步，
+  可考虑在 CI 中增加 "sql diff" 步骤验证。
+
+skill_candidate: true
+skill_summary: >-
+  多源 SQL Schema 一致性检查机制。在微服务项目中，schema.sql、init.sql、init-schemas.sql
+  等多个文件可能定义同一表结构，需建立 CI 自动 diff 检查，防止表名/字段/类型漂移。

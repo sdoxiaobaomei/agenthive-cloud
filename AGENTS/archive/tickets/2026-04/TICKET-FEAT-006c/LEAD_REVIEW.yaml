@@ -1,0 +1,17 @@
+ticket_id: TICKET-FEAT-006c
+review_decision: APPROVED
+review_score: 0.92
+reviewer: lead
+reviewed_at: '2026-04-27T23:35:00Z'
+issues:
+  - severity: minor
+    description: >-
+      BFF 文件相对路径两次出错（server/api/code/files/*.ts 到 server/utils/ 是 ../../../）。
+      建议项目文档中记录 BFF 文件相对路径规则，避免后续重复。
+    file: apps/landing/server/api/code/files/
+notes: >-
+  自动保存 debounce 1s 合理，useDebounceFn 使用正确。
+  Teleport to body 避免右键菜单被父容器 overflow hidden 裁剪。
+  重命名/删除同步已打开 Tab 状态的逻辑完整。
+  自动保存失败不阻塞编辑（仅 Toast 提示），符合 IDE 体验标准。
+next_action: none

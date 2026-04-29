@@ -1,0 +1,106 @@
+ticket_id: TICKET-PLAT-OTEL-001
+status: completed
+confidence_score: 0.90
+summary: >-
+  Implemented OpenTelemetry unified observability with dev/prod parity across
+  the entire AgentHive stack. Java services (7) are auto-instrumented via OTel
+  Java Agent v2.6.0 with zero code changes. Node API instrumentation is enabled
+  via existing @opentelemetry/sdk-node. Nginx propagates W3C TraceContext
+  (traceparent/tracestate). Dev stack adds Jaeger all-in-one for trace
+  visualization alongside existing Grafana+Tempo. Prod profile uses configurable
+  OTLP endpoint. Log correlation is achieved via MDC injection (Java) and
+  structured JSON logger (Node). Also fixed pre-existing docker-compose.prod.yml
+  watchtower placement bug.
+
+files_modified:
+  - docker-compose.dev.yml
+  - docker-compose.prod.yml
+  - apps/java/gateway-service/Dockerfile
+  - apps/java/auth-service/Dockerfile
+  - apps/java/user-service/Dockerfile
+  - apps/java/payment-service/Dockerfile
+  - apps/java/order-service/Dockerfile
+  - apps/java/cart-service/Dockerfile
+  - apps/java/logistics-service/Dockerfile
+  - nginx/nginx.dev.conf
+  - nginx/nginx.conf
+  - monitoring/tempo/tempo.yml
+  - monitoring/opentelemetry/otel-collector/otel-collector.yml
+  - scripts/setup-dev-env.sh
+
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+
+blockers: []
+
+learnings: >-
+  1. OTel Java Agent MDC injection (trace_id/span_id) works out-of-the-box for
+     Logback/Log4j2 since v1.32.0. Spring Boot respects LOGGING_PATTERN_CONSOLE
+     env var via relaxed binding, enabling stdout trace correlation without
+     code changes.
+  2. The existing otel-collector.yml already exported to Jaeger, but the Jaeger
+     service was missing from docker-compose. Adding jaegertracing/all-in-one
+     closed this gap with minimal effort.
+  3. Tempo's S3/MinIO backend config was broken in dev (MinIO not present).
+     Switching to backend: local is the correct dev simplification.
+  4. docker-compose.prod.yml had a pre-existing structural bug: watchtower was
+     indented under networks:. Fixing it unblocked prod validation.
+  5. For dev/prod parity, the agent JAR should be baked into Docker images
+     (via ADD in Dockerfile), while activation is controlled via env vars
+     (OTEL_JAVAAGENT_ENABLED, OTEL_EXPORTER_OTLP_ENDPOINT).
+
+objective_breakdown:
+  - metric: AC 完整实现
+    weight: 0.25
+    actual: 9/9 实现
+    score: 0.25
+  - metric: 编译/类型通过
+    weight: 0.10
+    actual: docker-compose.dev.yml config 验证通过 (exit 0)
+    score: 0.10
+  - metric: 测试覆盖
+    weight: 0.15
+    actual: 基础设施变更无单元测试，docker-compose 语法校验通过
+    score: 0.05
+  - metric: 安全扫描
+    weight: 0.10
+    actual: 无硬编码 secret，镜像仍为非 root，agent 通过 HTTPS 下载
+    score: 0.10
+  - metric: Reflection 质量
+    weight: 0.10
+    actual: 完整，包含架构决策、踩坑记录、回滚策略
+    score: 0.10
+  - metric: Skill 沉淀
+    weight: 0.15
+    actual: skill_candidate=true，已沉淀到 .kimi/memory/skills/platform/draft/
+    score: 0.15
+  - metric: 代码风格
+    weight: 0.10
+    actual: 符合团队现有 Dockerfile/docker-compose 风格
+    score: 0.10
+  - metric: 文档更新
+    weight: 0.05
+    actual: setup-dev-env.sh 增加 OTel 使用提示
+    score: 0.05
+
+skill_candidate: true
+skill_summary: >-
+  Pattern: OpenTelemetry Java Agent 零侵入集成到 Spring Boot 3 多服务架构。
+  关键实践：(1) Dockerfile 中使用 ADD 下载 pinned 版本 agent，builder 阶段
+  缓存；(2) ENTRYPOINT 硬编码 -javaagent 路径，通过 OTEL_JAVAAGENT_ENABLED
+  控制开关；(3) 利用 Spring Boot  relaxed binding 通过 env var
+  LOGGING_PATTERN_CONSOLE 注入 trace_id 到 stdout；(4) 统一 OTEL env vars
+  (OTEL_SERVICE_NAME, OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_RESOURCE_ATTRIBUTES)
+  在 docker-compose 中集中管理，实现 dev/prod 仅 endpoint 不同。
+
+rollback_plan: >-
+  1. 回滚 docker-compose.dev.yml: 移除 Jaeger 服务、移除 Java/Node 服务的
+     OTEL env vars、恢复 api 的 OTEL_SDK_DISABLED: "true"。
+  2. 回滚 Java Dockerfiles: 移除 ADD opentelemetry-javaagent.jar 和 ENTRYPOINT
+     中的 -javaagent 参数。
+  3. 回滚 nginx: 移除 traceparent/tracestate proxy_set_header。
+  4. 回滚 monitoring: 恢复 tempo.yml 的 S3 存储配置（如有需要）。
+  5. 所有回滚可在 5 分钟内完成，通过 git revert 或手动替换。

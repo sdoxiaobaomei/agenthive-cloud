@@ -1,0 +1,59 @@
+ticket_id: TICKET-FE-MKT-002-UI-2
+status: completed
+confidence_score: 0.94
+objective_breakdown:
+  product_list_table: 1.0
+  status_filter: 1.0
+  action_buttons_with_confirm: 1.0
+  publish_form: 1.0
+  markdown_preview: 1.0
+  tech_stack_tags: 1.0
+  pricing_fields: 1.0
+  image_upload_preview: 1.0
+  demo_url: 1.0
+  source_project: 1.0
+  publish_redirect: 1.0
+  form_validation: 1.0
+summary: >-
+  创作者中心商品管理页（/creator/products）和发布商品页（/creator/products/new）已完成。
+  
+  /creator/products 页面包含：
+  - 商品列表表格（名称/类型/价格/状态/销量/评分/操作），使用 DataTable 组件
+  - 状态筛选（全部/上架中/已下架），使用 ElRadioGroup
+  - 操作按钮：编辑（mock 提示）、下架/上架（带 ConfirmDialog 确认）、删除（带 ConfirmDialog 确认）
+  - 商品缩略图展示，行点击跳转至 marketplace 详情页
+  
+  /creator/products/new 页面包含：
+  - ProductForm 组件：名称（2-50字必填）、描述（10-2000字必填，支持 Markdown 预览）
+  - 类型选择：Template / Website / Component / Plugin
+  - 技术栈标签输入（Enter 添加，最多 10 个，可删除）
+  - Credits 价格（必填，>0）、法币价格（可选）
+  - 预览图上传：最多 5 张，2MB/张限制，本地 FileReader 预览，拖拽排序
+  - 演示 URL 输入（可选）
+  - 商品来源选择：从 mock project 列表中选择
+  - 表单校验完成后发布，成功后跳转至 marketplace 详情页
+  
+  移除了冲突的 pages/creator/products/index.vue 文件，避免与 pages/creator/products.vue 路由冲突。
+files_modified:
+  - apps/landing/pages/creator/products.vue
+  - apps/landing/pages/creator/products/new.vue
+  - apps/landing/components/creator/ProductForm.vue
+  - apps/landing/composables/useMockProducts.ts
+  - apps/landing/pages/creator/products/index.vue (removed)
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. Element Plus Upload 组件配合 auto-upload=false 和 on-change 可实现纯本地预览，无需后端上传接口。
+  2. 拖拽排序通过 HTML5 drag API 实现，无需额外库。
+  3. Markdown 预览使用 composable 封装渲染逻辑，组件层只需调用 render() 方法。
+  4. 表单数据通过 v-model + reactive + watch 双向同步，避免 prop drilling。
+  5. Nuxt 路由中同时存在 products.vue 和 products/index.vue 会导致冲突，应只保留其一。
+skill_candidate:
+  - pattern: Local Image Upload with Drag Sort
+    description: 纯前端图片上传预览 + 拖拽排序，使用 FileReader + HTML5 Drag API
+  - pattern: Markdown Preview Panel
+    description: 文本输入区 + 实时 Markdown 预览切换，使用 composable 封装渲染

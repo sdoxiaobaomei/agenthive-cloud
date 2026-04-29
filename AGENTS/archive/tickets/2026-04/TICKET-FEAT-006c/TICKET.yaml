@@ -1,0 +1,37 @@
+ticket_id: TICKET-FEAT-006c
+title: 文件操作菜单与自动保�?
+type: feature
+priority: P1
+status: approved
+assigned_team: frontend
+role: frontend_dev
+description: >-
+  �?Workspace 文件树和编辑器增加文件操作能力:右键上下文菜单、自动保存、拖拽移动�?
+acceptance_criteria:
+  - 右键菜单（文件树节点上右键）�?    - 新建文件 / 新建文件夹（在当前目录下�?    - 重命名（就地编辑，回车确认，Esc 取消�?    - 删除（确认弹窗）    - 复制路径
+  - 新建文件/文件夹:弹出输入框，输入名称后调�?API 创建，自动展开父目录并选中新建�?
+  - 重命名:复用 FileTreeNode 已有�?rename 功能，对�?/api/code/workspace/files/rename API
+  - 删除:确认弹窗后调用 API，成功则从文件树移除并关闭对�?Tab（如打开�?
+  - 自动保存:编辑器内容变更�?debounce 1s 自动调用 /api/code/workspace/files/save API
+  - 保存状态指示:Tab 标题旁显�?"�?（未保存）→ 消失（已保存�?
+  - 拖拽移动:文件树节点支持拖拽到文件夹中，调用 /api/code/workspace/files/move API
+  - 键盘快捷键:Ctrl+S 手动保存（与自动保存并存�?
+relevant_files:
+  - apps/landing/components/FileTreeNode.vue
+  - apps/landing/pages/workspace/[projectId].vue
+  - apps/landing/components/MonacoEditor.vue
+constraints:
+  - 右键菜单使用自定�?Vue 组件（不用浏览器原生 contextmenu�?
+  - 自动保存失败时显�?Toast 错误提示，不阻塞编辑
+  - 拖拽移动的视觉反馈:拖拽时目标文件夹高亮，释放后刷新文件�?
+  - 新建文件默认内容为空，新建文件夹为空目录
+depends_on:
+  - TICKET-FEAT-006b
+  - TICKET-FEAT-002a
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: low
+security_implications: none

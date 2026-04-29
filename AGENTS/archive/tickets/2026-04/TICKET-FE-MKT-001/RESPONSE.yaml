@@ -1,0 +1,31 @@
+ticket_id: TICKET-FE-MKT-001
+status: completed
+confidence_score: 0.90
+summary: >-
+  实现了 Marketplace 市场页面：/marketplace 商品列表页（卡片网格布局、分类筛选
+  全部/模板/成品网站/组件、排序 最热/最新/评分/价格、搜索框按名称/标签过滤）和
+  /marketplace/:id 商品详情页（大图预览/缩略图切换、技术栈标签、卖家信息、
+  credits/法币双购买按钮、已购买状态、iframe sandbox 演示预览）。使用 mock 数据
+  填充（6 个示例商品），购买流程对接 mock API，法币支付标记为"coming soon"。
+  同时新建了 marketplace Pinia store（含分类/排序/搜索状态、购买记录持久化），
+  并在 app layout 侧边栏增加了 Marketplace 入口。
+files_modified:
+  - apps/landing/stores/marketplace.ts
+  - apps/landing/pages/marketplace/index.vue
+  - apps/landing/pages/marketplace/[id].vue
+  - apps/landing/layouts/app.vue
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. 商品卡片网格使用 CSS Grid + auto-fill 实现响应式，1280px+ 3-4 列，768px- 单列，
+     无需媒体查询即可自适应。
+  2. iframe sandbox="allow-scripts allow-same-origin" 是展示第三方演示的安全方式，
+     防止恶意脚本影响父页面。
+  3. mock 数据驱动开发是前端先行的有效策略：store 中内置 mockProducts 数组，
+     后端 API 就绪后只需替换 fetch 逻辑，UI 层完全无需改动。
+  4. 购买状态的 localStorage 持久化（purchasedProductIds）让用户刷新后仍能看到
+     已购买标记，提升体验。

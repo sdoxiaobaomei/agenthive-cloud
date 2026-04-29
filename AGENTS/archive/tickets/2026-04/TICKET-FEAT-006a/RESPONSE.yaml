@@ -1,0 +1,31 @@
+ticket_id: TICKET-FEAT-006a
+status: completed
+confidence_score: 0.90
+summary: >-
+  实现了 /workspace/:projectId 路由页面，包含可折叠的左侧文件树面板（250px）
+  和右侧主内容区。文件树对接真实 API（BFF 已增强 path 参数透传），支持
+  展开/折叠、懒加载子目录、文件选中。主内容区在未选中文件时展示欢迎页，
+  选中文件时展示占位预览（Monaco 编辑器在 FEAT-006b 中集成）。同时新建了
+  独立的 workspace Pinia store 管理文件树/选中/展开/侧边栏折叠状态，并在
+  app layout 的项目列表项中增加了 hover 显示的 workspace 入口按钮。
+files_modified:
+  - apps/landing/stores/workspace.ts
+  - apps/landing/server/api/code/files.get.ts
+  - apps/landing/pages/workspace/[projectId].vue
+  - apps/landing/layouts/app.vue
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. Element Plus Icons Vue 中没有 `Code` 图标，使用 `Document` 替代作为 workspace
+     入口按钮图标。后续应建立项目内可用图标清单避免此类问题。
+  2. `<ClientOnly>` 是处理文件树 SSR 兼容性的最佳实践——文件树依赖 DOM 事件
+     和 localStorage，服务端无法渲染。
+  3. 懒加载子目录的实现模式：toggleFolder → 检查 children 是否存在 → 不存在则
+     fetchFiles(path) → store 中 updateNodeChildren 递归更新。此模式可复用于
+     任何树形懒加载场景。
+  4. 独立 workspace store 的决策正确：workspace 与 chat 是不同的业务域，分离后
+     状态更清晰，也便于后续 FEAT-006b/006c/007 的迭代。

@@ -1,0 +1,106 @@
+ticket_id: TICKET-E2E-001
+status: completed
+confidence_score: 0.88
+summary: >-
+  Diagnosed and fixed the dev environment rebuild failure, rebuilt all services,
+  and created automated E2E smoke tests. Root causes: (1) API container failed
+  healthcheck due to missing /data directory permissions in Dockerfile + missing
+  --env-file causing blank REDIS_PASSWORD; (2) landing container never started
+  because it depends_on api condition: service_healthy; (3) docker compose
+  commands were missing --env-file .env.dev, causing hundreds of "variable is
+  not set" warnings; (4) Nacos auth user "agenthive" was missing after container
+  recreation, causing all Java services to crash-loop with "user not found!".
+  
+  Fixes applied:
+  - apps/api/Dockerfile: added `mkdir -p /data && chown appuser:nodejs /data`
+    in production stage to fix EACCES permission denied.
+  - Enforced `--env-file .env.dev` on ALL docker compose commands.
+  - Rebuilt api and landing images.
+  - Rebuilt all 7 Java service images (temporarily patched Dockerfiles to skip
+    OTel agent download due to network EOF failure, then restored originals).
+  - Created Nacos "agenthive" user with ROLE_USER + read/write permissions
+    to restore Java microservice registration.
+  - Created scripts/e2e-smoke-test.sh and scripts/e2e-smoke-test.ps1 with
+    22 automated checks covering container health, login/token/subject/me,
+    landing page, and docker compose variable validation.
+
+files_modified:
+  - apps/api/Dockerfile
+  - scripts/e2e-smoke-test.sh
+  - scripts/e2e-smoke-test.ps1
+
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+
+container_health_status:
+  agenthive-landing-dev: healthy
+  agenthive-nginx-dev: up
+  agenthive-gateway-dev: healthy
+  agenthive-auth-dev: healthy
+  agenthive-user-dev: healthy
+  agenthive-order-dev: healthy
+  agenthive-payment-dev: healthy
+  agenthive-cart-dev: healthy
+  agenthive-logistics-dev: healthy
+  agenthive-api-dev: healthy
+  agenthive-postgres-dev: healthy
+  agenthive-redis-dev: healthy
+  agenthive-rabbitmq-dev: healthy
+  agenthive-nacos-dev: healthy
+
+e2e_test_results:
+  total_checks: 22
+  passed: 22
+  failed: 0
+  script_bash: scripts/e2e-smoke-test.sh
+  script_ps1: scripts/e2e-smoke-test.ps1
+  test_coverage:
+    - container_health: 14/14 passed
+    - api_login: passed (HTTP 200 + token returned)
+    - api_me: passed (HTTP 200 + user data)
+    - token_subject_numeric: passed (subject=2049166941001154562, not UUID)
+    - frontend_landing: passed (HTTP 200)
+    - docker_compose_variables: passed (0 "variable is not set" warnings)
+
+objective_breakdown:
+  version: "1.0"
+  formula: "0.25*ac + 0.15*compile + 0.20*tests + 0.15*security + 0.10*cross_service + 0.05*docs + 0.10*skill_candidate"
+  scores:
+    ac: 0.90
+    compile: 1.00
+    tests: 1.00
+    security: 0.95
+    cross_service: 0.90
+    docs: 0.80
+    skill_candidate: 0.90
+  total: 0.92
+
+blockers:
+  - >-
+    SEC-002 not fully deployed: auth-service JAR (2026/4/27 20:49) predates
+    SEC-002 source changes (2026/4/28 23:09). No Maven/Java build tools
+    available in this environment to recompile. Java services were rebuilt
+    from existing JARs.
+  - >-
+    PLAT-OTEL-001 partially skipped: OpenTelemetry Java Agent v2.6.0 download
+    from GitHub failed with "unexpected EOF" (network issue). Java Dockerfiles
+    were temporarily patched to skip the agent, images rebuilt, then
+    Dockerfiles restored. OTel instrumentation will be available once network
+    allows agent download.
+
+learnings: >-
+  1. Missing `--env-file .env.dev` is a silent killer: it causes blank env vars
+     without failing docker compose config, leading to runtime auth failures.
+     Always include `--env-file` in dev rebuild documentation.
+  2. Non-root containers MUST pre-create any directories they need to write to
+     (like /data/workspaces). The Dockerfile should include mkdir+chown before
+     USER switch.
+  3. Nacos standalone with auth enabled loses its Derby user DB if the
+     container is recreated in certain conditions. Document the need to
+     back up Nacos users or use an external DB for persistence.
+  4. When Java agent downloads fail during build, temporarily patching
+     Dockerfiles (with .bak restore) is a safe way to continue rebuilds
+     without losing infrastructure code changes.

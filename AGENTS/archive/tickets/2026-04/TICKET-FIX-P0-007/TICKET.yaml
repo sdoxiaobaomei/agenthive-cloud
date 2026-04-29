@@ -1,0 +1,30 @@
+ticket_id: TICKET-FIX-P0-007
+status: approved
+title: 'Nginx dev config hardcoded JWT injection causes /me 500'
+type: bugfix
+priority: P0
+description: >-
+  nginx/nginx.dev.conf lines 62 and 78 contain:
+  proxy_set_header Authorization "Bearer <hardcoded-dev-token>";
+  
+  This forcibly overwrites the Authorization header on ALL /api and /socket.io
+  requests, injecting a UUID-subject dev token (sub: 5ab7d370-8900-41a8-a9ca-37dbdcb45b5a)
+  regardless of what the browser sends. Java auth-service expects Long subject IDs,
+  causing NumberFormatException in getCurrentUser().
+  
+  User confirmed clearing browser cache does not resolve the 500.
+acceptance_criteria:
+  - Remove hardcoded proxy_set_header Authorization lines from nginx.dev.conf
+  - Verify /api/auth/login no longer carries injected Authorization header
+  - Verify /api/auth/me uses the token returned by /login (not overwritten)
+  - Login flow works end-to-end: login -> get token -> /me returns 200 with user info
+relevant_files:
+  - nginx/nginx.dev.conf
+constraints:
+  - Do NOT add conditional logic; simply remove the two lines
+  - Do NOT break WebSocket auth; WS should rely on Gateway JwtValidationFilter
+  - Docker compose may need nginx reload or restart after change
+depends_on: []
+confidence_threshold: 0.85
+risk_assessment: low
+security_implications: none

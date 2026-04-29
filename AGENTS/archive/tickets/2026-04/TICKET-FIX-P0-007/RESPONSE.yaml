@@ -1,0 +1,46 @@
+ticket_id: TICKET-FIX-P0-007
+status: completed
+confidence_score: 0.975
+summary: >-
+  Removed two hardcoded `proxy_set_header Authorization "Bearer ..."` lines from
+  nginx/nginx.dev.conf in the `/api` (ex-line 62) and `/socket.io` (ex-line 78)
+  location blocks. All other proxy headers (Host, X-Real-IP, X-Forwarded-For,
+  X-Forwarded-Proto) and WebSocket upgrade headers (Upgrade, Connection) remain
+  untouched. The fix stops nginx from overwriting client-supplied Authorization
+  headers, allowing the Java auth-service to receive the real login token instead
+  of the UUID-subject dev token that caused NumberFormatException.
+
+files_modified:
+  - nginx/nginx.dev.conf
+
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+
+blockers: []
+
+learnings: >-
+  Hardcoding JWT tokens in reverse-proxy configs is an anti-pattern that breaks
+  auth flows and leaks credentials. Dev-environment shortcuts should still route
+  real client headers through to backend services. Gateway-level filters
+  (JwtValidationFilter) are the correct place for auth validation, not nginx
+  header injection.
+
+objective_breakdown:
+  formula: "confidence = 0.25*ac + 0.15*compile + 0.20*tests + 0.15*security + 0.10*cross_service + 0.05*docs + 0.10*skill_candidate"
+  ac: 1.0
+  compile: 1.0
+  tests: 0.9
+  security: 1.0
+  cross_service: 1.0
+  docs: 1.0
+  skill_candidate: 0.95
+  computed: 0.975
+
+skill_candidate:
+  pattern: "nginx-proxy-header-passthrough"
+  description: "Never overwrite Authorization headers in nginx location blocks; pass client headers through to backend auth filters."
+  draft_path: ".kimi/memory/skills/platform/draft/nginx-proxy-header-passthrough.md"
+  rationale: "Reinforces secure reverse-proxy practices and prevents credential leakage / auth bypass in dev environments."

@@ -1,0 +1,63 @@
+ticket_id: TICKET-FE-MKT-003-UI-1
+status: completed
+confidence_score: 0.96
+objective_breakdown:
+  balance_display: 1.0
+  quick_actions: 1.0
+  income_pie_chart: 1.0
+  recent_transactions_preview: 1.0
+  transaction_history_table: 1.0
+  type_filter: 1.0
+  pagination: 1.0
+  type_icon_colors: 1.0
+  balance_counter_animation: 1.0
+  nav_bar_balance_poll: 1.0
+  chat_estimated_cost: 1.0
+  dark_mode_support: 1.0
+summary: >-
+  Credits 中心首页（/credits）和流水明细页（/credits/transactions）已完成。
+  
+  /credits 页面包含：
+  - 余额大数字展示（精确到 4 位小数：1234.5678 credits），带法币换算（≈ ¥123.46）
+  - 余额计数器动画：从 0 滚动到目标值，800ms easeOutCubic
+  - 快捷操作按钮：Recharge / Withdraw / History，点击路由跳转
+  - 收益来源饼图（流量收益/销售收益/充值，近 30 天），使用 PieChart 组件（环形图 + 中心文字）
+  - 最近 5 笔流水预览卡片，显示图标/描述/时间/金额/余额，颜色区分收入(绿)/支出(红)/手续费(灰)
+  - 4 个统计卡片：总收入/总支出/净余额/可用余额
+  
+  /credits/transactions 页面包含：
+  - 完整流水列表，使用 DataTable 组件
+  - 类型筛选（全部/收入/支出），DataTable 表头筛选
+  - 分页加载（每页 10/20/50 条）
+  - 类型图标颜色区分：收入绿色 ↑ / 支出红色 ↓ / 手续费灰色 −
+  
+  全局集成：
+  - layouts/app.vue 顶部导航栏实时轮询 credits 余额（5s 间隔），使用 useMockCredits().refresh()
+  - ChatPanel.vue 发送消息旁显示预估消费提示（~0.5 credits/msg）
+files_modified:
+  - apps/landing/pages/credits/index.vue
+  - apps/landing/pages/credits/transactions.vue
+  - apps/landing/components/economy/PieChart.vue
+  - apps/landing/components/economy/DataTable.vue
+  - apps/landing/components/ChatPanel.vue
+  - apps/landing/layouts/app.vue
+  - apps/landing/composables/useMockApi.ts
+  - apps/landing/composables/useMockCredits.ts
+  - apps/landing/composables/useMockTransactions.ts
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. 余额动画使用 requestAnimationFrame + easeOutCubic，在 onMounted 中触发，onUnmounted 中清理。
+  2. PieChart 组件支持 donut 模式 + 中心文字，暗色模式通过 props.dark 控制配色。
+  3. 顶部导航栏余额轮询使用 setInterval，需在 onUnmounted 中 clearInterval 避免内存泄漏。
+  4. useMockTransactions 封装了分页逻辑，返回 paginatedTransactions + pagination 对象，直接适配 DataTable。
+  5. ChatPanel 的预估消费通过固定文案展示，未来可接入真实计费模型。
+skill_candidate:
+  - pattern: Animated Balance Counter
+    description: requestAnimationFrame 实现数字滚动动画，支持 easeOutCubic 缓动
+  - pattern: NavBar Credit Polling
+    description: 顶部导航栏实时轮询余额，setInterval + onUnmounted 清理

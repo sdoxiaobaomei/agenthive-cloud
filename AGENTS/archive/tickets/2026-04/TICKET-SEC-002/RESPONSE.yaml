@@ -1,0 +1,50 @@
+ticket_id: TICKET-SEC-002
+status: completed
+confidence_score: 0.95
+summary: >-
+  Fixed P0 security vulnerabilities in auth-service:
+  1) SysUser entity — replaced @Data with @Getter/@Setter/@ToString(callSuper=true, exclude="password")/@EqualsAndHashCode
+     and added @JsonIgnore on password to prevent serialization and toString leakage.
+  2) LoginRequest, RegisterRequest, UpdateProfileRequest DTOs — replaced @Data with
+     @Getter/@Setter/@ToString(exclude="password") to prevent password exposure in logs.
+  3) application.yml — switched MyBatis log-impl from StdOutImpl to Slf4jImpl and
+     lowered com.agenthive.auth.mapper log level from debug to warn to stop SQL/parameter
+     leakage to stdout.
+  4) GlobalExceptionHandler — changed SLF4J call to use string concatenation, forcing
+     the error(String, Throwable) overload so stack traces are reliably printed.
+  5) Added SysUserSecurityTest with behavioral assertions for @JsonIgnore serialization
+     exclusion and @ToString.Exclude (via Lombok exclude) toString exclusion.
+files_modified:
+  - apps/java/auth-service/src/main/java/com/agenthive/auth/domain/entity/SysUser.java
+  - apps/java/auth-service/src/main/java/com/agenthive/auth/service/dto/LoginRequest.java
+  - apps/java/auth-service/src/main/java/com/agenthive/auth/service/dto/RegisterRequest.java
+  - apps/java/auth-service/src/main/java/com/agenthive/auth/service/dto/UpdateProfileRequest.java
+  - apps/java/auth-service/src/main/resources/application.yml
+  - apps/java/common/common-web/src/main/java/com/agenthive/common/web/advice/GlobalExceptionHandler.java
+  - apps/java/auth-service/src/test/java/com/agenthive/auth/domain/entity/SysUserSecurityTest.java
+verification_status:
+  compile_passed: true
+  self_review_passed: true
+  tests_added: true
+  security_check_passed: true
+objective_breakdown:
+  version: "1.0"
+  formula: "0.25*ac + 0.15*compile + 0.20*tests + 0.15*security + 0.10*cross_service + 0.05*docs + 0.10*skill_candidate"
+  scores:
+    ac: 1.0
+    compile: 1.0
+    tests: 1.0
+    security: 1.0
+    cross_service: 1.0
+    docs: 0.0
+    skill_candidate: 1.0
+  total: 0.95
+blockers: []
+learnings: >-
+  @Data on entities/DTOs is dangerous for sensitive fields because it includes them
+  in toString/equals/hashCode. Always use explicit Lombok annotations and exclude
+  sensitive fields. For SLF4J, varargs overloads do not guarantee Throwable extraction
+  across all bindings; use string concatenation to force the (String, Throwable) signature
+  when a stack trace is required. Added minimal plain-unit behavioral tests for
+  @JsonIgnore and @ToString.Exclude without requiring a Spring context, avoiding
+  MyBatis mapper initialization issues in test slices.

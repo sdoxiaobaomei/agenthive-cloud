@@ -1,0 +1,65 @@
+ticket_id: TICKET-FE-MKT-003-UI-2
+status: completed
+confidence_score: 0.95
+objective_breakdown:
+  quick_amount_selection: 1.0
+  custom_amount_input: 1.0
+  fiat_price_calculation: 1.0
+  payment_method_selection: 1.0
+  recharge_confirm_flow: 1.0
+  withdrawable_balance_display: 1.0
+  withdraw_amount_input: 1.0
+  fee_realtime_calculation: 1.0
+  account_selection: 1.0
+  account_masking: 1.0
+  withdraw_submission_flow: 1.0
+  withdraw_history_table: 1.0
+  nav_balance_update: 1.0
+summary: >-
+  Credits 充值页（/credits/recharge）和提现页（/credits/withdraw）已完成。
+  
+  /credits/recharge 页面包含：
+  - 快捷金额选择卡片（10/50/100/500/1000 credits），卡片式单选，选中高亮
+  - 自定义金额输入，使用 AmountInput 组件，最小 1 credit
+  - 法币价格实时计算（1 credit = ¥0.1），汇率配置在 composable 中
+  - 支付渠道选择（支付宝/微信支付），卡片式单选
+  - 确认充值：ConfirmDialog → 模拟支付 2s → 成功 Toast + 余额自动更新 + 跳转回 Credits 首页
+  
+  /credits/withdraw 页面包含：
+  - 可提现余额展示（总余额 - 冻结余额），渐变背景卡片
+  - 提现金额输入，使用 AmountInput 组件，最低限额 100 credits
+  - 手续费实时计算（费率 10%），输入 100 显示到账 90
+  - 到账账户选择：支付宝/微信/银行卡，预留扩展位
+  - 账户信息脱敏展示（'支付宝 188****8888'）
+  - 提交申请：ConfirmDialog → 模拟提交 1s → 显示"审核中"状态
+  - 提现记录列表（时间/金额/手续费/到账/状态），使用 DataTable
+  
+  全局集成：
+  - 充值和提现操作后，顶部导航栏余额通过全局 creditsStore 自动更新
+  - 使用 useMockRecharge / useMockWithdraw composables 封装业务逻辑，组件层不直接操作 Store
+files_modified:
+  - apps/landing/pages/credits/recharge.vue
+  - apps/landing/pages/credits/withdraw.vue
+  - apps/landing/components/economy/AmountInput.vue
+  - apps/landing/components/economy/ConfirmDialog.vue
+  - apps/landing/composables/useMockRecharge.ts
+  - apps/landing/composables/useMockWithdraw.ts
+  - apps/landing/stores/credits.ts
+  - apps/landing/layouts/app.vue
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. AmountInput 组件封装了精度控制、法币换算、快捷金额选择，在充值和提现页复用。
+  2. ConfirmDialog 组件支持多种类型（warning/danger/info/primary），loading 状态控制。
+  3. 充值/提现 composables 返回计算属性（fee/netAmount）和方法（recharge/withdraw），组件层纯展示逻辑。
+  4. 支付模拟使用 Promise + setTimeout，真实后端就绪时替换为真实 API 调用即可。
+  5. 账户脱敏通过简单的字符串替换实现，生产环境应由后端返回已脱敏数据。
+skill_candidate:
+  - pattern: AmountInput with Fiat Conversion
+    description: 金额输入组件内置法币实时换算，支持精度控制和快捷金额选择
+  - pattern: Payment Flow Mock
+    description: ConfirmDialog → loading 模拟 → Toast 反馈 → 余额更新 → 页面跳转的完整支付流程

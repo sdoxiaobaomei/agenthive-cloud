@@ -1,0 +1,39 @@
+ticket_id: TICKET-FEAT-001c
+title: Project 创建�?Workspace 初始�?
+type: feature
+priority: P1
+status: approved
+assigned_team: node
+role: backend_dev
+description: >-
+  实现 Project 创建时的 Workspace 自动初始化:  1) 空白项目根据 tech_stack 复制模板文件�?  2) Git 导入异步 clone 仓库�?  3) 失败时自动回滚（删除 DB 记录 + 清理目录）�?
+acceptance_criteria:
+  - POST /api/projects 支持 type=blank|git-import
+  - blank 时根�?tech_stack（vue/react/node/java）从 apps/api/templates/{stack}/ 复制�?workspace
+  - git-import 时异步执�?git clone，返�?{ projectId, jobId, 
+status: 'cloning' }
+  - 提供 GET /api/projects/:id/clone-status?jobId=xxx 查询 clone 进度
+  - clone 失败时:删除 projects 记录、清�?workspace 目录、返回错误详�?
+  - clone 成功时:更新 project.workspace_path �?git_branch
+  - workspace 目录命名规则�?data/workspaces/{userId}/{projectId}
+  - 模板目录初始包含:README.md + 对应技术栈的最小可运行骨架
+relevant_files:
+  - apps/api/src/project/controller.ts
+  - apps/api/src/project/service.ts
+  - apps/api/src/controllers/code.ts
+  - apps/api/src/config/database.js
+constraints:
+  - git clone 使用环境变量 GIT_SSH_KEY �?HTTPS_TOKEN，禁�?hardcode
+  - clone 操作超时 60 秒，超时视为失败
+  - 模板文件总大�?< 1MB，禁止包�?node_modules
+  - 使用 fs/promises 进行目录复制，保持文件权�?
+depends_on:
+  - TICKET-FEAT-001a
+  - TICKET-FEAT-001b
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: high
+security_implications: critical

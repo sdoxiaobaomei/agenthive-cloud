@@ -1,0 +1,17 @@
+ticket_id: TICKET-FEAT-005d
+review_decision: APPROVED
+review_score: 0.94
+reviewer: lead
+reviewed_at: '2026-04-27T23:35:00Z'
+issues:
+  - severity: minor
+    description: >-
+      成员表格角色下拉直接绑定 row.role 并监听 @change，API 失败时 UI 已变更。
+      Agent 已在 learnings 中识别此问题，并通过 catch 后重新 fetchMembers 恢复状态。
+      建议后续优化为先调 API 成功后更新本地状态。
+    file: apps/landing/pages/projects/[id]/settings.vue
+notes: >-
+  删除项目二次确认要求输入完整项目名称，安全实践优秀。
+  角色权限矩阵（owner > admin > member > viewer）在前端提前拦截，清晰可维护。
+  危险操作区域红色边框+浅红背景的视觉警示有效。
+next_action: none

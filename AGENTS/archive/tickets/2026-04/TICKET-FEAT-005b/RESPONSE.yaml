@@ -1,0 +1,29 @@
+ticket_id: TICKET-FEAT-005b
+status: completed
+confidence_score: 0.92
+summary: >-
+  实现了 /projects/create 三步创建向导页面：Step 1 选择创建方式（空白项目/
+  Git 导入卡片），Step 2 配置项目（名称/描述/技术栈选择或 Git URL/分支），
+  Step 3 确认摘要并创建。使用 Element Plus Steps 组件实现向导流程，技术栈
+  选择使用彩色图标卡片，支持表单校验（名称必填 1-128 字符、Git URL 格式校验）。
+  创建成功后自动跳转到 /workspace/:projectId。创建中显示全屏 loading 遮罩。
+  同时扩展了 project store 的 createProject action，支持传递 type/tech_stack/
+  git_url/git_branch 等扩展字段。
+files_modified:
+  - apps/landing/pages/projects/create.vue
+  - apps/landing/stores/project.ts
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. Element Plus Steps 组件与自定义步骤内容配合时，需要用 :active 控制当前
+     步骤，finish-status 控制已完成步骤的视觉状态。
+  2. 表单校验在步骤切换时需要手动触发（formRef.validate()），否则用户可能
+     跳过必填项。nextStep 中先做校验再推进是合理的模式。
+  3. 创建中的全屏 overlay 比按钮 loading 状态体验更好，因为创建过程可能较长
+     （尤其是 Git 导入时）。
+  4. Git URL 的正则校验覆盖了 HTTPS (https://*.git) 和 SSH (git@*:*.git) 两种
+     常见格式，后续可扩展支持更多 Git 托管平台。

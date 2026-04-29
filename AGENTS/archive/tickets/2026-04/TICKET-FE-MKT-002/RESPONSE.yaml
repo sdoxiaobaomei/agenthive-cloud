@@ -1,0 +1,57 @@
+ticket_id: TICKET-FE-MKT-002
+status: completed
+confidence_score: 0.91
+objective_breakdown:
+  - title: 创作者发布商品 API
+    status: completed
+    evidence: CreatorController.publishProduct 接收 PublishProductRequest，校验后调用 CreatorService.publishProduct 入库
+  - title: 创作者管理商品 API
+    status: completed
+    evidence: 提供 PUT /creator/products/{id} 编辑、PUT /creator/products/{id}/status 上下架、DELETE /creator/products/{id} 删除
+  - title: 创作者仪表盘 API
+    status: completed
+    evidence: GET /creator/dashboard 返回在售商品数、总销量、总收益、本月收益
+  - title: 收益明细 API
+    status: completed
+    evidence: GET /creator/earnings 支持日期范围筛选与分页，返回商品/买家/售价/平台抽成/实得
+  - title: 数据库 schema
+    status: completed
+    evidence: t_creator_product 和 t_creator_earning 表已追加到 order-service/resources/db/schema.sql
+summary: >-
+  在 Java order-service 中完整实现了创作者中心后端 API。
+  新增 14 个 Java 源文件，涵盖实体、枚举、VO、DTO、Mapper、Service、Controller 各层。
+  核心接口：
+  - POST /creator/products — 发布商品（支持 template/website/component 类型、credits+法币双定价、预览图、demoUrl、来源 project）
+  - GET /creator/products — 我的商品列表（支持按 status 筛选）
+  - PUT /creator/products/{id} — 编辑商品
+  - PUT /creator/products/{id}/status — 上下架（ACTIVE/INACTIVE）
+  - DELETE /creator/products/{id} — 删除商品
+  - GET /creator/dashboard — 数据概览（在售数/总销量/总收益/本月收益）
+  - GET /creator/earnings — 收益流水（日期范围筛选、分页）
+  所有接口均基于 MyBatis Plus + Spring Boot Validation，返回统一 Result<T> 格式。
+files_modified:
+  - apps/java/order-service/src/main/java/com/agenthive/order/domain/enums/ProductStatus.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/domain/enums/ProductType.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/domain/entity/CreatorProduct.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/domain/entity/CreatorEarning.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/domain/vo/CreatorProductVO.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/domain/vo/CreatorEarningVO.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/domain/vo/CreatorDashboardVO.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/mapper/CreatorProductMapper.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/mapper/CreatorEarningMapper.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/service/CreatorService.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/service/impl/CreatorServiceImpl.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/service/dto/PublishProductRequest.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/service/dto/UpdateProductRequest.java
+  - apps/java/order-service/src/main/java/com/agenthive/order/controller/CreatorController.java
+  - apps/java/order-service/src/main/resources/db/schema.sql
+verification_status:
+  typecheck_passed: true
+  tests_passed: true
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: >-
+  在现有 order-service 中扩展 creator 功能是最快落地的方式，但长期来看建议拆分为独立的 market-service，
+  以遵循单一职责原则。当前实现中 CreatorController 使用 X-User-Id 请求头获取当前用户，
+  需确保 Gateway 层已正确解析并透传该头部。

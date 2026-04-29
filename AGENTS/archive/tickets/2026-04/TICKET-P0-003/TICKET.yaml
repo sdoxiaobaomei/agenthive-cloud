@@ -1,0 +1,17 @@
+ticket_id: TICKET-P0-003
+title: K8s Secrets 迁移 External Secrets Operator
+type: security
+priority: P0
+status: cancelled
+assigned_team: platform
+role: backend_dev
+description: >-
+  【已取消】原计划在 K8s 环境中使用 External Secrets Operator (ESO) 管理 Secret。
+  由于预算限制，K8s 短期内不上线，生产环境采用 Docker Compose 部署。
+  Secret 管理改为 Docker Compose 方案：.env 文件 + 文件权限控制（chmod 600）。
+cancellation_reason: >-
+  预算限制导致 K8s 不上线，ESO 是 K8s 专属组件，在 Docker Compose 环境下无意义。
+  替代方案：.env.prod 文件权限控制 + 不提交 Git + 仅服务器 root 可读。
+  如未来迁移到 K8s，此 Ticket 可重新激活。
+replacement_action: >-
+  参见 TICKET-P0-NEW-001（Docker Compose Secret 管理）和 .env.prod 安全加固。

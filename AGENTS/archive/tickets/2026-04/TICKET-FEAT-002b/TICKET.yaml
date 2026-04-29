@@ -1,0 +1,30 @@
+ticket_id: TICKET-FEAT-002b
+title: Workspace 批量操作与内容搜�?API
+type: feature
+priority: P1
+status: approved
+assigned_team: node
+role: backend_dev
+description: >-
+  实现 Workspace 批量操作（批量删�?移动）和内容搜索 API�?  搜索支持文件名匹配和内容匹配（类�?VS Code �?workspace 搜索）�?
+acceptance_criteria:
+  - POST /api/code/workspace/files/batch 批量操作�?    - action: 'delete' | 'move'    - paths: string[]    - target?: string（move 时目标目录）    - 返回每个路径的操作结果（类似 Promise.allSettled�?
+  - GET /api/code/workspace/files/search?q=keyword&path=.&includeContent=true    - 文件名搜索:不区分大小写，支持部分匹�?    - 内容搜索:递归扫描文本文件，返回匹配行和上下文（前�?行）    - 排除:node_modules/.git/dist/.nuxt/.output    - 搜索结果限制 100 条，超限时返回截断提�?
+  - 搜索性能:workspace < 1000 文件�?< 500ms
+  - 批量操作失败时:已成功的不回滚，返回部分成功结果
+relevant_files:
+  - apps/api/src/controllers/code.ts
+  - apps/api/src/routes/code.ts
+constraints:
+  - 搜索使用 Node.js fs + readline（不引入额外依赖�?ripgrep�?
+  - 二进制文件（图片/pdf/zip）跳过内容搜�?
+  - 批量 move 的目标目录必须存在，不存在时返回错误
+depends_on:
+  - TICKET-FEAT-002a
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: medium
+security_implications: none

@@ -1,0 +1,35 @@
+ticket_id: TICKET-P0-005
+title: PostgreSQL 自动备份策略
+type: infrastructure
+priority: P0
+status: approved
+assigned_team: platform
+role: backend_dev
+description: >-
+  �?PostgreSQL 配置每日自动逻辑备份（pg_dump），  备份文件加密后上传至对象存储（MinIO/S3），保留 7 天�?  提供单库快速恢复脚本�?
+acceptance_criteria:
+  - 每日 02:00 UTC 执行自动备份 CronJob（K8s）或定时任务（Docker�?
+  - 备份文件 gzip 压缩 + 加密（AES-256）后上传对象存储
+  - 保留策略�? 天自动清理旧备份
+  - 恢复脚本可执行:指定日期 �?下载 �?解密 �?恢复至目标数据库
+  - 文档化:备份/恢复操作手册放入 docs/operation/
+relevant_files:
+  - k8s/base/02-postgres.yaml
+  - k8s/base/02-postgres-java.yaml
+  - docker-compose.dev.yml
+  - docker-compose.prod.yml
+  - scripts/backup-postgres.sh
+  - scripts/restore-postgres.sh
+constraints:
+  - 不改动现有数据库 schema
+  - 备份期间对业务影�?< 30s
+  - 优先使用已有 MinIO 作为对象存储后端
+depends_on:
+  - TICKET-P0-003
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T20:38:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: high
+security_implications: review_required

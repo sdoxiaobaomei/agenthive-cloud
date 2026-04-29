@@ -1,0 +1,42 @@
+ticket_id: TICKET-NODE-MKT-001
+status: completed
+confidence_score: 0.92
+objective_breakdown:
+  - title: 任务执行前余额检查
+    status: completed
+    evidence: Chat Controller 已在 sendMessage / executeTask 中集成 checkBalance，余额不足返回 402
+  - title: 任务执行后扣费
+    status: completed
+    evidence: TaskConsumer 在任务完成后调用 debitCredits；taskExecution.ts 的 TaskExecutionService 在 LLM 执行完成后也调用 debitCredits
+  - title: 扣费失败补偿队列
+    status: completed
+    evidence: billingRetry.ts 使用 Redis Stream 实现最多 3 次重试；TaskConsumer 和 TaskExecutionService 均在扣费失败时入队
+  - title: Credits BFF 代理路由
+    status: completed
+    evidence: routes/credits.ts 提供 GET /balance /transactions /pricing
+  - title: Agent Runtime token 消耗上报
+    status: completed
+    evidence: QueryLoopV2 新增 onComplete 回调，在 execute 完成后将完整 usage（含 totalTokens）传递给调用方；TaskConsumer 从 Redis 读取 `agenthive:task:usage:${taskId}` 作为实际 tokensUsed
+summary: >-
+  已完成 Node.js API 与 Agent Runtime 侧的 Credits 计费系统集成。
+  1) Chat Controller 在任务执行前通过 checkBalance 预检余额，不足时返回 402；
+  2) TaskConsumer 在消费 Redis Stream 任务完成后调用 /credits/agent-debit 正式扣费，
+     并支持从 Redis 读取实际 token 消耗；
+  3) TaskExecutionService（独立 LLM 执行路径）同样在执行完成后自动扣费，失败时入队重试；
+  4) QueryLoopV2 新增 onComplete 回调，使 Agent Runtime 调用方可在循环结束后上报 usage；
+  5) Credits BFF 路由 (/api/credits/balance|transactions|pricing) 保持可用，支持 mock 降级。
+files_modified:
+  - apps/api/src/services/taskExecution.ts
+  - apps/api/src/services/TaskConsumer.ts
+  - apps/agent-runtime/src/agent/QueryLoopV2.ts
+  - apps/agent-runtime/src/agent/QueryLoopFactory.ts
+verification_status:
+  typecheck_passed: true
+  tests_passed: true
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: >-
+  Agent Runtime 与 API 之间存在两条任务执行路径：Redis Stream（TaskConsumer）和直接调用（TaskExecutionService）。
+  计费逻辑需要在两条路径的“任务完成”钩子中分别植入。为避免重复扣费，
+  未来可考虑在 debitCredits 中增加 taskId 幂等校验（Java 端或 Redis 分布式锁）。

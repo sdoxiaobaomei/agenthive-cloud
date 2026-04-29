@@ -1,0 +1,23 @@
+ticket_id: TICKET-P0-NEW-001
+status: completed
+confidence_score: 0.95
+summary: >-
+  已完成 Docker 日志轮转与磁盘监控全部配置：
+  1. docker-compose.prod.yml / dev.yml / demo.yml 中全部 50 个服务添加 json-file
+     日志驱动限制（max-size: 100m, max-file: 5, compress: true）；
+  2. 新建 scripts/disk-monitor.sh（磁盘监控 + 80% 告警 + 90% 自动清理）；
+  3. 新建 docs/deployment/docker-logging.md（完整操作指南）。
+files_modified:
+  - modified: docker-compose.prod.yml
+  - modified: docker-compose.dev.yml
+  - modified: docker-compose.demo.yml
+  - created: scripts/disk-monitor.sh
+  - created: docs/deployment/docker-logging.md
+  - modified: docs/deployment/README.md
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+blockers: []
+learnings: "PyYAML 会严重破坏 docker-compose 文件的注释和格式，行级文本处理是更安全的选择。"

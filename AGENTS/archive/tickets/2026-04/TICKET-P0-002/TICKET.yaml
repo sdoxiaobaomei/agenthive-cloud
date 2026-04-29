@@ -1,0 +1,31 @@
+ticket_id: TICKET-P0-002
+title: Node API 结构化日志与敏感信息脱敏
+type: security
+priority: P0
+status: approved
+assigned_team: node
+role: backend_dev
+description: >-
+  �?apps/api 中全�?console.log/console.error 替换�?Pino 结构化日志；  建立脱敏规则，确保数据库连接串、JWT Secret、Redis 密码、LLM API Key 在任何日志级别下均不可见�?  当前 P0-SEC-3 指出 apps/api/src/index.ts 存在敏感连接串打印�?
+acceptance_criteria:
+  - 生产环境 LOG_LEVEL=info 下，日志中不包含任何密码、连接串、Secret、Token
+  - 全局搜索 console.log/console.error/console.warn 数量�?0（除 dev-server 等构建脚本外�?
+  - Pino 配置支持 JSON 输出、日志级别由 env 控制、包�?traceId 字段
+  - 脱敏规则覆盖:pg connection string、redis url、jwt secret、ollama/api keys
+relevant_files:
+  - apps/api/src/index.ts
+  - apps/api/src/services/*.ts
+  - apps/api/src/middleware/*.ts
+  - apps/api/src/chat-controller/*.ts
+  - apps/api/package.json
+constraints:
+  - 保持现有日志语义不变，仅替换输出方式
+  - 不引入新的运行时依赖（pino 已可用）
+depends_on: []
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T20:38:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: medium
+security_implications: review_required

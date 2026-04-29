@@ -1,0 +1,98 @@
+ticket_id: TICKET-PLAT-NET-001
+status: completed
+confidence_score: 0.95
+summary: >-
+  Implemented multi-layer Docker network optimization for China dev environment:
+  replaced GitHub-based OTel agent ADD with local COPY, configured Aliyun Maven
+  mirror, added China DNS servers to all compose services, added shared Maven
+  cache volume for Java services, created WSL2 mirrored-networking template,
+  and documented Docker registry mirror setup.
+files_modified:
+  - docker-compose.dev.yml
+  - apps/java/auth-service/Dockerfile
+  - apps/java/cart-service/Dockerfile
+  - apps/java/gateway-service/Dockerfile
+  - apps/java/logistics-service/Dockerfile
+  - apps/java/order-service/Dockerfile
+  - apps/java/payment-service/Dockerfile
+  - apps/java/user-service/Dockerfile
+  - apps/java/settings.xml
+  - .gitignore
+  - .wslconfig.template
+  - docs/WSL2-NETWORK-SETUP.md
+  - docs/DOCKER-MIRROR-SETUP.md
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+blockers: []
+learnings: >-
+  Pre-downloading build artifacts to a local cache and referencing them via COPY
+  eliminates EOF failures from GitHub inside containers. Keeping the cached jar
+  both in a central .cache/ directory and in each service build context ensures
+  compatibility with existing docker-compose and CI build contexts without
+  requiring risky context-path changes across workflows.
+
+objective_breakdown:
+  - objective: "Docker Compose DNS"
+    status: completed
+    files:
+      - docker-compose.dev.yml
+    detail: >-
+      Added dns: [223.5.5.5, 114.114.114.114] to all 20 services in
+      docker-compose.dev.yml. Verified with `docker compose config` (exit 0).
+
+  - objective: "Maven Aliyun Mirror"
+    status: completed
+    files:
+      - apps/java/settings.xml
+    detail: >-
+      Created apps/java/settings.xml with aliyunmaven mirror pointing to
+      https://maven.aliyun.com/repository/public. Can be mounted or copied
+      to /root/.m2/settings.xml in containers or used on the host.
+
+  - objective: "Pre-download OTel Agent (replace ADD with COPY)"
+    status: completed
+    files:
+      - apps/java/.cache/opentelemetry-javaagent-2.6.0.jar
+      - apps/java/auth-service/Dockerfile
+      - apps/java/cart-service/Dockerfile
+      - apps/java/gateway-service/Dockerfile
+      - apps/java/logistics-service/Dockerfile
+      - apps/java/order-service/Dockerfile
+      - apps/java/payment-service/Dockerfile
+      - apps/java/user-service/Dockerfile
+      - .gitignore
+    detail: >-
+      Downloaded opentelemetry-javaagent-2.6.0.jar from GitHub release to
+      apps/java/.cache/ and copied into each of the 7 Java service directories.
+      Replaced ADD --chmod=644 <github-url> with COPY opentelemetry-javaagent-2.6.0.jar
+      in all 7 Dockerfiles. Added .gitignore entries so jars are not committed.
+
+  - objective: "Maven Cache Volume"
+    status: completed
+    files:
+      - docker-compose.dev.yml
+    detail: >-
+      Added `volumes: - maven-cache:/root/.m2` to all 7 Java services and
+      declared the `maven-cache` named volume in the bottom volumes section.
+
+  - objective: "WSL2 Config Template"
+    status: completed
+    files:
+      - .wslconfig.template
+      - docs/WSL2-NETWORK-SETUP.md
+    detail: >-
+      Created .wslconfig.template with networkingMode=mirrored, dnsTunneling,
+      firewall, autoProxy, memory=8GB, processors=4. Created markdown guide
+      explaining copy-to-%USERPROFILE%, wsl --shutdown, and Docker Desktop restart.
+
+  - objective: "Docker Registry Mirrors Guide"
+    status: completed
+    files:
+      - docs/DOCKER-MIRROR-SETUP.md
+    detail: >-
+      Created docs/DOCKER-MIRROR-SETUP.md with 4 China-based registry mirrors
+      (daocloud, 1panel, rat.dev, USTC) and step-by-step Docker Desktop paste
+      instructions.

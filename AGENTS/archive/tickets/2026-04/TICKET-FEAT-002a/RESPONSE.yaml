@@ -1,0 +1,28 @@
+ticket_id: TICKET-FEAT-002a
+status: completed
+confidence_score: 0.92
+summary: >-
+  补全 Workspace 文件系统 API 的基础操作缺口：
+  1. POST /api/code/workspace/files/mkdir — 创建目录（支持多级，mkdir -p 语义）；
+  2. POST /api/code/workspace/files/rename — 重命名文件或目录（目标存在返回 409）；
+  3. POST /api/code/workspace/files/move — 移动文件或目录到目标路径（跨目录，支持递归子树，目标存在返回 409）；
+  4. POST /api/code/workspace/files/upload — 单/多文件上传（multer memoryStorage，multipart/form-data，最多 5 个文件）；
+  5. GET /api/code/workspace/files/download — 文件下载（Content-Disposition: attachment，stream 传输）；
+  6. 所有操作均通过 isPathSafe 安全检查，禁止跳出 workspace；
+  7. 上传文件白名单：multer fileFilter 拦截 .exe/.bat/.cmd/.sh/.dll/.so，单文件限制 10MB。
+files_modified:
+  - apps/api/src/controllers/code.ts
+  - apps/api/src/routes/code.ts
+  - apps/api/package.json
+verification_status:
+  typecheck_passed: true
+  tests_passed: true
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: >-
+  1. multer 2.x 使用 memoryStorage 配合 writeFile 可直接将上传文件写入目标 workspace，无需磁盘临时文件，
+     简化了清理逻辑，但需注意大文件内存占用（当前单文件 10MB 限制可接受）。
+  2. rename/move 操作使用 Node.js 原生的 fs/promises.rename，天然支持递归移动目录子树，无需手动遍历。
+  3. 下载采用 createReadStream().pipe(res) 而非 readFile + res.send()，避免大文件加载到内存，提升吞吐量。
+  4. 目标存在检查使用 stat + ENOENT 判断，比 existsSync 更符合 async/await 风格。

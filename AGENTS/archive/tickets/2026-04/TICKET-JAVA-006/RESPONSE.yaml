@@ -1,0 +1,46 @@
+ticket_id: TICKET-JAVA-006
+status: completed
+confidence_score: 0.85
+summary: >-
+  实现了流量收益结算定时任务（PV/UV → Credits）。
+  新增 traffic_conversion_config 配置表和对应的实体/Mapper；
+  新增 TrafficSettlementService 处理结算业务逻辑（按日期查询流量记录、计算收益、幂等入账、更新统计）；
+  新增 TrafficSettlementJob 每日凌晨 02:00 触发；
+  PaymentServiceApplication 添加 @EnableScheduling 启用定时任务；
+  schema.sql 追加 t_traffic_conversion_config 表定义。
+  全部 payment-service 测试通过（含 7 个新增结算测试）。
+files_modified:
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/entity/TrafficConversionConfig.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/mapper/TrafficConversionConfigMapper.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/TrafficSettlementService.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/dto/SettlementReport.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/impl/TrafficSettlementServiceImpl.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/job/TrafficSettlementJob.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/PaymentServiceApplication.java
+  - apps/java/payment-service/src/main/resources/db/schema.sql
+  - apps/java/payment-service/src/test/java/com/agenthive/payment/service/impl/TrafficSettlementServiceImplTest.java
+verification_status:
+  compile_passed: true
+  self_review_passed: true
+  tests_added: true
+  tests_passed: true
+  security_check_passed: true
+objective_breakdown:
+  ac: 0.90
+  compile: 1.00
+  tests: 0.80
+  security: 0.90
+  cross_service: 0.70
+  docs: 0.20
+  skill_candidate: 1.00
+skill_candidate: true
+skill_summary: "Daily traffic-to-credits settlement job with per-website idempotency, exception-isolated batch processing, and TransactionTemplate per-user transactions."
+blockers: []
+learnings: >-
+  1. TransactionTemplate 注入优于 PlatformTransactionManager：测试中可直接 mock TransactionTemplate.execute()
+     并让它直接执行 callback，避免与 Spring 事务基础设施的复杂交互。
+  2. Mockito strictness：@BeforeEach 中的通用 stub（如 transactionTemplate）在某些测试路径中可能未被使用，
+     使用 @MockitoSettings(strictness = Strictness.LENIENT) 或把 stub 下放到具体测试可避免 UnnecessaryStubbingException。
+  3. BigDecimal 比较：BigDecimal.ZERO 与 new BigDecimal("0.0000") 不相等，断言时应使用 compareTo。
+  4. 幂等性设计：利用现有 CreditsAccountService.credit() 的 (userId, sourceType, sourceId) 唯一约束，
+     以 websiteId:date 作为 sourceId，无需额外状态字段即可实现同一日期同一网站不重复结算。

@@ -1,0 +1,35 @@
+ticket_id: TICKET-P0-004
+title: Nginx HTTPS 证书配置�?TLS 强制跳转
+type: security
+priority: P0
+status: approved
+assigned_team: platform
+role: backend_dev
+description: >-
+  【简化】用户已在阿里云申请证书，无需 acme.sh/Let's Encrypt�?  只需将阿里云证书下载并配置到 Nginx，启�?HTTPS �?HTTP→HTTPS 强制跳转�?  证书续期由阿里云自动处理，到期前重新下载替换即可�?
+acceptance_criteria:
+  - 阿里云证书下载:    - 从阿里云 SSL 控制台下�?Nginx 格式证书�?pem + .key�?    - 放置�?nginx/ssl/ 目录:agenthive.crt（证书链�? agenthive.key（私钥）    - nginx/ssl/ 目录加入 .gitignore，禁止证书提�?Git
+  - Nginx 配置更新�?    - 监听 443 端口，启�?ssl    - ssl_certificate /etc/nginx/ssl/agenthive.crt    - ssl_certificate_key /etc/nginx/ssl/agenthive.key    - ssl_protocols TLSv1.2 TLSv1.3    - ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256（或现代推荐套件�?    - ssl_prefer_server_ciphers on    - HTTP 80 端口返回 301 强制跳转�?HTTPS    - HSTS 头:add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always
+  - docker-compose.prod.yml �?Nginx 挂载 ssl 目录�?    - ./nginx/ssl:/etc/nginx/ssl:ro
+  - 验证�?    - curl -I http://域名 �?返回 301 Location: https://...    - curl -I https://域名 �?返回 200，证书有�?    - SSL Labs 测试目标 B+ 以上（因阿里云证书通常已满足）
+  - 文档更新:docs/deployment/nginx-https.md（证书替换步骤，每年/每季度执行一次）
+relevant_files:
+  - nginx/nginx.conf
+  - nginx/conf.d/default.conf
+  - docker-compose.prod.yml
+constraints:
+  - 不引�?acme.sh/cert-manager，纯手动证书配置
+  - 证书文件不提�?Git，仅存放在服务器 nginx/ssl/ 目录
+  - .env.prod 中无需证书相关变量（路径硬编码或默认即可）
+  - 如有多域名，配置 server_name 匹配
+  - 证书到期�?30 天提醒（Calendar 提醒或文档标注）
+depends_on: []
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:10:00Z'
+retry_count: 0
+confidence_threshold: 0.95
+risk_assessment: medium
+security_implications: critical
+notes: >-
+  进一步简化:阿里云证书已申请，无需任何自动续期工具�?  工作量从 2 天缩减到 0.5 天（下载证书 + 配置 Nginx + 验证）�?  证书到期前从阿里云控制台重新下载替换即可�?

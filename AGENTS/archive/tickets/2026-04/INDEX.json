@@ -1,0 +1,512 @@
+﻿{
+    "version":  "1.1.0",
+    "total_tickets":  58,
+    "archive_date":  "2026-04-29",
+    "tickets":  [
+                    {
+                        "priority":  "",
+                        "title":  "",
+                        "status":  "",
+                        "id":  "FE-MKT-002",
+                        "type":  ""
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "\u0027Workspace 持久化与架构缺陷修复\u0027",
+                        "status":  "approved",
+                        "id":  "TICKET-ARCH-001",
+                        "type":  "architecture"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "\u0027Rebuild dev environment + automated e2e acceptance\u0027",
+                        "status":  "approved",
+                        "id":  "TICKET-E2E-001",
+                        "type":  "platform"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Project 鏁版嵁妯″瀷鎵╁睍涓庢暟鎹簱杩佺Щ",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-001a",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Project 鎴愬憳绠＄悊 API",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-001b",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Project 鍒涘缓锟?Workspace 鍒濆锟?",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-001c",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Workspace 鐩綍鎿嶄綔涓庢枃浠朵笂浼犱笅锟?API",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-002a",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Workspace 鎵归噺鎿嶄綔涓庡唴瀹规悳锟?API",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-002b",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Workspace Git 鐘舵€佹煡锟?API",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-002c",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P2",
+                        "title":  "Project-Chat-Agent 鍏宠仈涓?Dashboard 鏁版嵁 API锛堝欢鍚庯級",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-003",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "娓呯悊鏁版嵁搴撶増 Code Files 缁熶竴涓烘枃浠剁郴缁熺増",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-004",
+                        "type":  "refactor"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Project 鍒楄〃锟?/projects",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-005a",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Project 鍒涘缓鍚戝 /projects/create",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-005b",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Project Dashboard /projects/:id",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-005c",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Project 璁剧疆锟?/projects/:id/settings",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-005d",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Workspace 椤甸潰楠ㄦ灦涓庢枃浠舵爲 /workspace/:id",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-006a",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Monaco 缂栬緫鍣ㄥ Tab 闆嗘垚",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-006b",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "鏂囦欢鎿嶄綔鑿滃崟涓庤嚜鍔ㄤ繚锟?",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-006c",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P2",
+                        "title":  "Workspace 宸ュ叿鏍忊€斺€擥it 闈㈡澘銆佺粓绔€侀瑙堛€佹悳绱紙寤跺悗锛?",
+                        "status":  "approved",
+                        "id":  "TICKET-FEAT-007",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "甯傚満椤甸潰鈥斺€斿晢鍝佹祻瑙堜笌璐拱",
+                        "status":  "approved",
+                        "id":  "TICKET-FE-MKT-001",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "鍒涗綔鑰呬腑蹇冣€斺€斿彂甯冧笌绠＄悊",
+                        "status":  "approved",
+                        "id":  "TICKET-FE-MKT-002",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "鍒涗綔鑰呬腑蹇?UI 鍘熷瀷鈥斺€旈椤?+ 鏀剁泭鏄庣粏",
+                        "status":  "approved",
+                        "id":  "TICKET-FE-MKT-002-UI-1",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "鍒涗綔鑰呬腑蹇?UI 鍘熷瀷鈥斺€斿晢鍝佺鐞?+ 鍙戝竷鍟嗗搧",
+                        "status":  "approved",
+                        "id":  "TICKET-FE-MKT-002-UI-2",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Credits 涓績鈥斺€斾綑棰濄€佹祦姘淬€佸厖鍊间笌鎻愮幇",
+                        "status":  "approved",
+                        "id":  "TICKET-FE-MKT-003",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Credits 涓績 UI 鍘熷瀷鈥斺€旈椤?+ 娴佹按鏄庣粏",
+                        "status":  "approved",
+                        "id":  "TICKET-FE-MKT-003-UI-1",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Credits 涓績 UI 鍘熷瀷鈥斺€斿厖鍊?+ 鎻愮幇",
+                        "status":  "approved",
+                        "id":  "TICKET-FE-MKT-003-UI-2",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "缁忔祹绯荤粺鍏变韩 UI 鍩虹璁炬柦鈥斺€擬ock 鏁版嵁灞?+ 閫氱敤缁勪欢",
+                        "status":  "approved",
+                        "id":  "TICKET-FE-MKT-UI-INFRA",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "\u0027Chat page UI refactor: header, sidebar, project nav redesign\u0027",
+                        "status":  "approved",
+                        "id":  "TICKET-FE-UI-REFACTOR-001",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "鎭㈠ docker-compose.dev.yml Redis 鎸佷箙鍖栧畬鏁撮厤缃?",
+                        "status":  "approved",
+                        "id":  "TICKET-FIX-P0-006",
+                        "type":  "fix"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "\u0027Nginx dev config hardcoded JWT injection causes /me 500\u0027",
+                        "status":  "approved",
+                        "id":  "TICKET-FIX-P0-007",
+                        "type":  "bugfix"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Credits 璐︽埛涓庝氦鏄撴祦姘寸郴缁?",
+                        "status":  "approved",
+                        "id":  "TICKET-JAVA-001",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "甯傚満鍟嗗搧涓庝氦鏄撴牳蹇?",
+                        "status":  "approved",
+                        "id":  "TICKET-JAVA-002",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "缃戠珯鎵樼涓庢祦閲忕粺璁″熀纭€",
+                        "status":  "approved",
+                        "id":  "TICKET-JAVA-003",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Credits 鎻愮幇涓庢墜缁垂绯荤粺",
+                        "status":  "approved",
+                        "id":  "TICKET-JAVA-004",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Agent 棰濆害璁¤垂 API",
+                        "status":  "approved",
+                        "id":  "TICKET-JAVA-005",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "娴侀噺鏀剁泭缁撶畻瀹氭椂浠诲姟",
+                        "status":  "approved",
+                        "id":  "TICKET-JAVA-006",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Agent 浠诲姟璁¤垂涓庝綑棰濇鏌ラ泦鎴?",
+                        "status":  "approved",
+                        "id":  "TICKET-NODE-MKT-001",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "缃戠珯鎵樼閮ㄧ讲涓庢祦閲忕粺璁′笂鎶?",
+                        "status":  "approved",
+                        "id":  "TICKET-NODE-MKT-002",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "Java 榛樿瀵嗙爜 Fallback 褰诲簳娓呯悊",
+                        "status":  "approved",
+                        "id":  "TICKET-P0-001",
+                        "type":  "security"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "Node API 缁撴瀯鍖栨棩蹇椾笌鏁忔劅淇℃伅鑴辨晱",
+                        "status":  "approved",
+                        "id":  "TICKET-P0-002",
+                        "type":  "security"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "K8s Secrets 杩佺Щ External Secrets Operator",
+                        "status":  "cancelled",
+                        "id":  "TICKET-P0-003",
+                        "type":  "security"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "Nginx HTTPS 璇佷功閰嶇疆锟?TLS 寮哄埗璺宠浆",
+                        "status":  "approved",
+                        "id":  "TICKET-P0-004",
+                        "type":  "security"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "PostgreSQL 鑷姩澶囦唤绛栫暐",
+                        "status":  "approved",
+                        "id":  "TICKET-P0-005",
+                        "type":  "infrastructure"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "Redis 鎸佷箙鍖栫‘璁や笌閰嶇疆瀹屽杽",
+                        "status":  "completed",
+                        "id":  "TICKET-P0-006",
+                        "type":  "infrastructure"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "Gateway CORS 鐢熶骇鐜绮剧‘ Origin 楠岃瘉",
+                        "status":  "approved",
+                        "id":  "TICKET-P0-007",
+                        "type":  "security"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "\"Dev 鐜 Docker Compose 閮ㄧ讲鏁呴殰锛?椤归厤缃敊璇鑷存湇鍔″惎鍔ㄥけ璐?",
+                        "status":  "approved",
+                        "id":  "TICKET-P0-DEV-001",
+                        "type":  ""
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "Docker 鏃ュ織杞浆涓庣鐩樼洃锟?",
+                        "status":  "approved",
+                        "id":  "TICKET-P0-NEW-001",
+                        "type":  "infrastructure"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Watchtower 鑷姩闀滃儚鏇存柊",
+                        "status":  "approved",
+                        "id":  "TICKET-P0-NEW-002",
+                        "type":  "infrastructure"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "淇 Nacos 鍑嵁涓嶄竴鑷?+ 鍚敤鏈嶅姟鍙戠幇",
+                        "status":  "approved",
+                        "id":  "TICKET-PLAT-DEV-001",
+                        "type":  "fix"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "淇鏁版嵁搴撳垵濮嬪寲锛歂ode DB + 缁熶竴鐢ㄦ埛琛?+ auth DB 涓绘満",
+                        "status":  "approved",
+                        "id":  "TICKET-PLAT-DEV-002",
+                        "type":  "fix"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "缁熶竴 JWT Secret + .env.dev 瀹屾暣鎬ф鏌?",
+                        "status":  "approved",
+                        "id":  "TICKET-PLAT-DEV-003",
+                        "type":  "infrastructure"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "鏁忔劅淇℃伅澶栬縼锛歂acos token/identity 绉诲叆 .env.dev",
+                        "status":  "approved",
+                        "id":  "TICKET-PLAT-DEV-004",
+                        "type":  "fix"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "Dev 鐜鍚姩鍋ュ悍妫€鏌ヨ剼鏈?",
+                        "status":  "approved",
+                        "id":  "TICKET-PLAT-DEV-005",
+                        "type":  "infrastructure"
+                    },
+                    {
+                        "priority":  "P2",
+                        "title":  "閰嶇疆涓€鑷存€ч棬绂侊細docker-compose 鈫?application.yml 鍙橀噺瀵归綈妫€鏌?",
+                        "status":  "completed",
+                        "id":  "TICKET-PLAT-DEV-006",
+                        "type":  "infrastructure"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "\u0027Docker container network optimization for China dev environment\u0027",
+                        "status":  "approved",
+                        "id":  "TICKET-PLAT-NET-001",
+                        "type":  "platform"
+                    },
+                    {
+                        "priority":  "P1",
+                        "title":  "\u0027OpenTelemetry unified observability: dev/prod parity\u0027",
+                        "status":  "approved",
+                        "id":  "TICKET-PLAT-OTEL-001",
+                        "type":  "feature"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "\u0027Remove password plaintext leak from login.vue console.log\u0027",
+                        "status":  "approved",
+                        "id":  "TICKET-SEC-001",
+                        "type":  "security"
+                    },
+                    {
+                        "priority":  "P0",
+                        "title":  "\u0027Fix auth-service entity serialization and logging leaks\u0027",
+                        "status":  "approved",
+                        "id":  "TICKET-SEC-002",
+                        "type":  "security"
+                    }
+                ],
+    "feature_groups":  {
+                           "Observability":  {
+                                                 "count":  1,
+                                                 "tickets":  [
+                                                                 "TICKET-PLAT-OTEL-001"
+                                                             ]
+                                             },
+                           "Marketplace \u0026 Economy":  {
+                                                              "count":  16,
+                                                              "tickets":  [
+                                                                              "TICKET-FE-MKT-001",
+                                                                              "TICKET-FE-MKT-002",
+                                                                              "TICKET-FE-MKT-002-UI-1",
+                                                                              "TICKET-FE-MKT-002-UI-2",
+                                                                              "TICKET-FE-MKT-003",
+                                                                              "TICKET-FE-MKT-003-UI-1",
+                                                                              "TICKET-FE-MKT-003-UI-2",
+                                                                              "TICKET-FE-MKT-UI-INFRA",
+                                                                              "TICKET-JAVA-001",
+                                                                              "TICKET-JAVA-002",
+                                                                              "TICKET-JAVA-003",
+                                                                              "TICKET-JAVA-004",
+                                                                              "TICKET-JAVA-005",
+                                                                              "TICKET-JAVA-006",
+                                                                              "TICKET-NODE-MKT-001",
+                                                                              "TICKET-NODE-MKT-002"
+                                                                          ]
+                                                          },
+                           "Security":  {
+                                            "count":  7,
+                                            "tickets":  [
+                                                            "TICKET-P0-001",
+                                                            "TICKET-P0-002",
+                                                            "TICKET-P0-003",
+                                                            "TICKET-P0-004",
+                                                            "TICKET-P0-007",
+                                                            "TICKET-SEC-001",
+                                                            "TICKET-SEC-002"
+                                                        ]
+                                        },
+                           "Infrastructure":  {
+                                                  "count":  14,
+                                                  "tickets":  [
+                                                                  "TICKET-E2E-001",
+                                                                  "TICKET-FIX-P0-006",
+                                                                  "TICKET-FIX-P0-007",
+                                                                  "TICKET-P0-005",
+                                                                  "TICKET-P0-006",
+                                                                  "TICKET-P0-NEW-001",
+                                                                  "TICKET-P0-NEW-002",
+                                                                  "TICKET-PLAT-DEV-001",
+                                                                  "TICKET-PLAT-DEV-002",
+                                                                  "TICKET-PLAT-DEV-003",
+                                                                  "TICKET-PLAT-DEV-004",
+                                                                  "TICKET-PLAT-DEV-005",
+                                                                  "TICKET-PLAT-DEV-006",
+                                                                  "TICKET-PLAT-NET-001"
+                                                              ]
+                                              },
+                           "Agent System":  {
+                                                "count":  2,
+                                                "tickets":  [
+                                                                "FE-MKT-002",
+                                                                "TICKET-P0-DEV-001"
+                                                            ]
+                                            },
+                           "Project \u0026 Workspace":  {
+                                                            "count":  18,
+                                                            "tickets":  [
+                                                                            "TICKET-ARCH-001",
+                                                                            "TICKET-FEAT-001a",
+                                                                            "TICKET-FEAT-001b",
+                                                                            "TICKET-FEAT-001c",
+                                                                            "TICKET-FEAT-002a",
+                                                                            "TICKET-FEAT-002b",
+                                                                            "TICKET-FEAT-002c",
+                                                                            "TICKET-FEAT-003",
+                                                                            "TICKET-FEAT-004",
+                                                                            "TICKET-FEAT-005a",
+                                                                            "TICKET-FEAT-005b",
+                                                                            "TICKET-FEAT-005c",
+                                                                            "TICKET-FEAT-005d",
+                                                                            "TICKET-FEAT-006a",
+                                                                            "TICKET-FEAT-006b",
+                                                                            "TICKET-FEAT-006c",
+                                                                            "TICKET-FEAT-007",
+                                                                            "TICKET-FE-UI-REFACTOR-001"
+                                                                        ]
+                                                        }
+                       },
+    "commits":  [
+                    "security(*): harden auth, logging, CORS, HTTPS and secrets management",
+                    "infra(*): Docker, K8s, CI/CD, backup, monitoring and dev environment",
+                    "feat(observability): unified OpenTelemetry tracing and metrics",
+                    "feat(project): Project \u0026 Workspace core — models, API, UI, file system",
+                    "feat(marketplace): Economy system — credits, marketplace, creator center, hosting",
+                    "chore(agents): Agent system configs, memory maintenance, skills and workflows",
+                    "chore(cleanup): remove temp files, build artifacts and update .gitignore"
+                ]
+}

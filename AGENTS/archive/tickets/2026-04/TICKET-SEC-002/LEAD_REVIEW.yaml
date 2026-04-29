@@ -1,0 +1,12 @@
+ticket_id: TICKET-SEC-002
+review_decision: approved
+review_score: 0.95
+issues: []
+next_action: none
+reviewed_by: lead
+reviewed_at: "2025-04-28T23:55:00+08:00"
+comments: >-
+  Revision accepted. SysUserSecurityTest uses plain JUnit 5 + ObjectMapper,
+  avoiding Spring context overhead. Tests verify both @JsonIgnore serialization
+  exclusion and @ToString.Exclude toString exclusion. Objective breakdown
+  recalculated correctly: 0.95 (docs=0.0 is honest — no doc updates were made).

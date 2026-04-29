@@ -1,0 +1,23 @@
+ticket_id: TICKET-P0-NEW-002
+status: completed
+confidence_score: 0.94
+summary: >-
+  已完成 Watchtower 自动镜像更新全部配置：
+  1. docker-compose.prod.yml 新增 watchtower 服务（5 分钟轮询、label 过滤、
+     webhook 通知、自动清理旧镜像）；
+  2. 9 个业务服务（api/landing/java-*）添加 com.centurylinklabs.watchtower.enable=true
+     label，允许自动更新；
+  3. 基础设施服务（nginx/nacos/rabbitmq/监控栈）未添加 label，避免自动重启；
+  4. 新建 docs/deployment/watchtower.md（配置说明 + 测试验证 + 故障排查）。
+  人工待办：配置 WATCHTOWER_WEBHOOK_URL 环境变量后启动 watchtower 服务。
+files_modified:
+  - modified: docker-compose.prod.yml
+  - created: docs/deployment/watchtower.md
+  - modified: docs/deployment/README.md
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+blockers: []
+learnings: "Watchtower 的 label-enable 模式是生产环境最佳实践，可精确控制哪些容器允许自动更新，避免数据库/消息队列等核心服务被意外重启。"

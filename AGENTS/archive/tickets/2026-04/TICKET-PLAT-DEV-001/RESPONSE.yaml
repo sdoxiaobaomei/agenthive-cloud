@@ -1,0 +1,53 @@
+ticket_id: TICKET-PLAT-DEV-001
+status: completed
+confidence_score: 0.90
+summary: >-
+  修复 Nacos 凭据不一致并启用服务发现路由。
+  
+  1. Gateway 路由修复：将 gateway-service 的 application-docker.yml 中所有 Java 微服务路由
+     从硬编码 http://service:port 改为 lb://service，使 Gateway 通过 Nacos 服务发现进行负载均衡转发。
+     修改的路由包括：auth-service, user-service, payment-service, order-service, cart-service, logistics-service。
+     Node API 路由保持 http://api:3001（Node 服务未注册到 Nacos）。
+  
+  2. bootstrap.yml 对齐：cart-service 和 logistics-service 的 bootstrap.yml 使用 ${NACOS_HOST}:${NACOS_PORT}
+     而其他服务和 docker-compose 均使用 ${NACOS_SERVER}，导致这两个服务在 Dev 环境无法正确连接 Nacos。
+     已统一为 ${NACOS_SERVER:localhost:8848} 并补充 spring.application.name，与其他 5 个服务结构完全一致。
+  
+  3. 凭据验证：docker-compose.dev.yml 中所有 7 个 Java 服务的 Nacos 凭据已统一为
+     username=agenthive / password=${NACOS_PASSWORD}，.env.dev 中 NACOS_PASSWORD=agenthive-secret-2024
+     与 Nacos 容器的 NACOS_AUTH_IDENTITY_VALUE 一致。所有 application-docker.yml 中 discovery.enabled=true。
+
+files_modified:
+  - apps/java/gateway-service/src/main/resources/application-docker.yml
+  - apps/java/cart-service/src/main/resources/bootstrap.yml
+  - apps/java/logistics-service/src/main/resources/bootstrap.yml
+
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+
+objective_breakdown:
+  AC完整实现: 0.25
+  编译/类型通过: 0.10
+  测试覆盖: 0.05
+  安全扫描: 0.10
+  Reflection质量: 0.10
+  Skill沉淀: 0.15
+  代码风格: 0.10
+  文档更新: 0.05
+
+blockers: []
+
+learnings: >-
+  cart-service 和 logistics-service 的 bootstrap.yml 使用了与其他服务不同的环境变量名（NACOS_HOST/NACOS_PORT
+  vs NACOS_SERVER），这种细微差异在代码审查中极易被忽略，但会导致服务完全无法连接到 Nacos。
+  建议建立 bootstrap.yml 模板化机制，所有 Java 服务共享同一份基础配置模板，通过 Kustomize 或 Maven
+  资源过滤注入差异，避免同类漂移。
+
+skill_candidate: true
+skill_summary: >-
+  Spring Cloud Nacos bootstrap.yml 标准化模板 + Gateway lb:// 路由范式。
+  踩坑点：不同服务的 bootstrap.yml 若使用不同环境变量名（NACOS_HOST vs NACOS_SERVER），
+  即使 docker-compose 中已注入正确值，服务仍会连接失败（回退到 localhost:8848）。

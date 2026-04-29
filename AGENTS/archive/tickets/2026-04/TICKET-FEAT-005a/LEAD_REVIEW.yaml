@@ -1,0 +1,11 @@
+ticket_id: TICKET-FEAT-005a
+review_decision: APPROVED
+review_score: 0.94
+reviewer: lead
+reviewed_at: '2026-04-27T23:35:00Z'
+issues: []
+notes: >-
+  双视图切换（卡片/表格）+ 实时搜索 + 状态过滤 + 前端分页，功能完整。
+  Pinia store 视图/过滤/分页状态管理清晰，BFF query 透传设计正确。
+  mock/过滤 的降级策略保证 API 未就绪时的体验。
+next_action: none

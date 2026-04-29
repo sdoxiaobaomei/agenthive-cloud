@@ -1,0 +1,47 @@
+ticket_id: TICKET-FE-MKT-UI-INFRA
+status: completed
+confidence_score: 0.78
+summary: >-
+  经济系统共享 UI 基础设施已完成。创建了统一的 Mock API 层(composables/useMockApi.ts)，
+  提供 useMockCredits() 和 useMockCreator() 两个 composable，返回响应式 ref 数据。
+  创建了 6 个通用 Vue 组件: DataCard(数据卡片+趋势指示)、TrendChart(ECharts 折线图+7/30/90天切换)、
+  PieChart(ECharts 环形饼图+中心文字)、DataTable(Element Plus el-table 封装+分页)、
+  AmountInput(金额输入+法币换算+快捷金额)、ConfirmDialog(二次确认弹窗)。
+  所有组件支持暗色模式。创建了 economy-preview.vue 预览页面展示全部组件。
+  类型定义(types/economy.ts)已存在且覆盖完整，无需新建。
+  修复了 4 个类型错误: DataTable 泛型默认类型改为 Record<string, any> 以兼容接口数组，
+  size prop 类型扩展为匹配 Element Plus ComponentSize，移除了 economy-preview.vue 中无效的 as 类型断言。
+files_modified:
+  - apps/landing/types/economy.ts
+  - apps/landing/composables/useMockApi.ts
+  - apps/landing/components/economy/DataCard.vue
+  - apps/landing/components/economy/TrendChart.vue
+  - apps/landing/components/economy/PieChart.vue
+  - apps/landing/components/economy/DataTable.vue
+  - apps/landing/components/economy/AmountInput.vue
+  - apps/landing/components/economy/ConfirmDialog.vue
+  - apps/landing/pages/economy-preview.vue
+verification_status:
+  compile_passed: true
+  typecheck_passed: true
+  tests_added: false
+  tests_passed: N/A
+  security_check_passed: true
+objective_breakdown:
+  ac_coverage: 1.0
+  compile_typecheck: 1.0
+  tests: 0.0
+  security: 1.0
+  cross_service: 1.0
+  docs: 1.0
+  skill_candidate: 0.8
+skill_candidate: true
+skill_summary: "Mock API分层模式：interface定义 + composable实现，后端就绪时零成本替换。适用于所有前端原型开发。"
+learnings: >-
+  1. 现有 types/economy.ts 已包含完整接口定义，避免重复造轮子。
+  2. ECharts 在 Nuxt 3 SSR 中必须用 await import('echarts') 动态导入，且在 onMounted 中初始化。
+  3. Mock API 层使用 interface + composable 模式，后端就绪时只需替换 composable 内部实现，UI 层完全无感。
+  4. DataTable 封装时保留 Element Plus 原有功能（排序/筛选/分页），通过 slot 和 formatter 扩展自定义渲染。
+  5. 暗色模式通过 Tailwind dark: 变体和 ECharts 主题色动态切换实现。
+  6. Vue SFC 模板中 as 类型断言对 props 绑定不生效，应在组件内部使用更宽松的泛型约束(Record<string, any>)。
+  7. Element Plus 的 ComponentSize 包含空字符串 ""，组件 props 定义时应与之对齐以避免 TS overload 不匹配。

@@ -1,0 +1,33 @@
+ticket_id: TICKET-FE-MKT-001
+title: 市场页面——商品浏览与购买
+type: feature
+priority: P1
+status: approved
+assigned_team: frontend
+role: frontend_dev
+description: >-
+  实现 Marketplace 前端页面:商品列表、分类筛选、商品详情、购买流程�?  用户可浏览和购买其他创作者发布的模板/网站/组件�?
+acceptance_criteria:
+  - /marketplace 列表页:    - 商品卡片网格布局（大�?名称+价格+评分+卖家头像�?    - 分类筛选:全部 / 模板 / 成品网站 / 组件    - 排序:最�?最�?评分最�?价格最�?    - 搜索框:按名�?标签搜索    - 分页或无限滚�?
+  - /marketplace/:id 详情页:    - 商品大图轮播/预览    - 名称、描述、技术栈标签、价格（credits 或法币）    - 卖家信息（头像、名称、其他商品）    - 演示链接（iframe 嵌入或新窗口打开�?    - 购买按钮�?      - credits 支付:确认弹�?�?调用 API �?购买成功 �?显示"已购�?      - 法币支付:跳转支付页面（复用现有支付流程�?    - 已购买用户显�?下载/使用"按钮
+  - 购买成功页:展示商品内容（模板文件预览或一键导入到 workspace�?
+  - 空状态:市场无商品时显示"成为第一个创作�?
+  - 响应式:1280px+ 桌面端，支持 3 �?4 列网�?
+relevant_files:
+  - apps/landing/pages/marketplace/
+  - apps/landing/stores/
+  - apps/landing/server/api/
+constraints:
+  - 使用 Element Plus 组件，视觉风格与 Project 页面一�?
+  - 商品预览使用 iframe sandbox（防止恶意脚本）
+  - 购买状态通过 Pinia store 管理，购买成功后更新本地状�?
+  - 法币支付先使�?mock（等�?Java Payment 接口完善真实渠道�?
+depends_on:
+  - TICKET-JAVA-002
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:10:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: medium
+security_implications: review_required

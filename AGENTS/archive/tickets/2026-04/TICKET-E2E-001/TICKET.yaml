@@ -1,0 +1,47 @@
+ticket_id: TICKET-E2E-001
+status: approved
+title: 'Rebuild dev environment + automated e2e acceptance'
+type: platform
+priority: P0
+description: >-
+  User attempted to rebuild dev environment after multiple code fixes
+  (SEC-001, SEC-002, FIX-P0-007, PLAT-OTEL-001) but got stuck.
+  
+  Current state from diagnostics:
+  1. agenthive-landing-dev container is MISSING (frontend not running)
+  2. agenthive-api-dev is UNHEALTHY (Node API failing)
+  3. Java services (auth, gateway, etc.) are still 3-hour-old containers â€?     SEC-002 and PLAT-OTEL-001 changes NOT deployed
+  4. docker compose shows hundreds of "variable is not set" warnings â€?     .env.dev is NOT being loaded (missing --env-file flag)
+  5. nginx was restarted 16 min ago but may still have old config
+  
+  Required: diagnose root cause, fix rebuild process, deploy all approved
+  changes, then run automated e2e acceptance tests.
+acceptance_criteria:
+  - All 14 containers healthy: landing, nginx, gateway, auth, user, order,
+    payment, cart, logistics, api, postgres, redis, rabbitmq, nacos
+  - .env.dev loaded correctly (no "variable is not set" warnings)
+  - Nginx serves landing without UUID token injection
+  - Login (password) returns valid token with numeric subject
+  - /me returns 200 with user info
+  - Browser console has no password plaintext leaks
+  - Automated e2e script exists and passes (API + frontend smoke)
+  - Jaeger/OTel collector starts if PLAT-OTEL-001 changes included
+relevant_files:
+  - docker-compose.dev.yml
+  - .env.dev
+  - nginx/nginx.dev.conf
+  - scripts/setup-dev-env.sh
+  - scripts/health-check-dev.sh
+constraints:
+  - Must use --env-file .env.dev for all docker compose commands
+  - Must not lose postgres data (volume mount preserved)
+  - Must preserve existing .env.dev contents; only append missing vars
+  - Automated e2e must be runnable as a single script (bash or ps1)
+depends_on:
+  - TICKET-FIX-P0-007
+  - TICKET-SEC-001
+  - TICKET-SEC-002
+  - TICKET-PLAT-OTEL-001
+confidence_threshold: 0.85
+risk_assessment: medium
+security_implications: none

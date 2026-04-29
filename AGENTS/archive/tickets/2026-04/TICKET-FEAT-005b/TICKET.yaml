@@ -1,0 +1,38 @@
+ticket_id: TICKET-FEAT-005b
+title: Project 创建向导 /projects/create
+type: feature
+priority: P1
+status: approved
+assigned_team: frontend
+role: frontend_dev
+description: >-
+  实现三步创建向导页面:选择创建方式 �?配置项目 �?确认创建�?  支持空白项目（技术栈模板选择）和 Git 导入两种方式�?
+acceptance_criteria:
+  - Step 1 - 选择创建方式:两个大卡片（空白项�?/ �?Git 导入），选中后高�?
+  - Step 2a - 空白项目配置:项目名称、描述、技术栈选择（Vue/React/Node/Java 图标卡片�?
+  - Step 2b - Git 导入配置:项目名称、描述、Git URL（HTTPS/SSH）、分支名（默�?main�?
+  - Step 3 - 确认:展示配置摘要，点击"创建"调用 API
+  - 创建成功:跳转到 /workspace/:projectId（直接进入工作区�?
+  - 创建中状态:显示 loading + "正在初始化项�?.."
+  - Git 导入时轮�?clone-status 接口，显示进度（如可能）
+  - 表单校验:名称必填（1-128字符）、Git URL 格式校验
+  - 允许返回上一步修�?
+relevant_files:
+  - apps/landing/pages/projects/create.vue
+  - apps/landing/stores/project.ts
+  - apps/landing/composables/useApi.ts
+constraints:
+  - 使用 Element Plus Steps 组件做向导流�?
+  - 技术栈选择使用图标+文字卡片，视觉上突出选中状�?
+  - Git URL 输入框支持粘贴后自动解析分支名（可选）
+  - 创建失败后留�?Step 3，显示错误信息，允许重试
+depends_on:
+  - TICKET-FEAT-001a
+  - TICKET-FEAT-001c
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: low
+security_implications: none

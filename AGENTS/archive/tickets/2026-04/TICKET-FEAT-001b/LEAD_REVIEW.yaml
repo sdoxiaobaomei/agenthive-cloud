@@ -1,0 +1,11 @@
+ticket_id: TICKET-FEAT-001b
+review_decision: APPROVED
+review_score: 0.95
+reviewer: lead
+reviewed_at: '2026-04-27T23:10:00Z'
+issues: []
+notes: >-
+  权限中间件设计简洁，未引入新文件，保持 Express middleware 链清晰。
+  "至少保留 1 个 owner" 和 "viewer 不可升 admin" 的业务规则在 Controller 层实现，
+  便于后续根据配置动态调整。
+next_action: none

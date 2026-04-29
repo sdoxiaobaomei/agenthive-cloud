@@ -1,0 +1,65 @@
+ticket_id: TICKET-P0-001
+status: completed
+confidence_score: 0.94
+summary: >-
+  彻底清理了 apps/java 所有服务 application*.yml 中的敏感配置 fallback 默认值，
+  并增强了启动校验逻辑，确保任一必需 Secret 缺失时服务明确报错并启动失败。
+objective_breakdown:
+  acceptance_criteria:
+    score: 1.00
+    note: "全部 AC 满足：所有 6+ 服务的 DB/RabbitMQ/JWT 等敏感配置 fallback 默认值已清理；JwtConfig/InternalApiConfig/WithdrawalAccountEncryptor 的 @PostConstruct 校验已增强，缺失 Secret 时服务明确启动失败"
+  compile_passed:
+    score: 1.00
+    note: "mvn compile 通过，新增 4 个测试类编译通过"
+  test_coverage:
+    score: 0.90
+    note: "新增 4 个单元测试覆盖 JwtConfig、InternalApiConfig、WithdrawalAccountEncryptor 的校验逻辑；未覆盖所有服务的 YAML 解析"
+  security_scan:
+    score: 1.00
+    note: "消除了所有明文 fallback 凭据；增强占位符未解析检测（${...} 模式）；增加弱密码/长度校验，阻止不安全默认值启动"
+  cross_service:
+    score: 0.80
+    note: "涉及 auth/gateway/payment 3 个服务的 Java 代码变更，以及 6+ 个服务的 YAML 配置清理"
+  docs:
+    score: 0.80
+    note: "learnings 详细记录根因和修复步骤，但未沉淀为独立文档文件"
+  skill_candidate:
+    score: 0.90
+    note: "skill_candidate=true。沉淀了 Spring Boot 敏感配置安全加固模式：清理 fallback + @PostConstruct 占位符/弱密码检测"
+files_modified:
+  # YAML 配置清理
+  - apps/java/auth-service/src/main/resources/application.yml
+  - apps/java/auth-service/src/main/resources/application-docker.yml
+  - apps/java/auth-service/src/main/resources/application-local.yml
+  - apps/java/cart-service/src/main/resources/application.yml
+  - apps/java/logistics-service/src/main/resources/application.yml
+  - apps/java/order-service/src/main/resources/application.yml
+  - apps/java/payment-service/src/main/resources/application.yml
+  - apps/java/user-service/src/main/resources/application.yml
+  - apps/java/user-service/src/main/resources/application-local.yml
+  # Java 启动校验增强
+  - apps/java/auth-service/src/main/java/com/agenthive/auth/config/JwtConfig.java
+  - apps/java/gateway-service/src/main/java/com/agenthive/gateway/config/JwtConfig.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/config/InternalApiConfig.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/config/WithdrawalAccountEncryptor.java
+  # 新增单元测试
+  - apps/java/auth-service/src/test/java/com/agenthive/auth/config/JwtConfigTest.java
+  - apps/java/gateway-service/src/test/java/com/agenthive/gateway/config/JwtConfigTest.java
+  - apps/java/payment-service/src/test/java/com/agenthive/payment/config/InternalApiConfigTest.java
+  - apps/java/payment-service/src/test/java/com/agenthive/payment/config/WithdrawalAccountEncryptorTest.java
+verification_status:
+  compile_passed: true
+  self_review_passed: true
+  tests_added: true
+  security_check_passed: true
+blockers: []
+learnings: >-
+  1. 所有服务的 DB_USER 和 RABBITMQ_USER 已移除 fallback 默认值（agenthive/guest），改为纯环境变量引用。
+  2. auth-service/user-service 的 local 配置中硬编码的数据库用户名已改为 ${DB_USER}，空密码改为 ${DB_PASSWORD}/${REDIS_PASSWORD}。
+  3. JwtConfig、InternalApiConfig、WithdrawalAccountEncryptor 的 @PostConstruct 校验已增强，
+     明确检测 ${...} 未解析占位符模式，给出清晰的错误信息（如 "jwt.secret appears to be an unresolved placeholder: ${JWT_SECRET}"）。
+  4. 即使不增强占位符检测，现有的长度/弱密码校验在环境变量缺失时也会间接阻止启动（${JWT_SECRET} 长度13<32，且包含"secret"关键字），
+     但明确检测能提供更好的 DX（Developer Experience）。
+skill_candidate: true
+skill_summary: >-
+  Spring Boot 敏感配置安全加固模式：1) 清理 application*.yml 中所有 fallback 默认值（尤其是 DB/RabbitMQ 凭据、JWT secret），改为纯 ${ENV} 引用；2) 在 @PostConstruct 中增加占位符未解析检测（${...} 模式）+ 弱密码/长度校验，确保服务在缺失必需 Secret 时明确启动失败而非降级运行。

@@ -1,0 +1,54 @@
+ticket_id: TICKET-ARCH-001
+title: 'Workspace 持久化与架构缺陷修复'
+type: architecture
+priority: P1
+status: approved
+assigned_team: platform
+role: platform_dev
+description: >-
+  【Lead 决策记录 2026-04-29】
+  
+  经分析，采用方案 B（标准修复）：
+  1. Docker Compose 添加 named volume workspace_data:/data/workspaces
+  2. 新增 apps/api/src/config/workspace.ts 统一导出 WORKSPACE_BASE 和 getWorkspacePath()
+  3. 所有引用点迁移至该模块
+  
+  以下问题标记为 Phase 2 技术债务，不在本 ticket 解决：
+  - 文件变更通知层（问题 3）→ TICKET-ARCH-001b
+  - Chat/Project 命名空间隔离（问题 4）→ 低优先级，概率极低
+  - Workspace 用户隔离（问题 5）→ 需 K8s Pod 隔离方案（Phase 3/4）
+  - 快照/备份机制（问题 6）→ 需对象存储集成，Phase 2 规划
+  
+  原始问题汇总见 ticket 历史版本。
+
+acceptance_criteria:
+  - docker-compose.dev.yml / prod.yml / demo.yml 均添加 workspace_data named volume
+  - apps/api/Dockerfile 添加 VOLUME /data/workspaces 指令
+  - 新建 apps/api/src/config/workspace.ts，导出 WORKSPACE_BASE 和 getWorkspacePath(userId, projectId)
+  - 所有 5+ 个硬编码点迁移至 workspace.ts，零硬编码残留
+  - Windows 开发路径与 Linux 生产路径通过 path.join 自动适配
+  - 现有 workspace 数据在 volume 挂载后保持可访问（向后兼容）
+  - docker compose config 验证无错误
+
+relevant_files:
+  - docker-compose.dev.yml
+  - docker-compose.prod.yml
+  - docker-compose.demo.yml
+  - apps/api/Dockerfile
+  - apps/api/src/controllers/code.ts
+  - apps/api/src/project/service.ts
+  - apps/api/src/services/taskExecution.ts
+  - apps/api/src/chat-controller/service.ts
+  - apps/api/src/index.ts
+  - apps/api/src/config/workspace.ts
+  - .env.example
+
+constraints:
+  - 必须保证向后兼容（已有 workspace 数据不丢失）
+  - 生产环境变更需维护窗口
+  - 不解决通知层/隔离/备份（Phase 2）
+
+depends_on: []
+confidence_threshold: 0.9
+risk_assessment: high
+security_implications: high

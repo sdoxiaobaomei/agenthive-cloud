@@ -1,0 +1,27 @@
+ticket_id: TICKET-FEAT-005c
+status: completed
+confidence_score: 0.90
+summary: >-
+  实现了 /projects/:id Dashboard 页面：左侧项目信息卡片（名称/描述/技术栈/
+  Git URL/创建时间/成员头像列表）+ 快捷操作按钮（Open Workspace/Chat/Settings），
+  右侧 Tab 内容区包含 Overview（最近文件变更、Agent 任务）、Members（成员列表
+  表格）、Activity（时间线展示操作日志）。对接了 project store 和 workspace store
+  获取真实项目信息、成员列表和最近文件。活动日志和 Agent 任务使用 mock 数据。
+  404 和空状态已处理，响应式布局适配 1024px 以下单列。
+files_modified:
+  - apps/landing/pages/projects/[id]/index.vue
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. Dashboard 页面的 sticky 侧边栏（position: sticky; top: 24px）在桌面端提供
+     了优秀的浏览体验，用户滚动内容区时项目信息始终可见。
+  2. Element Plus Timeline 组件非常适合展示项目活动日志，配合不同 type
+     （primary/success/warning）可以直观区分活动类型。
+  3. 最近文件通过递归遍历 fileTree 获取所有文件节点，按 modifiedAt 排序后
+     取前 5 个。后续后端提供专用 API 后可替换为更高效的查询。
+  4. 成员头像列表使用负 margin 重叠效果（margin-left: -8px），节省空间且
+     视觉上更具凝聚力。

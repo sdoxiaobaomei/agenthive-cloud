@@ -1,0 +1,11 @@
+ticket_id: TICKET-FEAT-006a
+review_decision: APPROVED
+review_score: 0.93
+reviewer: lead
+reviewed_at: '2026-04-27T23:35:00Z'
+issues: []
+notes: >-
+  文件树懒加载模式（toggleFolder → fetchFiles → updateNodeChildren）可复用。
+  独立 workspace store 的决策正确，与 chat store 分离后状态更清晰。
+  ClientOnly 处理 SSR 兼容性是最佳实践。
+next_action: none

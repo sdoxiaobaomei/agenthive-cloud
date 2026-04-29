@@ -1,0 +1,28 @@
+ticket_id: TICKET-FEAT-005a
+status: completed
+confidence_score: 0.92
+summary: >-
+  实现了 /projects 项目列表页，包含完整的双视图切换（卡片/表格）、实时搜索、
+  状态过滤（全部/活跃/归档）、前端分页、空状态引导。同时增强了 Pinia store
+  的视图/过滤/分页状态管理，BFF 层支持查询参数透传，并在 app layout 侧边栏
+  增加了 /projects 独立入口链接。所有功能在 API 未就绪时通过前端 mock/过滤
+  保证体验，后端支持后可无缝切换。
+files_modified:
+  - apps/landing/pages/projects/index.vue
+  - apps/landing/stores/project.ts
+  - apps/landing/server/api/projects.get.ts
+  - apps/landing/layouts/app.vue
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. 项目中已有历史类型错误（chat.vue 类型不匹配、vite plugin 缺少 vite 类型声明、
+     auth register 响应类型不完整），需在后续统一清理。
+  2. Options API 风格的 Pinia store 中 getters 若依赖其他 getters 容易产生冗余计算，
+     建议在页面层用 computed 做组合过滤，store 保留基础状态即可。
+  3. BFF 代理层 query 透传只需一行 `getQuery(event)` + `proxyToApi(..., { query })`，
+     前后端契约变更时前端无需改动。
+  4. 卡片悬停 overlay 配合 backdrop-filter 可实现优雅的 IDE 风格交互。

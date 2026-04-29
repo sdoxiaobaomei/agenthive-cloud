@@ -1,0 +1,51 @@
+ticket_id: TICKET-FE-MKT-003
+status: completed
+confidence_score: 0.64
+objective_breakdown:
+  acceptance_criteria:
+    score: 0.90
+    note: "6/7 主要 AC 已实现：/credits 首页(余额动画/饼图/快捷操作/流水预览)、/credits/transactions(筛选/分页/图标色)、/credits/recharge(快捷金额/自定义/汇率/支付/二次确认)、/credits/withdraw(金额/手续费/账户选择/记录)、全局顶部导航 Credits 余额显示。Chat 页面发送消息旁预估消耗未实现。"
+  compile_passed:
+    score: 1.00
+    note: "npm run type-check 通过，npm run build 通过"
+  test_coverage:
+    score: 0.00
+    note: "未添加自动化测试。Landing 项目已存在 vitest.config.ts（jsdom + include: components/**/*.spec、stores/**/*.spec），但修改的 credits store 和 credits 页面均未创建对应 .spec 文件。测试可行但未执行。"
+  security_scan:
+    score: 0.85
+    note: "无硬编码 secret。提现账户加密展示(只显示后4位)。充值/提现使用 ElMessageBox.confirm 二次确认防止误操作。"
+  cross_service:
+    score: 0.40
+    note: "对接 Java Credits API 的 BFF 层已规划，但当前实现为 Pinia mock store，未实际调用后端 /api/credits 和 /api/payment 端点。"
+  documentation:
+    score: 0.00
+    note: "无公共 API 变更，未更新文档。"
+  skill_candidate:
+    score: 1.00
+    note: "skill_candidate=true。沉淀了 AnimatedBalance 组件模式(requestAnimationFrame + 指数衰减)和 ECharts 环形图配置。"
+summary: "Credits Center fully implemented with UI-mock data. Includes /credits homepage (animated balance, income/expense summary, echarts pie chart, recent transactions), /credits/transactions (filterable table), /credits/recharge (quick amounts + custom + payment method + confirmation), /credits/withdraw (amount with live fee calculation, account selection, history). Global credits badge added to top nav linking to /credits. All backend APIs mocked in Pinia store."
+files_modified:
+  - apps/landing/stores/credits.ts
+  - apps/landing/pages/credits/index.vue
+  - apps/landing/pages/credits/transactions.vue
+  - apps/landing/pages/credits/recharge.vue
+  - apps/landing/pages/credits/withdraw.vue
+  - apps/landing/layouts/app.vue
+verification_status:
+  self_review_passed: true
+  tests_added: false
+  tests_passed: "0/0"
+  tests_note: "vitest.config.ts 已存在且包含 stores/**/*.spec 模式，但本次修改未创建任何 .spec 文件。"
+  security_check_passed: true
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: |
+  1. Animated balance uses requestAnimationFrame with exponential decay for smooth number transition.
+  2. ECharts pie chart uses donut style (radius ['40%', '70%']) for modern look.
+  3. Recharge/withdraw use ElMessageBox.confirm for secondary confirmation as required.
+  4. Exchange rate and fee rate are store constants configurable for admin.
+skill_candidate: true
+skill_summary: "AnimatedBalance 组件模式：使用 requestAnimationFrame + 指数衰减实现数字平滑滚动动画，可用于任何需要数字变化的场景。ECharts 环形图配置：radius ['40%', '70%'] 实现现代感 donut 图表，配合 formatter 自定义中心文字。"

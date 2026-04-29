@@ -1,0 +1,34 @@
+ticket_id: TICKET-FEAT-002a
+title: Workspace 目录操作与文件上传下�?API
+type: feature
+priority: P1
+status: approved
+assigned_team: node
+role: backend_dev
+description: >-
+  补全 Workspace 文件系统 API 的基础操作:目录创�?重命�?移动、文件上�?下载�?  当前已有 list/read/write/delete，需补齐这些核心缺口�?
+acceptance_criteria:
+  - POST /api/code/workspace/files/mkdir 创建目录（支持多级，�?mkdir -p 语义�?
+  - POST /api/code/workspace/files/rename 重命名文件或目录
+  - POST /api/code/workspace/files/move 移动文件或目录到目标路径（跨目录�?
+  - POST /api/code/workspace/files/upload 单文�?多文件上传（multipart/form-data，multer 处理�?
+  - GET /api/code/workspace/files/download?path=... 文件下载（Content-Disposition: attachment�?
+  - 所有操作保�?isPathSafe 安全检查（禁止跳出 workspace�?
+  - 上传文件白名单:禁止 .exe/.bat/.cmd/.sh/.dll/.so（可执行文件�?
+  - 上传大小限制:单文件 10MB，请求总大�?50MB
+  - 目录操作支持递归（move 整个子树�?
+relevant_files:
+  - apps/api/src/controllers/code.ts
+  - apps/api/src/routes/code.ts
+constraints:
+  - 数据库版 code_files 端点保留不动（FEAT-004 统一清理�?
+  - 文件系统�?API 路径保持 /api/code/workspace/files 前缀
+  - rename/move 目标已存在时返回 409 Conflict
+depends_on: []
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.9
+risk_assessment: medium
+security_implications: review_required

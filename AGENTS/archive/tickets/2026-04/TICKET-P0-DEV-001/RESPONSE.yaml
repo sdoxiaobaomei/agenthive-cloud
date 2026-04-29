@@ -1,0 +1,51 @@
+ticket_id: TICKET-P0-DEV-001
+status: completed
+confidence_score: 0.70
+summary: >-
+  Dev 环境部署故障已完全修复，3 项配置错误全部解决，20 个容器全部正常运行。
+  问题 1：nginx.conf upstream 主机名错误（java-gateway → gateway-service），并创建 nginx.dev.conf 避免 dev 加载生产 HTTPS 配置。
+  问题 2：payment-service 缺失 INTERNAL_API_TOKEN 和 WITHDRAWAL_ENCRYPT_KEY 环境变量。
+  问题 3：数据库 Schema 未自动初始化，合并所有 6 个服务的 schema 并挂载到 postgres init 目录。
+objective_breakdown:
+  acceptance_criteria:
+    score: 0.90
+    note: "3 项配置错误全部解决：nginx upstream 修正、payment env 补齐、postgres schema 初始化；20 个容器全部正常运行，验证结果详细"
+  compile_passed:
+    score: 1.00
+    note: "无业务代码编译，纯配置变更（docker-compose、nginx、env、SQL）。docker-compose config 语法验证通过"
+  test_coverage:
+    score: 0.00
+    note: "诚实评分 0.00。Dev 环境部署修复的验证依赖真实容器运行时状态（docker compose ps、服务健康检查日志），无法通过传统代码测试覆盖。当前未添加部署验证脚本或端到端健康检查自动化测试。"
+  security_scan:
+    score: 0.80
+    note: "新增 dev 专用环境变量避免生产 token 泄露风险；WITHDRAWAL_ENCRYPT_KEY 满足 32 字符 AES-256 要求；nginx dev conf 移除了 SSL 证书加载。但 dev token 为明文占位符，仅限本地环境"
+  cross_service:
+    score: 0.85
+    note: "修复涉及 nginx、payment-service、postgres，跨越基础设施层和 Java 服务层，需要多服务协调验证"
+  docs:
+    score: 0.70
+    note: "RESPONSE 本身非常详细（根因、修复步骤、验证结果、容器状态表），但无独立操作文档或 runbook"
+  skill_candidate:
+    score: 0.80
+    note: "skill_candidate=true。沉淀 Dev 环境部署故障排查模式：docker compose 服务名一致性检查、环境变量缺失扫描、postgres schema init 挂载最佳实践"
+files_modified:
+  - nginx/nginx.conf
+  - nginx/nginx.dev.conf
+  - .env.dev
+  - docker-compose.dev.yml
+  - apps/java/scripts/init-schemas.sql
+verification_status:
+  compile_passed: true
+  self_review_passed: true
+  tests_added: false
+  security_check_passed: true
+blockers: []
+learnings: >-
+  1. nginx upstream 主机名必须与 docker-compose 服务名严格一致（java-gateway → gateway-service）。
+  2. Dev 环境应使用独立的 nginx 配置（HTTP only），避免加载生产 SSL 证书导致启动失败。
+  3. 新增 required 环境变量时，必须同步更新 .env.dev 和 docker-compose.dev.yml。
+  4. Postgres init 脚本 /docker-entrypoint-initdb.d/ 只在数据目录为空时执行，现有运行环境需手动初始化。
+  5. WITHDRAWAL_ENCRYPT_KEY 必须为 32 字符以满足 AES-256 要求。
+skill_candidate: true
+skill_summary: >-
+  Dev 环境部署故障排查模式：1) docker compose 服务名一致性检查（nginx upstream vs docker-compose service name）；2) 环境变量缺失扫描（对比 Java @Value required 字段与 .env.dev / docker-compose.dev.yml）；3) Postgres schema 初始化挂载最佳实践（合并多服务 schema 到单一 init 脚本，注意数据目录为空时才自动执行）。

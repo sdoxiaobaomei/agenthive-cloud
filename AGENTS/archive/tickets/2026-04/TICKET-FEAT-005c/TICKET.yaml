@@ -1,0 +1,37 @@
+ticket_id: TICKET-FEAT-005c
+title: Project Dashboard /projects/:id
+type: feature
+priority: P1
+status: approved
+assigned_team: frontend
+role: frontend_dev
+description: >-
+  实现项目详情 Dashboard 页面，展示项目概览、最近活动、快速操作入口�?  这是用户进入项目后的第一个落地页�?
+acceptance_criteria:
+  - 页面布局:左侧项目信息卡�?+ 右侧内容区（Tab 切换�?
+  - 项目信息卡片:名称、描述、技术栈标签、Git URL（如有）、创建时间、成员头像列�?
+  - 快捷操作按钮:进�?Workspace、打开 Chat、项目设�?
+  - Tab 1 - 概览:最近文件变更列表（对接 workspace API）、最�?Agent 任务（mock 或等 FEAT-003�?
+  - Tab 2 - 成员:成员列表（头像+名称+角色），owner 可管理成员（跳转到设置页�?
+  - Tab 3 - 活动:项目操作日志（创建/归档/成员变动），时间线展�?
+  - 空状态处理:无文件变更时显示"Workspace 为空，开始编码吧"
+  - 404 处理:项目不存在时显�?项目未找�?
+relevant_files:
+  - apps/landing/pages/projects/[id]/index.vue
+  - apps/landing/stores/project.ts
+  - apps/landing/server/api/projects/
+constraints:
+  - 使用 Element Plus Tabs + Timeline 组件
+  - 成员头像列表最多显�?5 个，超出显示 +N
+  - 最近文件变更对�?/api/code/workspace/files（取最近修改的 5 个文件）
+  - 活动日志先使用前�?mock 数据（后�?activity_log 后续补充�?
+depends_on:
+  - TICKET-FEAT-005a
+  - TICKET-FEAT-001c
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: low
+security_implications: none

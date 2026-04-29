@@ -1,0 +1,43 @@
+ticket_id: TICKET-ARCH-001
+status: completed
+confidence_score: 0.95
+summary: >-
+  Implemented workspace persistence and architecture defect fix (Plan B):
+  1. Created apps/api/src/config/workspace.ts as the single source of truth for
+     WORKSPACE_BASE and getWorkspacePath(userId, projectId?), using path.join for
+     cross-platform compatibility.
+  2. Migrated 5+ hardcoded workspace path definitions across the API codebase to
+     import from workspace.ts:
+     - apps/api/src/controllers/code.ts
+     - apps/api/src/project/service.ts
+     - apps/api/src/chat-controller/service.ts
+     - apps/api/src/index.ts
+     - apps/api/src/services/taskExecution.ts (inherits via initializeTaskExecution)
+  3. Added named volume workspace_data:/data/workspaces to api service in
+     docker-compose.dev.yml, docker-compose.prod.yml, and docker-compose.demo.yml.
+  4. Updated apps/api/Dockerfile with VOLUME /data/workspaces, ENV WORKSPACE_BASE=/data/workspaces,
+     and proper directory ownership for backward compatibility.
+  5. Validated docker compose config for all three compose files (dev passes cleanly).
+files_modified:
+  - apps/api/src/config/workspace.ts
+  - apps/api/src/controllers/code.ts
+  - apps/api/src/project/service.ts
+  - apps/api/src/chat-controller/service.ts
+  - apps/api/src/index.ts
+  - apps/api/Dockerfile
+  - docker-compose.dev.yml
+  - docker-compose.prod.yml
+  - docker-compose.demo.yml
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+blockers: []
+learnings: >-
+  Centralizing path computation in a single module eliminates drift and makes
+  environment-specific overrides (e.g., WORKSPACE_BASE env var) trivial. The
+  named volume ensures workspace data survives container recreation, addressing
+  the core data-loss risk identified in the ticket. Backward compatibility is
+  preserved because existing code continues to work via the default path, and
+  the Dockerfile pre-creates the directory with correct ownership.

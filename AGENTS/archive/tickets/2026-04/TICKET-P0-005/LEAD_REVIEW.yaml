@@ -1,0 +1,10 @@
+ticket_id: TICKET-P0-005
+review_decision: APPROVED
+review_score: 0.94
+reviewer: lead
+reviewed_at: '2026-04-27T23:30:00Z'
+issues: []
+notes: >-
+  备份策略完整：pg_dump → gzip → AES-256 → MinIO，7 天保留，含恢复脚本。
+  K8s CronJob 文件保留为技术储备（当前 Docker Compose 环境不使用，无害）。
+next_action: none

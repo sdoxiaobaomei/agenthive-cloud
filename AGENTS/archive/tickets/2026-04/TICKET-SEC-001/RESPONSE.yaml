@@ -1,0 +1,21 @@
+ticket_id: TICKET-SEC-001
+status: completed
+confidence_score: 1.0
+summary: >
+  Removed 13 console.log statements from apps/landing/pages/login.vue that were
+  leaking sensitive authentication data (including plaintext passwords) to the
+  browser console. Preserved all 4 console.error statements for error handling.
+  No other logic was modified. Type-check of login.vue passes; pre-existing
+  unrelated type errors remain in other landing app files.
+files_modified:
+  - apps/landing/pages/login.vue
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >
+  Production code must never log raw credentials or PII. Future PRs should
+  include a lint rule (e.g. eslint no-console or a custom rule) to block
+  console.log in pages handling auth/sensitive data.

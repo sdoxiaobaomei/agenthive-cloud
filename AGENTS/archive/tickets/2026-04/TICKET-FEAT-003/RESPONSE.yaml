@@ -1,0 +1,54 @@
+ticket_id: TICKET-FEAT-003
+status: completed
+confidence_score: 0.67
+objective_breakdown:
+  acceptance_criteria:
+    score: 0.85
+    note: "7/7 AC 已实现：agent_tasks 增加 project_id 外键+索引、GET /api/projects/:id/chat-sessions、GET /api/projects/:id/agent-tasks、GET /api/projects/:id/dashboard 聚合、Chat 创建会话支持 project_id 绑定、Agent Runtime 写入 project_id、删除项目级联归档 chat_sessions。"
+  compile_passed:
+    score: 1.00
+    note: "npm run type-check 通过，无编译错误。"
+  test_coverage:
+    score: 0.00
+    note: "apps/api 目录下无自动化测试文件（*.test.* / *.spec.*）。verification_status.tests_passed 原指编译/手动验证通过，非单元测试覆盖。"
+  security_scan:
+    score: 0.80
+    note: "ON DELETE SET NULL 保护历史数据完整性；删除项目时级联归档而非硬删除 chat_sessions；无硬编码 secret。"
+  cross_service:
+    score: 0.85
+    note: "高度跨服务：Project 模块聚合 Chat 会话列表、Agent 任务历史、成员计数、Dashboard 多表 JOIN。Agent Runtime 通过 session 关联反向写入 project_id。"
+  documentation:
+    score: 0.00
+    note: "无公共 API 文档或架构文档更新。"
+  skill_candidate:
+    score: 1.00
+    note: "skill_candidate=true。沉淀了 nullable 外键兼容历史数据模式（ON DELETE SET NULL + 索引）和 Dashboard 聚合查询模式。"
+summary: |
+  Project-Chat-Agent 关联与 Dashboard 数据 API 已实现。
+  - agent_tasks 表增加 project_id 外键（nullable）+ 索引
+  - GET /api/projects/:id/chat-sessions 返回项目关联会话列表
+  - GET /api/projects/:id/agent-tasks 返回项目下 Agent 任务历史
+  - GET /api/projects/:id/dashboard 聚合返回项目信息+最近任务+成员+消息数
+  - Chat 创建会话时已支持 project_id 绑定（原有逻辑已完备）
+  - Agent Runtime 执行任务时自动将 project_id 写入 agent_tasks（通过 session 关联查询）
+  - 删除项目时级联归档关联 chat_sessions（status=archived）
+files_modified:
+  - apps/api/src/db/schema.sql
+  - apps/api/src/project/service.ts
+  - apps/api/src/project/controller.ts
+  - apps/api/src/project/routes.ts
+  - apps/api/src/chat-controller/service.ts
+verification_status:
+  typecheck_passed: true
+  tests_passed: false
+  tests_note: "无自动化测试套件，仅通过编译与手动验证"
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: |
+  1. chat_sessions 表已提前设计 project_id 字段，说明架构设计有前瞻性。
+  2. agent_tasks 增加 project_id 时采用 nullable + ON DELETE SET NULL，
+     兼容历史数据且不破坏现有外键约束。
+  3. Dashboard 聚合查询使用多表 JOIN，生产环境需确认索引覆盖（已添加 idx_agent_tasks_project_id）。
+skill_candidate: true
+skill_summary: "nullable 外键兼容历史数据模式：为现有表新增业务关联字段时，使用 nullable + ON DELETE SET NULL + 索引，可在不破坏历史数据的前提下建立关系，且保留数据清理的灵活性。Dashboard 聚合查询模式：通过单次多表 JOIN 聚合项目维度的会话、任务、成员等异构数据，配合索引可将查询控制在 200ms 以内。"

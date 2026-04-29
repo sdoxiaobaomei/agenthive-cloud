@@ -1,0 +1,32 @@
+ticket_id: TICKET-FEAT-001a
+title: Project 数据模型扩展与数据库迁移
+type: feature
+priority: P1
+status: approved
+assigned_team: node
+role: backend_dev
+description: >-
+  扩展 projects 表字段，新增 project_members 表，更新 TypeScript 类型定义�?  这是 Project 生命周期的数据基础，所有后�?Project 功能依赖�?Ticket�?
+acceptance_criteria:
+  - 执行迁移脚本�?projects 表新增字段:type/tech_stack/git_url/git_branch/workspace_path/last_accessed_at/is_template
+  - 新增 project_members 表:id/project_id/user_id/role/joined_at，含外键和唯一索引
+  - 更新 apps/api/src/project/types.ts:Project/ProjectMember/CreateProjectInput/UpdateProjectInput 类型
+  - 更新 apps/api/src/db/index.ts 中的 projectDb（如需要）
+  - 现有数据兼容:旧项目 type 设为 'blank'，tech_stack 设为 null
+  - npm run type-check 通过
+relevant_files:
+  - apps/api/src/project/types.ts
+  - apps/api/src/db/index.ts
+  - apps/api/src/config/database.js
+constraints:
+  - 使用 node-pg-migrate 或纯 SQL 脚本执行迁移，必须可回滚
+  - 不得在峰值时段执行（假设夜间维护窗口�?
+  - 旧字段（name/description/repo_url/owner_id/status/created_at/updated_at）保持完整兼�?
+depends_on: []
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.9
+risk_assessment: high
+security_implications: review_required

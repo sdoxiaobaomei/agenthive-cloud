@@ -1,0 +1,30 @@
+ticket_id: TICKET-FEAT-001b
+status: completed
+confidence_score: 0.93
+summary: >-
+  实现 Project 成员管理 REST API：
+  1. GET /api/projects/:id/members — 返回成员列表（JOIN users 表，脱敏：仅返回 username/avatar，不含密码哈希）；
+  2. POST /api/projects/:id/members — 邀请成员（user_id + role，默认 member，ON CONFLICT 幂等更新角色）；
+  3. PATCH /api/projects/:id/members/:userId — 更新角色（owner/admin/member/viewer）；
+  4. DELETE /api/projects/:id/members/:userId — 移除成员；
+  5. 权限校验中间件：requireProjectAdmin（仅 owner/admin 可操作）+ requireProjectMember（查询需为成员）；
+  6. 业务规则硬编码：viewer 不可被提升为 admin；每个项目至少保留 1 个 owner（移除/降级前 countOwners 检查）；
+  7. 成员变动通过结构化 logger 记录（为后续 activity_log 表预留）。
+files_modified:
+  - apps/api/src/project/routes.ts
+  - apps/api/src/project/controller.ts
+  - apps/api/src/project/service.ts
+verification_status:
+  typecheck_passed: true
+  tests_passed: true
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: >-
+  1. 复用 FEAT-001a 中预置的 projectService 成员管理方法（findMembers/addMember/removeMember/updateMemberRole），
+     使本 Ticket 仅需聚焦路由、控制器和权限规则，体现了前置数据基础 Ticket 的价值。
+  2. 权限校验提取为 requireProjectAdmin/requireProjectMember 辅助函数，避免在每个端点中重复权限查询逻辑，
+     同时保持 Express middleware 链的简洁（未引入新中间件文件，降低复杂度）。
+  3. "至少保留 1 个 owner" 规则在 Controller 层通过 countOwners() + 前置检查实现，而非数据库触发器，
+     理由：触发器跨事务行为不可控，且错误信息难以定制化；应用层检查更灵活、更利于返回用户友好的中文错误提示。
+  4. viewer 不可升 admin 的规则同样放在 Controller，便于后续根据配置动态调整（如引入企业版策略）。

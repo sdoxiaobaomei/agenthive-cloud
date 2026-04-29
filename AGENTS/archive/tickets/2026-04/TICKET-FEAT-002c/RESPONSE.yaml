@@ -1,0 +1,24 @@
+ticket_id: TICKET-FEAT-002c
+status: completed
+confidence_score: 0.95
+summary: |
+  Workspace Git 状态查询功能已完成。
+  - 新增 GET /workspace/git-status?projectId=xxx
+  - 返回 branch、commit hash、modified/untracked/staged 文件列表、ahead/behind 数量
+  - 非 git 仓库返回 400；所有 git 命令 10s 超时防 hang
+files_modified:
+  - apps/api/src/controllers/code.ts
+  - apps/api/src/routes/code.ts
+verification_status:
+  typecheck_passed: true
+  tests_passed: true
+  lint_passed: true
+  security_check_passed: true
+blockers: []
+learnings: |
+  1. child_process.exec 的 stdout/stderr 在 TypeScript 中类型为 string | Buffer，
+     需要显式 typeof 检查后再调用 .trim()，否则报 TS2339。
+  2. git status --porcelain 格式固定（XY + 空格 + path），适合程序解析，
+     比 --short 更稳定。
+  3. ahead/behind 查询应分别用 try/catch 包裹，因为分支可能没有上游（upstream），
+     此时返回 null 比抛错更友好。

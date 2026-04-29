@@ -1,0 +1,21 @@
+ticket_id: TICKET-P0-004
+status: completed
+confidence_score: 0.95
+summary: >-
+  已完成 Nginx HTTPS 证书配置与 TLS 强制跳转（简化版）：
+  1. 更新 nginx/nginx.conf：证书路径改为 agenthive.crt/agenthive.key，
+     ssl_prefer_server_ciphers 设为 on，保留 HTTP→HTTPS 301 跳转、HSTS、TLS 1.2+1.3；
+  2. docker-compose.prod.yml 已挂载 nginx/ssl 目录（无需变更）；
+  3. 新建 docs/deployment/nginx-https.md（阿里云证书下载/部署/续期完整指南）。
+  人工待办：从阿里云 SSL 控制台下载证书并放置到 nginx/ssl/ 目录后重启 Nginx。
+files_modified:
+  - modified: nginx/nginx.conf
+  - created: docs/deployment/nginx-https.md
+  - modified: docs/deployment/README.md
+verification_status:
+  security_check_passed: true
+  syntax_valid: true
+  plan_reviewed: true
+  rollback_plan_defined: true
+blockers: []
+learnings: "阿里云证书直配方案比 Let's Encrypt 更简洁，无需 cert-manager/acme.sh，适合当前 Docker Compose 部署模式。K8s 相关证书配置保留为技术储备。"

@@ -1,0 +1,35 @@
+ticket_id: TICKET-FEAT-002c
+title: Workspace Git 状态查�?API
+type: feature
+priority: P1
+status: approved
+assigned_team: node
+role: backend_dev
+description: >-
+  �?Workspace 提供 Git 状态查询能力，返回每个文件�?git status（modified/added/deleted/untracked）�?  前端 FileTreeNode 组件已预�?gitStatus 字段，只需后端提供数据�?
+acceptance_criteria:
+  - GET /api/projects/:id/git-status 返回项目 workspace �?git 状�?
+  - 响应格式:{ files: [{ path, 
+status: 'modified'|'added'|'deleted'|'untracked'|'unchanged' }] }
+  - �?git 仓库返回 { isGitRepo: false, files: [] }
+  - 使用 child_process.spawn('git', ['status', '--porcelain']) 执行
+  - 解析 porcelain 输出，映射为前端需要的 status 枚举
+  - 缓存:Redis 缓存 git-status 结果 5 秒（避免频繁调用�?
+  - 执行超时 3 秒，超时视为�?git 仓库
+relevant_files:
+  - apps/api/src/controllers/code.ts
+  - apps/api/src/routes/code.ts
+  - apps/api/src/config/redis.js
+constraints:
+  - 不引�?node-git 等重型库，使用系�?git 命令
+  - 错误处理:git 未安装时优雅降级（返�?isGitRepo: false�?
+  - 不暴�?.git 目录内容给前�?
+depends_on:
+  - TICKET-FEAT-002a
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:00:00Z'
+retry_count: 0
+confidence_threshold: 0.9
+risk_assessment: low
+security_implications: none

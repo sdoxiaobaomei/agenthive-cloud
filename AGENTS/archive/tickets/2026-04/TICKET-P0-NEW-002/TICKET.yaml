@@ -1,0 +1,33 @@
+ticket_id: TICKET-P0-NEW-002
+title: Watchtower 自动镜像更新
+type: infrastructure
+priority: P1
+status: approved
+assigned_team: platform
+role: backend_dev
+description: >-
+  添加 Watchtower 服务�?docker-compose.prod.yml，实现容器镜像的自动检测和更新�?  CI/CD 推送新镜像后，Watchtower 自动拉取并安全重启容器，无需人工介入�?
+acceptance_criteria:
+  - docker-compose.prod.yml 中添�?watchtower 服务�?    ```yaml    watchtower:      image: containrrr/watchtower:latest      container_name: agenthive-watchtower      volumes:        - /var/run/docker.sock:/var/run/docker.sock      environment:        - WATCHTOWER_POLL_INTERVAL=300        - WATCHTOWER_LABEL_ENABLE=true        - WATCHTOWER_CLEANUP=true        - WATCHTOWER_INCLUDE_STOPPED=true        - WATCHTOWER_REVIVE_STOPPED=true        - WATCHTOWER_NOTIFICATIONS=webhook        - WATCHTOWER_NOTIFICATION_WEBHOOK_URL=${WATCHTOWER_WEBHOOK_URL}      command: --label-enable      restart: unless-stopped    ```
+  - 需要自动更新的服务添加 label:`com.centurylinklabs.watchtower.enable=true`
+  - 核心基础设施服务（postgres/redis/nacos）不添加 label，避免自动重启导致数据中�?
+  - 业务服务（api/landing/java-*）添�?label，允许自动更�?
+  - 测试验证�?    1. 手动推送一个测试镜像（tag �?test-watchtower�?    2. Watchtower �?5 分钟内检测到并拉取新镜像    3. 容器安全重启，服务健康检查通过后流量切�?    4. 收到 webhook 通知（更新成�?失败�?
+  - 文档更新:docs/deployment/watchtower.md（配置说�?+ 手动触发命令�?
+relevant_files:
+  - docker-compose.prod.yml
+  - .github/workflows/deploy.yml（确�?CI 推送镜像流程）
+constraints:
+  - Watchtower 仅监控业务镜像，不监控数据库/消息队列/监控�?
+  - 容器重启前必�?healthcheck 通过，避免更新导致服务不可用
+  - 更新失败时回滚到上一版本（Watchtower 默认行为�?
+  - Webhook 通知使用钉钉或企业微信，URL 从环境变量配�?
+  - 首次部署时，Watchtower 不立即重启所有容器（WATCHTOWER_INCLUDE_STOPPED=true 仅在检测到新镜像时触发�?
+depends_on: []
+parent_ticket: null
+qa_result: null
+created_at: '2026-04-27T21:18:00Z'
+retry_count: 0
+confidence_threshold: 0.85
+risk_assessment: medium
+security_implications: review_required

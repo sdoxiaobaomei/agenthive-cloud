@@ -1,0 +1,34 @@
+ticket_id: TICKET-FEAT-006b
+status: completed
+confidence_score: 0.91
+summary: >-
+  实现了 Monaco Editor 多 Tab 集成：新建 MonacoEditor.vue 组件（client-only
+  动态导入 monaco-editor），支持语法高亮（ts/js/vue/html/css/json/yaml/md/java/
+  go/python/rust/sql 等）、主题切换（light/dark）、minimap、自动括号匹配。
+  大文件（>1MB）自动只读并显示警告。Workspace 页面集成 Tab 栏，支持打开、
+  切换、关闭文件，已打开文件不重复打开。同时增强了 workspace store 的
+  openedFiles/activeFilePath 状态管理，新增文件内容获取的 BFF 路由
+  `/api/code/files/:path`，以及文件扩展名到 Monaco language 的映射。
+files_modified:
+  - apps/landing/components/MonacoEditor.vue
+  - apps/landing/stores/workspace.ts
+  - apps/landing/pages/workspace/[projectId].vue
+  - apps/landing/server/api/code/files/[...path].get.ts
+  - apps/landing/package.json
+verification_status:
+  typecheck_passed: true
+  build_passed: true
+  ssr_safe: true
+  performance_check_passed: true
+blockers: []
+learnings: >-
+  1. `@monaco-editor/vue` 包不存在于 npm registry（404），直接使用 `monaco-editor`
+     配合 `await import('monaco-editor')` 动态导入是更可靠的方式。
+  2. Nuxt 文件路由中 catch-all 路由 `[...path].get.ts` 的相对 import 路径容易出错：
+     `server/api/code/files/` 到 `server/utils/` 是 `../../../` 而非 `../../../../`。
+  3. Monaco Editor 的 `onUnmounted` 中必须调用 `editor.dispose()` 释放内存，否则
+     Tab 切换时会导致内存泄漏。大文件检测用 `new Blob([content]).size` 即可。
+  4. `v-model` 与 Monaco 的双向绑定需要小心处理：外部 setValue 不应触发
+     onDidChangeModelContent 导致的循环更新。当前实现通过 `editor.getValue() !== newVal`
+     判断避免循环。
+  5. Vue 文件在 Monaco 中没有内置语法高亮，fallback 到 `html` 是合理折中。

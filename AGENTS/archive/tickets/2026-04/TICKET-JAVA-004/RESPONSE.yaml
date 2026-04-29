@@ -1,0 +1,58 @@
+ticket_id: TICKET-JAVA-004
+status: completed
+confidence_score: 0.86
+summary: >-
+  实现了 Credits 提现与手续费系统。新增 frozen_balance 到 CreditsAccount，支持申请冻结、审批扣减、拒绝解冻的完整状态机。
+  新增 WithdrawalRecord 实体/表，WithdrawalStatus 枚举，WithdrawalService 处理核心逻辑（含风控限额、手续费计算、小额自动审批）。
+  用户接口：POST/GET /credits/withdrawals；管理接口：GET /admin/withdrawals，POST /admin/withdrawals/{id}/approve|reject，均校验 X-Internal-Token。
+  account_info 使用 AES-256-GCM 加密存储，密钥从 WITHDRAWAL_ENCRYPT_KEY 环境变量读取，启动时强制校验。
+  全部 payment-service 测试通过（含 13 个新增 WithdrawalService 测试及 WithdrawalAccountEncryptorTest）。
+files_modified:
+  - apps/java/payment-service/src/main/resources/db/schema.sql
+  - apps/java/payment-service/src/main/resources/application.yml
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/PaymentServiceApplication.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/entity/CreditsAccount.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/entity/WithdrawalRecord.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/enums/WithdrawalStatus.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/vo/CreditsBalanceVO.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/domain/vo/WithdrawalVO.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/mapper/CreditsAccountMapper.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/mapper/WithdrawalRecordMapper.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/CreditsAccountService.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/impl/CreditsAccountServiceImpl.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/WithdrawalService.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/impl/WithdrawalServiceImpl.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/service/dto/ApplyWithdrawalRequest.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/config/WithdrawalConfig.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/config/WithdrawalAccountEncryptor.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/controller/WithdrawalController.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/controller/AdminWithdrawalController.java
+  - apps/java/payment-service/src/main/java/com/agenthive/payment/controller/CreditsController.java
+  - apps/java/payment-service/src/test/java/com/agenthive/payment/service/impl/CreditsAccountServiceImplTest.java
+  - apps/java/payment-service/src/test/java/com/agenthive/payment/service/impl/WithdrawalServiceImplTest.java
+  - apps/java/payment-service/src/test/java/com/agenthive/payment/config/WithdrawalAccountEncryptorTest.java
+verification_status:
+  compile_passed: true
+  self_review_passed: true
+  tests_added: true
+  tests_passed: true
+  security_check_passed: true
+objective_breakdown:
+  ac: 0.90
+  compile: 1.00
+  tests: 0.80
+  security: 0.90
+  cross_service: 0.75
+  docs: 0.25
+  skill_candidate: 1.00
+skill_candidate: true
+skill_summary: "Withdrawal state machine with balance freeze/unfreeze, AES-256-GCM account encryption, auto-approval threshold, and admin audit APIs."
+blockers: []
+learnings: >-
+  1. MyBatis Plus BaseMapper.insert() 在 Mockito 中存在 T 与 Collection<T> 的重载歧义，测试中必须使用
+     any(CreditsTransaction.class) 等显式类型匹配。
+  2. BigDecimal 比较：new BigDecimal("600") 与 new BigDecimal("600.0000") 不相等，断言时应使用 compareTo。
+  3. TransactionTemplate 注入优于 PlatformTransactionManager，测试中可直接 mock execute() 并让它执行 callback。
+  4. 冻结/解冻/扣减模型：在 CreditsAccount 上新增 frozen_balance 字段，通过三个原子 SQL 操作（freezeBalance、
+     unfreezeBalance、deductFrozenBalance）配合乐观锁实现，无需独立冻结表。
+  5. 自动审批逻辑应内聚在 apply 方法中，小额（<= threshold）同步自动审批，大额保持 PENDING。
