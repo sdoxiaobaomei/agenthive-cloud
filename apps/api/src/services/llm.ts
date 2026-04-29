@@ -1,3 +1,5 @@
+import logger from '../utils/logger.js'
+
 // LLM Service - 支持 Ollama 本地模型 和 OpenAI 兼容 API (阿里云百炼等)
 import type {
   LLMMessage,
@@ -265,14 +267,14 @@ function createProvider(): LLMProvider {
   const model = process.env.LLM_MODEL
 
   if (apiKey && baseUrl && model) {
-    console.log(`[LLM] Using OpenAI-compatible API: ${baseUrl}, model: ${model}`)
+    logger.info('[LLM] Using OpenAI-compatible API', { baseUrl, model })
     return new OpenAIProvider({ apiKey, baseUrl, model })
   }
 
   // 回退到 Ollama
   const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434'
   const ollamaModel = process.env.OLLAMA_MODEL || 'qwen3:14b'
-  console.log(`[LLM] Using Ollama: ${ollamaUrl}, model: ${ollamaModel}`)
+  logger.info('[LLM] Using Ollama', { ollamaUrl, ollamaModel })
   return new OllamaProvider({ baseUrl: ollamaUrl, model: ollamaModel })
 }
 
@@ -376,14 +378,14 @@ export async function initLLM(): Promise<void> {
   const check = await checkLLMConnection()
   
   if (check.ok) {
-    console.log(`[LLM] Connected to ${check.provider}. Available models: ${check.models?.slice(0, 5).join(', ')}...`)
+    logger.info('[LLM] Connected', { provider: check.provider, models: check.models?.slice(0, 5) })
   } else {
-    console.warn(`[LLM] Connection check: ${check.error}`)
-    console.warn(`[LLM] Will retry on first request`)
+    logger.warn('[LLM] Connection check failed', { error: check.error })
+    logger.warn('[LLM] Will retry on first request')
   }
   
   globalLLMService = new LLMService()
-  console.log(`[LLM] LLM Service initialized`)
+  logger.info('[LLM] LLM Service initialized')
 }
 
 // 获取服务实例

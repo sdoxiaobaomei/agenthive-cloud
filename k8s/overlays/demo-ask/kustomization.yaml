@@ -13,7 +13,6 @@ namespace: agenthive
 
 resources:
   - ./base/00-namespace.yaml
-  - ./base/01-secrets.yaml
   - ./base/03-redis.yaml
   - ./base/04-api.yaml
   - ./base/05-landing.yaml

@@ -13,6 +13,10 @@
         </div>
       </div>
       <div v-if="!isCollapsed" class="header-actions">
+        <div class="credit-badge">
+          <el-icon><Coin /></el-icon>
+          <span>{{ creditsBalance.toFixed(1) }}</span>
+        </div>
         <button class="header-btn" title="Clear chat" @click="clearChat">
           <el-icon><Delete /></el-icon>
         </button>
@@ -149,7 +153,10 @@
             </button>
           </div>
         </div>
-        <p class="input-hint">Press Enter to send, Shift + Enter for new line</p>
+        <div class="input-meta">
+          <p class="input-hint">Press Enter to send, Shift + Enter for new line</p>
+          <span class="cost-hint">{{ estimatedCost > 0 ? `预计消耗 ${estimatedCost} credits` : '~0.5 credits/msg' }}</span>
+        </div>
       </div>
     </div>
 
@@ -175,6 +182,7 @@ import {
   CircleClose,
   Timer,
   VideoPlay,
+  Coin,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { io, Socket } from 'socket.io-client'
@@ -206,6 +214,8 @@ const emit = defineEmits<{
 
 const { user } = useAuth()
 const { chat: chatApi, baseUrl } = useApi()
+const creditsStore = useCreditsStore()
+const creditsBalance = computed(() => creditsStore.balance)
 
 const messagesContainer = ref<HTMLDivElement>()
 const inputRef = ref<HTMLTextAreaElement>()
@@ -218,6 +228,7 @@ const sessionId = ref<string | null>(null)
 const wsConnected = ref(false)
 const agentStatus = ref('idle')
 const agentLogs = ref<string[]>([])
+const estimatedCost = ref(0)
 
 let socket: Socket | null = null
 
@@ -452,6 +463,8 @@ onMounted(() => {
   if (messagesContainer.value) {
     messagesContainer.value.addEventListener('scroll', checkScroll)
   }
+  // 加载 credits 余额
+  creditsStore.fetchBalance()
 })
 
 onUnmounted(() => {
@@ -563,6 +576,19 @@ onUnmounted(() => {
 .header-btn:hover {
   background: #f3f4f6;
   color: #6b7280;
+}
+
+.credit-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: 4px;
 }
 
 /* Messages Area */
@@ -903,11 +929,23 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
+.input-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
 .input-hint {
   font-size: 11px;
   color: #9ca3af;
-  text-align: center;
-  margin: 8px 0 0;
+  margin: 0;
+}
+
+.cost-hint {
+  font-size: 11px;
+  color: #f59e0b;
+  font-weight: 500;
 }
 
 /* Collapsed View */

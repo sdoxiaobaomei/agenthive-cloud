@@ -7,7 +7,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['components/**/*.spec.{js,ts}'],
+    include: ['components/**/*.spec.{js,ts}', 'stores/**/*.spec.{js,ts}', 'composables/**/*.spec.{js,ts}'],
   },
   resolve: {
     alias: {

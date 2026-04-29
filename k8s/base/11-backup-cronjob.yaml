@@ -1,0 +1,91 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: postgres-backup
+    app.kubernetes.io/component: backup
+spec:
+  schedule: "0 2 * * *"
+  timeZone: UTC
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: backup
+            image: postgres:16-alpine
+            command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              BACKUP_DIR=/backups
+              mkdir -p $BACKUP_DIR
+
+              # 数据库列表
+              DB_LIST="agenthive auth_db user_db payment_db order_db cart_db logistics_db"
+
+              for DB in $DB_LIST; do
+                echo "Backing up $DB..."
+                pg_dump -h postgres -p 5432 -U agenthive \
+                  --no-owner --no-privileges "$DB" | \
+                  gzip | \
+                  openssl enc -aes-256-cbc -salt -pass pass:"$BACKUP_ENCRYPTION_KEY" \
+                  > "$BACKUP_DIR/${DB}_${TIMESTAMP}.sql.gz.enc"
+              done
+
+              # 上传 MinIO（使用 mc 客户端）
+              if [ -n "$MINIO_ACCESS_KEY" ]; then
+                mc alias set local "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+                for DB in $DB_LIST; do
+                  mc cp "$BACKUP_DIR/${DB}_${TIMESTAMP}.sql.gz.enc" "local/$MINIO_BUCKET/postgres/$DB/"
+                done
+                # 清理 7 天前备份
+                for DB in $DB_LIST; do
+                  mc rm --recursive --force --older-than "7d" "local/$MINIO_BUCKET/postgres/$DB/" || true
+                done
+              fi
+
+              echo "Backup completed at $TIMESTAMP"
+            env:
+            - name: PGUSER
+              value: agenthive
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_PASSWORD
+            - name: BACKUP_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: BACKUP_ENCRYPTION_KEY
+            - name: MINIO_ENDPOINT
+              value: http://minio:9000
+            - name: MINIO_BUCKET
+              value: agenthive-backups
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MINIO_ACCESS_KEY
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: MINIO_SECRET_KEY
+            volumeMounts:
+            - name: tmp-backups
+              mountPath: /backups
+          volumes:
+          - name: tmp-backups
+            emptyDir: {}

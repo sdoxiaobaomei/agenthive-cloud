@@ -39,6 +39,12 @@ services:
           memory: 128M
     networks:
       - agenthive-demo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   # ==========================================
   # API 服务 (Express)
@@ -71,6 +77,8 @@ services:
       - JWT_SECRET=${JWT_SECRET:-demo-jwt-secret-change-me}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://xiaochaitian.asia,https://xiaochaitian.asia}
       - UV_THREADPOOL_SIZE=4
+    volumes:
+      - workspace_data:/data/workspaces
     restart: unless-stopped
     deploy:
       resources:
@@ -78,6 +86,12 @@ services:
           memory: 512M
     networks:
       - agenthive-demo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   # ==========================================
   # Landing (Nuxt 3)
@@ -99,6 +113,12 @@ services:
           memory: 1G
     networks:
       - agenthive-demo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   # ==========================================
   # Java 微服务（象征性跑 3 个，默认不启动）
@@ -124,6 +144,12 @@ services:
       - agenthive-demo
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   java-auth:
     build:
@@ -147,6 +173,12 @@ services:
       - agenthive-demo
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   java-user:
     build:
@@ -170,6 +202,12 @@ services:
       - agenthive-demo
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   nacos:
     image: nacos/nacos-server:v2.3.0
@@ -189,6 +227,12 @@ services:
       - agenthive-demo
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -208,6 +252,12 @@ services:
       - agenthive-demo
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   # ==========================================
   # 监控栈（默认不启动）
@@ -235,6 +285,12 @@ services:
       - agenthive-demo
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   grafana:
     image: grafana/grafana:10.0.0
@@ -256,6 +312,12 @@ services:
       - agenthive-demo
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   tempo:
     image: grafana/tempo:2.5.0
@@ -275,6 +337,12 @@ services:
       - agenthive-demo
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   loki:
     image: grafana/loki:3.0.0
@@ -294,6 +362,12 @@ services:
       - agenthive-demo
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.96.0
@@ -313,6 +387,12 @@ services:
       - agenthive-demo
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   # ==========================================
   # Cloudflare Tunnel（可选）
@@ -329,12 +409,19 @@ services:
       - agenthive-demo
     profiles:
       - with-tunnel
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
 networks:
   agenthive-demo:
     driver: bridge
 
 volumes:
+  workspace_data:
   api-node-modules:
   api-pnpm-store:
   landing-node-modules:

@@ -1,5 +1,6 @@
 // 数据库配置
 import pg from 'pg'
+import logger from '../utils/logger.js'
 const { Pool } = pg
 
 // 数据库连接配置
@@ -24,11 +25,11 @@ export const testConnection = async (): Promise<boolean> => {
   try {
     const client = await pool.connect()
     const result = await client.query('SELECT NOW()')
-    console.log('[Database] Connected:', result.rows[0].now)
+    logger.info('[Database] Connected', { now: result.rows[0].now })
     client.release()
     return true
   } catch (error) {
-    console.error('[Database] Connection failed:', error)
+    logger.error('[Database] Connection failed', error as Error)
     return false
   }
 }

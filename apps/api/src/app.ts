@@ -5,9 +5,11 @@ import { requestLogger } from './middleware/request-logger.js'
 import { corsConfig } from './config/cors.js'
 import { authMiddleware } from './middleware/auth.js'
 import { rateLimitMiddleware } from './middleware/rateLimit.js'
+import { trafficTracker, hostedSiteMockHandler } from './middleware/traffic.js'
 import routes from './routes/index.js'
 import logger from './utils/logger.js'
 import { setupSwagger } from './swagger.js'
+import { startBatchReporter } from './project/traffic-service.js'
 
 const app = express()
 
@@ -28,8 +30,14 @@ app.use(authMiddleware)
 // 速率限制（认证之后，路由之前）
 app.use(rateLimitMiddleware)
 
+// Hosted sites (public, traffic tracked before auth)
+app.use('/h/:projectId', trafficTracker(), hostedSiteMockHandler())
+
 // API 路由
 app.use('/api', routes)
+
+// Start background traffic reporter
+startBatchReporter()
 
 // 404 处理
 app.use((_req, res) => {

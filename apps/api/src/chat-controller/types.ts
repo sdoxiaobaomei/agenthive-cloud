@@ -32,6 +32,7 @@ export interface ChatMessage {
     tickets?: TicketRef[]
     progress?: number
     agentLogs?: AgentLogRef[]
+    estimatedCost?: number
   }
   createdAt: string
 }

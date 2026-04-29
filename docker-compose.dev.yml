@@ -1,3 +1,9 @@
+# IMPORTANT: Run `bash scripts/setup-dev-env.sh` before first startup
+# to generate required secrets and verify environment variables.
+#
+# After `docker compose up`, run `bash scripts/health-check-dev.sh` (or
+# `.\scripts\health-check-dev.ps1` on Windows) to verify all services.
+#
 # ============================================================================
 # AgentHive Cloud - Development Stack
 # 本地开发统一配置：Node.js + Java 微服务 + Monitoring
@@ -21,15 +27,19 @@ services:
     image: postgres:16-alpine
     container_name: agenthive-postgres-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       POSTGRES_USER: ${DB_USER:-agenthive}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-dev}
       POSTGRES_DB: ${DB_NAME:-agenthive}
-      POSTGRES_MULTIPLE_DATABASES: auth_db,user_db,payment_db,order_db,cart_db,logistics_db
+      POSTGRES_MULTIPLE_DATABASES: auth_db,user_db,payment_db,order_db,cart_db,logistics_db,agenthive
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./apps/java/scripts/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
+      - ./apps/java/scripts/init-schemas.sql:/docker-entrypoint-initdb.d/99-schemas.sql:ro
     ports:
       - "${DB_PORT:-5433}:5432"
     healthcheck:
@@ -48,17 +58,29 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   redis:
     image: redis:7-alpine
     container_name: agenthive-redis-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     command: >
       redis-server
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
       --appendonly yes
-      --save 60 1000
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --save 60 10000
       --requirepass ${REDIS_PASSWORD:-agenthive}
     volumes:
       - redis_data:/data
@@ -80,6 +102,12 @@ services:
         reservations:
           cpus: '0.1'
           memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   # ============================================
   # Java Infrastructure (profile: java)
@@ -89,13 +117,16 @@ services:
     image: nacos/nacos-server:v2.3.0
     container_name: agenthive-nacos-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       MODE: standalone
       PREFER_HOST_MODE: hostname
       NACOS_AUTH_ENABLE: "true"
-      NACOS_AUTH_TOKEN: bmFjb3Mtc2VjcmV0LWtleS1hZ2VudGhpdmUtMjAyNC1sb25nZXIta2V5
+      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN}
       NACOS_AUTH_IDENTITY_KEY: agenthive
-      NACOS_AUTH_IDENTITY_VALUE: agenthive-secret-2024
+      NACOS_AUTH_IDENTITY_VALUE: ${NACOS_AUTH_IDENTITY_VALUE}
       JVM_XMS: 512m
       JVM_XMX: 1024m
       JVM_XMN: 384m
@@ -120,10 +151,19 @@ services:
           memory: 1536M
         reservations:
           memory: 1024M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
     container_name: agenthive-rabbitmq-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-agenthive}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-agenthive-secret}
@@ -146,6 +186,12 @@ services:
           memory: 384M
         reservations:
           memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
   # ============================================
   # Node.js Services
   # ============================================
@@ -157,6 +203,9 @@ services:
       target: production
     container_name: agenthive-api-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       NODE_ENV: development
       PORT: 3001
@@ -175,7 +224,9 @@ services:
       LLM_USER_AGENT: ${LLM_USER_AGENT:-claude-code/0.1.0}
       OLLAMA_URL: http://host.docker.internal:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:14b}
-      OTEL_SDK_DISABLED: "true"
+      OTEL_SERVICE_NAME: agenthive-api
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
       DEV_USER_ID: 5ab7d370-8900-41a8-a9ca-37dbdcb45b5a
       CORS_ORIGIN: ${CORS_ORIGIN}
       UV_THREADPOOL_SIZE: 4
@@ -186,6 +237,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - workspace_data:/data/workspaces
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"]
       interval: 30s
@@ -202,6 +255,12 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   landing:
     build:
@@ -212,6 +271,9 @@ services:
         - NUXT_PUBLIC_API_BASE=/api
     container_name: agenthive-landing-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       API_URL: http://gateway-service:8080
       GATEWAY_URL: http://gateway-service:8080
@@ -238,6 +300,12 @@ services:
         reservations:
           cpus: '0.1'
           memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   # ============================================
   # Java Microservices (profile: java)
@@ -249,15 +317,20 @@ services:
       dockerfile: Dockerfile
     container_name: agenthive-gateway-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
-      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
-      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: nacos
-      SPRING_CLOUD_NACOS_CONFIG_USERNAME: nacos
-      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: nacos
+      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: ${NACOS_PASSWORD}
+      SPRING_CLOUD_NACOS_CONFIG_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: ${NACOS_PASSWORD}
+      NACOS_USERNAME: agenthive
+      NACOS_PASSWORD: ${NACOS_PASSWORD}
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
       JWT_SECRET: ${JWT_SECRET}
@@ -268,6 +341,14 @@ services:
       ALIBABA_CLOUD_ACCESS_KEY_ID: ${ALIBABA_CLOUD_ACCESS_KEY_ID}
       ALIBABA_CLOUD_ACCESS_KEY_SECRET: ${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
+      OTEL_SERVICE_NAME: gateway-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES: "true"
+      LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
     ports:
       - "8080:8080"
     depends_on:
@@ -279,6 +360,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+    volumes:
+      - maven-cache:/root/.m2
     networks:
       - agenthive-dev
     deploy:
@@ -287,21 +370,32 @@ services:
           memory: 768M
         reservations:
           memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
   auth-service:
     build:
       context: ./apps/java/auth-service
       dockerfile: Dockerfile
     container_name: agenthive-auth-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
-      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
-      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: nacos
-      SPRING_CLOUD_NACOS_CONFIG_USERNAME: nacos
-      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: nacos
+      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: ${NACOS_PASSWORD}
+      SPRING_CLOUD_NACOS_CONFIG_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: ${NACOS_PASSWORD}
+      NACOS_USERNAME: agenthive
+      NACOS_PASSWORD: ${NACOS_PASSWORD}
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
       DB_HOST: postgres
@@ -314,6 +408,14 @@ services:
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
+      OTEL_SERVICE_NAME: auth-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES: "true"
+      LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
     ports:
       - "8081:8081"
     depends_on:
@@ -329,6 +431,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+    volumes:
+      - maven-cache:/root/.m2
     networks:
       - agenthive-dev
     deploy:
@@ -337,21 +441,32 @@ services:
           memory: 768M
         reservations:
           memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
   user-service:
     build:
       context: ./apps/java/user-service
       dockerfile: Dockerfile
     container_name: agenthive-user-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
-      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
-      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: nacos
-      SPRING_CLOUD_NACOS_CONFIG_USERNAME: nacos
-      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: nacos
+      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: ${NACOS_PASSWORD}
+      SPRING_CLOUD_NACOS_CONFIG_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: ${NACOS_PASSWORD}
+      NACOS_USERNAME: agenthive
+      NACOS_PASSWORD: ${NACOS_PASSWORD}
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
       DB_HOST: postgres
@@ -363,6 +478,14 @@ services:
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
+      OTEL_SERVICE_NAME: user-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES: "true"
+      LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
     ports:
       - "8082:8082"
     depends_on:
@@ -378,6 +501,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+    volumes:
+      - maven-cache:/root/.m2
     networks:
       - agenthive-dev
     deploy:
@@ -386,21 +511,32 @@ services:
           memory: 768M
         reservations:
           memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
   payment-service:
     build:
       context: ./apps/java/payment-service
       dockerfile: Dockerfile
     container_name: agenthive-payment-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
-      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
-      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: nacos
-      SPRING_CLOUD_NACOS_CONFIG_USERNAME: nacos
-      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: nacos
+      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: ${NACOS_PASSWORD}
+      SPRING_CLOUD_NACOS_CONFIG_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: ${NACOS_PASSWORD}
+      NACOS_USERNAME: agenthive
+      NACOS_PASSWORD: ${NACOS_PASSWORD}
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
       DB_HOST: postgres
@@ -417,6 +553,16 @@ services:
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
       SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      WITHDRAWAL_ENCRYPT_KEY: ${WITHDRAWAL_ENCRYPT_KEY}
+      OTEL_SERVICE_NAME: payment-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES: "true"
+      LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
     ports:
       - "8083:8083"
     depends_on:
@@ -434,6 +580,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+    volumes:
+      - maven-cache:/root/.m2
     networks:
       - agenthive-dev
     deploy:
@@ -442,21 +590,32 @@ services:
           memory: 768M
         reservations:
           memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
   order-service:
     build:
       context: ./apps/java/order-service
       dockerfile: Dockerfile
     container_name: agenthive-order-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
-      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
-      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: nacos
-      SPRING_CLOUD_NACOS_CONFIG_USERNAME: nacos
-      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: nacos
+      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: ${NACOS_PASSWORD}
+      SPRING_CLOUD_NACOS_CONFIG_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: ${NACOS_PASSWORD}
+      NACOS_USERNAME: agenthive
+      NACOS_PASSWORD: ${NACOS_PASSWORD}
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
       DB_HOST: postgres
@@ -473,6 +632,14 @@ services:
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
       SPRING_MAIN_ALLOW_BEAN_DEFINITION_OVERRIDING: "true"
+      OTEL_SERVICE_NAME: order-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES: "true"
+      LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
     ports:
       - "8084:8084"
     depends_on:
@@ -490,6 +657,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+    volumes:
+      - maven-cache:/root/.m2
     networks:
       - agenthive-dev
     deploy:
@@ -498,21 +667,32 @@ services:
           memory: 768M
         reservations:
           memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
   cart-service:
     build:
       context: ./apps/java/cart-service
       dockerfile: Dockerfile
     container_name: agenthive-cart-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
-      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
-      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: nacos
-      SPRING_CLOUD_NACOS_CONFIG_USERNAME: nacos
-      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: nacos
+      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: ${NACOS_PASSWORD}
+      SPRING_CLOUD_NACOS_CONFIG_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: ${NACOS_PASSWORD}
+      NACOS_USERNAME: agenthive
+      NACOS_PASSWORD: ${NACOS_PASSWORD}
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
       DB_HOST: postgres
@@ -528,6 +708,14 @@ services:
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
+      OTEL_SERVICE_NAME: cart-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES: "true"
+      LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
     ports:
       - "8085:8085"
     depends_on:
@@ -545,6 +733,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+    volumes:
+      - maven-cache:/root/.m2
     networks:
       - agenthive-dev
     deploy:
@@ -553,21 +743,32 @@ services:
           memory: 768M
         reservations:
           memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
   logistics-service:
     build:
       context: ./apps/java/logistics-service
       dockerfile: Dockerfile
     container_name: agenthive-logistics-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       NACOS_SERVER: nacos:8848
       SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
       SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
-      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
-      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: nacos
-      SPRING_CLOUD_NACOS_CONFIG_USERNAME: nacos
-      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: nacos
+      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: ${NACOS_PASSWORD}
+      SPRING_CLOUD_NACOS_CONFIG_USERNAME: agenthive
+      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: ${NACOS_PASSWORD}
+      NACOS_USERNAME: agenthive
+      NACOS_PASSWORD: ${NACOS_PASSWORD}
       SPRING_PROFILES_ACTIVE: docker
       SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
       DB_HOST: postgres
@@ -583,6 +784,14 @@ services:
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-agenthive}
       SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-agenthive-secret}
       JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
+      OTEL_SERVICE_NAME: logistics-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES: "true"
+      LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
     ports:
       - "8086:8086"
     depends_on:
@@ -598,6 +807,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 60s
+    volumes:
+      - maven-cache:/root/.m2
     networks:
       - agenthive-dev
     deploy:
@@ -606,6 +817,12 @@ services:
           memory: 768M
         reservations:
           memory: 384M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
   # ============================================
   # Monitoring Stack (profile: monitoring)
   # ============================================
@@ -614,6 +831,9 @@ services:
     image: prom/prometheus:v2.48.0
     container_name: agenthive-prometheus-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -634,11 +854,20 @@ services:
           memory: 256M
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   grafana:
     image: grafana/grafana:10.0.0
     container_name: agenthive-grafana-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin123}
       GF_AUTH_ANONYMOUS_ENABLED: "false"
@@ -657,11 +886,20 @@ services:
           memory: 256M
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   tempo:
     image: grafana/tempo:2.5.0
     container_name: agenthive-tempo-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     command: ["-config.file=/etc/tempo.yml"]
     volumes:
       - ./monitoring/tempo/tempo.yml:/etc/tempo.yml:ro
@@ -678,11 +916,26 @@ services:
           memory: 512M
     profiles:
       - monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3200/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   loki:
     image: grafana/loki:3.0.0
     container_name: agenthive-loki-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     command: ["-config.file=/etc/loki/local-config.yaml"]
     volumes:
       - ./monitoring/loki/loki.yml:/etc/loki/local-config.yaml:ro
@@ -699,17 +952,31 @@ services:
           memory: 256M
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.96.0
     container_name: agenthive-otel-collector-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     command: ["--config=/etc/otel-collector.yml"]
     volumes:
       - ./monitoring/opentelemetry/otel-collector/otel-collector.yml:/etc/otel-collector.yml:ro
     ports:
       - "4317:4317"
       - "4318:4318"
+    depends_on:
+      tempo:
+        condition: service_healthy
+      jaeger:
+        condition: service_started
     networks:
       - agenthive-dev
     deploy:
@@ -720,6 +987,52 @@ services:
           memory: 256M
     profiles:
       - monitoring
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:13133/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: agenthive-jaeger-dev
+    restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+    networks:
+      - agenthive-dev
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    profiles:
+      - monitoring
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:16686 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   # ============================================
   # Nginx Reverse Proxy (profile: with-nginx)
@@ -729,10 +1042,13 @@ services:
     image: nginx:alpine
     container_name: agenthive-nginx-dev
     restart: unless-stopped
+    dns:
+      - 223.5.5.5
+      - 114.114.114.114
     ports:
       - "8088:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
     depends_on:
       api:
@@ -749,6 +1065,12 @@ services:
           memory: 128M
         reservations:
           memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 # ============================================
 # Volumes
 # ============================================
@@ -767,7 +1089,11 @@ volumes:
     driver: local
   tempo_data:
     driver: local
+  maven-cache:
+    driver: local
   loki_data:
+    driver: local
+  workspace_data:
     driver: local
 
 # ============================================

@@ -1,5 +1,6 @@
 // Redis 配置
 import { Redis } from 'ioredis'
+import logger from '../utils/logger.js'
 
 const getRedisConfig = () => {
   if (process.env.REDIS_URL && !process.env.REDIS_HOST) {
@@ -45,10 +46,10 @@ export const key = (namespace: string, id: string): string => `${KEY_PREFIX}${na
 export const testRedisConnection = async (): Promise<boolean> => {
   try {
     await redis.ping()
-    console.log('[Redis] Connected successfully')
+    logger.info('[Redis] Connected successfully')
     return true
   } catch (error) {
-    console.error('[Redis] Connection failed:', error)
+    logger.error('[Redis] Connection failed', error as Error)
     return false
   }
 }
@@ -61,9 +62,9 @@ export const closeRedis = async (): Promise<void> => {
 }
 
 // Redis 事件监听
-redis.on('connect', () => console.log('[Redis] Connecting...'))
-redis.on('ready', () => console.log('[Redis] Ready'))
-redis.on('error', (err: Error) => console.error('[Redis] Error:', err.message))
-redis.on('close', () => console.log('[Redis] Connection closed'))
+redis.on('connect', () => logger.info('[Redis] Connecting...'))
+redis.on('ready', () => logger.info('[Redis] Ready'))
+redis.on('error', (err: Error) => logger.error('[Redis] Error', err))
+redis.on('close', () => logger.info('[Redis] Connection closed'))
 
 export default redis

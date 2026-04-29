@@ -1,6 +1,6 @@
 // PostgreSQL 数据访问层
 import { pool } from '../config/database.js'
-import type { Agent, Task, User, CodeFile } from '../types/index.js'
+import type { Agent, Task, User } from '../types/index.js'
 
 // 模拟延迟（保持与原来一致的 API 响应时间体验）
 export const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms))
@@ -269,77 +269,6 @@ export const taskDb = {
   },
 }
 
-function escapeLikePattern(query: string): string {
-  return query
-    .replace(/\\/g, '\\\\')
-    .replace(/%/g, '\\%')
-    .replace(/_/g, '\\_')
-}
-
-// ============ Code Files ============
-export const codeDb = {
-  findByPath: async (path: string): Promise<CodeFile | undefined> => {
-    const result = await pool.query('SELECT * FROM code_files WHERE path = $1', [path])
-    return result.rows[0] || undefined
-  },
-
-  findAll: async (): Promise<CodeFile[]> => {
-    const result = await pool.query('SELECT * FROM code_files ORDER BY path')
-    return result.rows
-  },
-
-  create: async (data: Partial<CodeFile>): Promise<CodeFile> => {
-    const result = await pool.query(
-      `INSERT INTO code_files (path, name, content, language, is_directory) 
-       VALUES ($1, $2, $3, $4, $5) 
-       RETURNING *`,
-      [
-        data.path || `/untitled-${Math.random().toString(36).substring(2, 8)}`,
-        data.name || 'untitled',
-        data.content || '',
-        data.language || 'text',
-        data.is_directory || data.isDirectory || false,
-      ]
-    )
-    return result.rows[0]
-  },
-
-  update: async (path: string, content: string): Promise<CodeFile | undefined> => {
-    const result = await pool.query(
-      `UPDATE code_files 
-       SET content = $1, last_modified = CURRENT_TIMESTAMP
-       WHERE path = $2 
-       RETURNING *`,
-      [content, path]
-    )
-    return result.rows[0] || undefined
-  },
-
-  delete: async (path: string): Promise<boolean> => {
-    const result = await pool.query('DELETE FROM code_files WHERE path = $1', [path])
-    return result.rowCount ? result.rowCount > 0 : false
-  },
-
-  search: async (query: string): Promise<CodeFile[]> => {
-    const escapedQuery = escapeLikePattern(query)
-    const result = await pool.query(
-      `SELECT * FROM code_files 
-       WHERE name ILIKE $1 ESCAPE '\\' OR content ILIKE $1 ESCAPE '\\' 
-       ORDER BY path`,
-      [`%${escapedQuery}%`]
-    )
-    return result.rows
-  },
-
-  getRecent: async (limit: number): Promise<CodeFile[]> => {
-    const result = await pool.query(
-      'SELECT * FROM code_files ORDER BY last_modified DESC LIMIT $1',
-      [limit]
-    )
-    return result.rows
-  },
-}
-
 // ============ Projects ============
 export const projectDb = {
   findById: async (id: string): Promise<any | undefined> => {
@@ -366,10 +295,24 @@ export const projectDb = {
 
   create: async (data: any): Promise<any> => {
     const result = await pool.query(
-      `INSERT INTO projects (name, description, repo_url, owner_id, status)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO projects (
+         name, description, repo_url, owner_id, status,
+         type, tech_stack, git_url, git_branch, is_template
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [data.name, data.description || null, data.repo_url || null, data.owner_id, 'active']
+      [
+        data.name,
+        data.description || null,
+        data.repo_url || null,
+        data.owner_id,
+        'active',
+        data.type || 'blank',
+        data.tech_stack || null,
+        data.git_url || null,
+        data.git_branch || 'main',
+        data.is_template ?? false,
+      ]
     )
     return result.rows[0]
   },
@@ -381,10 +324,30 @@ export const projectDb = {
            description = COALESCE($2, description),
            repo_url = COALESCE($3, repo_url),
            status = COALESCE($4, status),
+           type = COALESCE($5, type),
+           tech_stack = COALESCE($6, tech_stack),
+           git_url = COALESCE($7, git_url),
+           git_branch = COALESCE($8, git_branch),
+           workspace_path = COALESCE($9, workspace_path),
+           last_accessed_at = COALESCE($10, last_accessed_at),
+           is_template = COALESCE($11, is_template),
            updated_at = CURRENT_TIMESTAMP
-       WHERE id = $5
+       WHERE id = $12
        RETURNING *`,
-      [data.name, data.description, data.repo_url, data.status, id]
+      [
+        data.name,
+        data.description,
+        data.repo_url,
+        data.status,
+        data.type,
+        data.tech_stack,
+        data.git_url,
+        data.git_branch,
+        data.workspace_path,
+        data.last_accessed_at,
+        data.is_template,
+        id,
+      ]
     )
     return result.rows[0] || undefined
   },

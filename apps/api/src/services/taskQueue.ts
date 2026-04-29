@@ -16,6 +16,8 @@ export interface TaskPayload {
   workspacePath: string
   ticketIds: string[]
   createdAt: number
+  userId?: string
+  estimatedCost?: number
 }
 
 /**
@@ -38,19 +40,25 @@ export async function initTaskQueue(): Promise<void> {
  * 提交任务到队列
  */
 export async function enqueueTask(payload: TaskPayload): Promise<string> {
-  const id = await redis.xadd(
-    STREAM_KEY,
-    '*',
+  const fields: (string | number)[] = [
     'taskId', payload.taskId,
     'sessionId', payload.sessionId,
     'intent', payload.intent,
     'content', payload.content,
     'workspacePath', payload.workspacePath,
     'ticketIds', JSON.stringify(payload.ticketIds),
-    'createdAt', payload.createdAt.toString()
-  )
+    'createdAt', payload.createdAt.toString(),
+  ]
+  if (payload.userId) {
+    fields.push('userId', payload.userId)
+  }
+  if (payload.estimatedCost !== undefined) {
+    fields.push('estimatedCost', String(payload.estimatedCost))
+  }
+
+  const id = await redis.xadd(STREAM_KEY, '*', ...fields)
   if (!id) throw new Error('Failed to enqueue task: XADD returned null')
-  logger.info('Task enqueued', { taskId: payload.taskId, streamId: id })
+  logger.info('Task enqueued', { taskId: payload.taskId, streamId: id, userId: payload.userId })
   return id
 }
 

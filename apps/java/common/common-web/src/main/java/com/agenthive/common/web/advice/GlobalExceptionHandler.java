@@ -40,7 +40,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e, HttpServletRequest request) {
-        log.error("Unexpected error at [{}]", request.getRequestURI(), e);
+        log.error("Unexpected error at [" + request.getRequestURI() + "]", e);
         return Result.error(ResultCode.INTERNAL_ERROR);
     }
 }

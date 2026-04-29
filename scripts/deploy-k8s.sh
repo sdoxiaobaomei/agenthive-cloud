@@ -37,8 +37,11 @@ kubectl apply -f "$K8S_DIR/00-namespace.yaml"
 echo ""
 
 # 2. 创建配置和密钥
-echo "🔐 创建 ConfigMaps 和 Secrets..."
-kubectl apply -f "$K8S_DIR/01-secrets.yaml"
+echo "🔐 创建 ConfigMaps 和 External Secrets..."
+# 注意：本地开发若未安装 External Secrets Operator，需手动创建 Secret：
+# kubectl create secret generic app-secrets --from-literal=DB_USER=agenthive --from-literal=DB_PASSWORD=dev --from-literal=JWT_SECRET=dev-jwt-secret --from-literal=LLM_API_KEY=sk-your-llm-api-key -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f "$K8S_DIR/01-secretstore.yaml"
+kubectl apply -f "$K8S_DIR/01-externalsecrets.yaml"
 echo ""
 
 # 3. 部署数据库

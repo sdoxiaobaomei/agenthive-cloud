@@ -8,7 +8,8 @@
 k8s/
 ├── base/                          # 基础配置（通用）
 │   ├── 00-namespace.yaml         # 命名空间
-│   ├── 01-secrets.yaml           # Secrets 和 ConfigMap
+│   ├── 01-secretstore.yaml       # External Secrets Operator ClusterSecretStore
+│   ├── 01-externalsecrets.yaml   # ExternalSecret (KMS → K8s Secret 同步)
 │   ├── 02-postgres.yaml          # PostgreSQL StatefulSet
 │   ├── 03-redis.yaml             # Redis Deployment
 │   ├── 04-api.yaml               # API Deployment + Service + PDB
@@ -102,26 +103,28 @@ kubectl apply -k k8s/components/security/
 
 ### Secret 管理最佳实践
 
-1. **本地开发**：使用 `01-secrets.yaml`（已提供默认值）
-2. **测试/生产**：使用 External Secrets Operator
+1. **所有环境**：使用 External Secrets Operator 从阿里云 KMS 动态注入 Secret
+2. **本地开发**：临时手动创建 Secret（见 `docs/deployment/external-secrets-operator.md`）
 
 ```yaml
-# 示例：External Secrets 配置
+# 当前配置：阿里云 KMS + RRSA 认证
+# 详见 docs/deployment/external-secrets-operator.md
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
   name: app-secrets
+  namespace: agenthive
 spec:
+  refreshInterval: 1h
   secretStoreRef:
-    name: vault-backend
-    kind: SecretStore
+    kind: ClusterSecretStore
+    name: alicloud-kms
   target:
     name: app-secrets
   data:
   - secretKey: DB_PASSWORD
     remoteRef:
-      key: agenthive/prod
-      property: db-password
+      key: agenthive-production-db-password
 ```
 
 ## 常用命令

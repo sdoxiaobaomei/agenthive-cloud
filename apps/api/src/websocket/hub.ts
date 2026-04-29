@@ -6,6 +6,7 @@ import { AI_ATTRIBUTES, AI_SPAN_NAMES, extractTraceContextFromPayload } from '@a
 import { redisCache } from '../services/redis-cache.js'
 import { resolveLocalUser } from '../services/userMapping.js'
 import { initChatNamespace } from '../chat-controller/websocket.js'
+import logger from '../utils/logger.js'
 
 // 访客房间管理
 const visitorRooms = new Map<string, { joinedAt: number; socketId: string }>()
@@ -75,7 +76,7 @@ export function initWebSocket(server: HttpServer): SocketIOServer {
     const isVisitor = socket.data.isVisitor
     const userId = socket.data.userId
     
-    console.log(`[WebSocket] ${isVisitor ? 'Visitor' : 'User'} connected: ${userId}`)
+    logger.info(`[WebSocket] ${isVisitor ? 'Visitor' : 'User'} connected`, { userId, isVisitor })
     
     if (isVisitor) {
       handleVisitorConnection(socket)
@@ -90,7 +91,7 @@ export function initWebSocket(server: HttpServer): SocketIOServer {
   // Initialize Chat namespace
   initChatNamespace(io)
 
-  console.log('[WebSocket] Server initialized')
+  logger.info('[WebSocket] Server initialized')
   return io
 }
 
@@ -157,13 +158,13 @@ function setupAgentHandlers(socket: Socket) {
     const status = await redisCache.getAgentStatus(agentId)
     socket.emit('agent:status', { agentId, ...status })
     
-    console.log(`[WebSocket] User ${socket.data.userId} subscribed to agent ${agentId}`)
+    logger.info('[WebSocket] User subscribed to agent', { userId: socket.data.userId, agentId })
   })
   
   // 取消订阅 Agent
   socket.on('agent:unsubscribe', (agentId: string) => {
     socket.leave(`agent:${agentId}`)
-    console.log(`[WebSocket] User ${socket.data.userId} unsubscribed from agent ${agentId}`)
+    logger.info('[WebSocket] User unsubscribed from agent', { userId: socket.data.userId, agentId })
   })
   
   // Agent 心跳（由 Agent 服务发送）
@@ -232,7 +233,7 @@ function setupTaskHandlers(socket: Socket) {
     const progress = await redisCache.getTaskProgress(taskId)
     socket.emit('task:progress', { taskId, ...progress })
     
-    console.log(`[WebSocket] User ${socket.data.userId} subscribed to task ${taskId}`)
+    logger.info('[WebSocket] User subscribed to task', { userId: socket.data.userId, taskId })
   })
   
   // 取消订阅任务
@@ -278,7 +279,7 @@ function setupTerminalHandlers(socket: Socket) {
   // 订阅终端输出
   socket.on('terminal:subscribe', (agentId: string) => {
     socket.join(`terminal:${agentId}`)
-    console.log(`[WebSocket] User ${socket.data.userId} subscribed to terminal ${agentId}`)
+    logger.info('[WebSocket] User subscribed to terminal', { userId: socket.data.userId, agentId })
   })
   
   // 发送终端命令
@@ -307,7 +308,7 @@ function setupTerminalHandlers(socket: Socket) {
 function setupCommonHandlers(socket: Socket) {
   // 断开连接
   socket.on('disconnect', (reason) => {
-    console.log(`[WebSocket] Disconnected: ${socket.data.userId}, reason: ${reason}`)
+    logger.info('[WebSocket] Disconnected', { userId: socket.data.userId, reason })
     
     if (socket.data.isVisitor) {
       visitorRooms.delete(socket.id)
@@ -316,7 +317,7 @@ function setupCommonHandlers(socket: Socket) {
   
   // 错误处理
   socket.on('error', (error) => {
-    console.error(`[WebSocket] Error from ${socket.data.userId}:`, error)
+    logger.error('[WebSocket] Error from client', error as Error, { userId: socket.data.userId })
   })
   
   // Ping/Pong 用于保持连接

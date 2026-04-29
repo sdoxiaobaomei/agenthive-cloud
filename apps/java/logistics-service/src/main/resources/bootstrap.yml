@@ -1,10 +1,17 @@
 spring:
+  application:
+    name: logistics-service
   cloud:
     nacos:
-      discovery:
-        server-addr: ${NACOS_HOST:localhost}:${NACOS_PORT:8848}
+      config:
+        server-addr: ${NACOS_SERVER:localhost:8848}
         namespace: ${NACOS_NAMESPACE:}
-        group: DEFAULT_GROUP
+        file-extension: yaml
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
+      discovery:
+        server-addr: ${NACOS_SERVER:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
         username: ${NACOS_USERNAME:}
         password: ${NACOS_PASSWORD:}
         # Use persistent instance to avoid gRPC ephemeral connection issues
@@ -13,11 +20,3 @@ spring:
         heart-beat-interval: 5000
         # Disable automatic registration if Nacos is not available
         register-enabled: true
-      config:
-        server-addr: ${NACOS_HOST:localhost}:${NACOS_PORT:8848}
-        namespace: ${NACOS_NAMESPACE:}
-        group: DEFAULT_GROUP
-        file-extension: yaml
-        enabled: false
-        username: ${NACOS_USERNAME:}
-        password: ${NACOS_PASSWORD:}

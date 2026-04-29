@@ -3,6 +3,9 @@ import { broadcast } from '../websocket/hub.js'
 import { mkdir, writeFile, readFile } from 'fs/promises'
 import { resolve, join } from 'path'
 import { getLLMService } from './llm.js'
+import { debitCredits, type DebitPayload } from './credits.js'
+import { enqueueBillingRetry } from './billingRetry.js'
+import logger from '../utils/logger.js'
 
 // 任务执行配置
 export interface TaskExecutionConfig {
@@ -44,7 +47,7 @@ export class TaskExecutionService {
 
   constructor(config: TaskExecutionConfig) {
     this.config = { ...DEFAULT_CONFIG, ...config }
-    console.log(`[TaskExecution] Service initialized with LLM support`)
+    logger.info('[TaskExecution] Service initialized with LLM support')
   }
 
   // 获取工作区路径
@@ -107,8 +110,11 @@ export class TaskExecutionService {
         output: result.data,
       })
 
-      console.log(`[TaskExecution] Task ${task.id} completed: ${task.status}`)
-      
+      // 任务完成后扣费
+      await this.chargeForTask(task, result.data?.usage)
+
+      logger.info('[TaskExecution] Task completed', { taskId: task.id, status: task.status })
+
       return task
 
     } catch (error) {
@@ -123,7 +129,7 @@ export class TaskExecutionService {
         error: task.error,
       })
 
-      console.error(`[TaskExecution] Task ${task.id} failed:`, error)
+      logger.error('[TaskExecution] Task failed', error as Error, { taskId: task.id })
       
       return task
 
@@ -209,7 +215,7 @@ export class TaskExecutionService {
       }
 
     } catch (error) {
-      console.error('[TaskExecution] LLM execution failed:', error)
+      logger.error('[TaskExecution] LLM execution failed', error as Error)
       return {
         code: 500,
         message: error instanceof Error ? error.message : 'LLM execution failed',
@@ -321,7 +327,7 @@ Use clear, concise language and proper formatting.`,
       task.completedAt = new Date()
     }
 
-    console.log(`[TaskExecution] Task ${taskId} cancelled`)
+    logger.info('[TaskExecution] Task cancelled', { taskId })
     return true
   }
 
@@ -339,6 +345,62 @@ Use clear, concise language and proper formatting.`,
   // 获取可用工具列表
   getAvailableTools(): string[] {
     return ['llm_chat', 'file_analysis', 'code_generation']
+  }
+
+  // 任务完成后扣费
+  private async chargeForTask(task: TaskInfo, usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number }): Promise<void> {
+    if (!task.userId) {
+      logger.warn('[TaskExecution] No userId for billing', { taskId: task.id })
+      return
+    }
+
+    const tokensUsed = usage?.totalTokens ?? 0
+    const workerRole = this.inferWorkerRole(task.type)
+
+    try {
+      const debitResult = await debitCredits({
+        userId: task.userId,
+        taskId: task.id,
+        workerRole,
+        tokensUsed,
+      })
+
+      if (!debitResult.success) {
+        logger.error('[TaskExecution] Billing failed, enqueuing retry', undefined, {
+          taskId: task.id,
+          error: debitResult.errorCode,
+        })
+        await enqueueBillingRetry({
+          taskId: task.id,
+          userId: task.userId,
+          workerRole,
+          tokensUsed,
+          originalError: debitResult.errorCode || 'debit_failed',
+        })
+      } else {
+        logger.info('[TaskExecution] Billing success', {
+          taskId: task.id,
+          creditsDeducted: debitResult.creditsDeducted,
+          remaining: debitResult.creditsRemaining,
+        })
+      }
+    } catch (billingError) {
+      logger.error('[TaskExecution] Billing exception, enqueuing retry', billingError as Error, { taskId: task.id })
+      await enqueueBillingRetry({
+        taskId: task.id,
+        userId: task.userId,
+        workerRole,
+        tokensUsed,
+        originalError: billingError instanceof Error ? billingError.message : 'billing_exception',
+      })
+    }
+  }
+
+  private inferWorkerRole(taskType: string): string {
+    if (taskType.includes('test') || taskType.includes('review') || taskType.includes('qa')) return 'qa'
+    if (taskType.includes('frontend') || taskType.includes('ui') || taskType.includes('css')) return 'frontend'
+    if (taskType.includes('deploy') || taskType.includes('devops') || taskType.includes('docker')) return 'devops'
+    return 'backend'
   }
 }
 

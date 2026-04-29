@@ -5,6 +5,7 @@
 import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { chatService } from './service.js'
+import { checkBalance } from '../services/credits.js'
 import logger from '../utils/logger.js'
 
 const createSessionSchema = z.object({
@@ -82,6 +83,11 @@ export const sendMessage = async (req: Request, res: Response) => {
       })
     }
 
+    const userId = (req as any).userId as string | undefined
+    if (!userId) {
+      return res.status(401).json({ code: 401, message: '未授权' , data: null })
+    }
+
     const session = await chatService.getSession(id)
     if (!session) {
       return res.status(404).json({ code: 404, message: '会话不存在' , data: null })
@@ -98,14 +104,32 @@ export const sendMessage = async (req: Request, res: Response) => {
 
     // Submit Agent tasks asynchronously via queue (does not wait for completion)
     let tasks: Awaited<ReturnType<typeof chatService.executeAgentTask>> = []
+    let estimatedCost = 0
     if (intent !== 'chat' && intent !== 'explain') {
-      tasks = await chatService.executeAgentTask(id, intent, parseResult.data.content)
+      // 根据意图推断主 workerRole 用于预估消耗
+      const primaryRole = intent === 'code_review' || intent === 'run_tests' ? 'qa' : 'backend'
+
+      // Pre-task balance check
+      const balanceResult = await checkBalance(userId, primaryRole)
+      estimatedCost = balanceResult.estimatedCost
+
+      if (!balanceResult.sufficient) {
+        logger.warn('Insufficient credits', { userId, sessionId: id, intent, balance: balanceResult.balance })
+        return res.status(402).json({
+          code: 402,
+          message: 'Credits 余额不足，请充值或赚取 Credits',
+          data: { balance: balanceResult.balance, estimatedCost: balanceResult.estimatedCost },
+        })
+      }
+
+      tasks = await chatService.executeAgentTask(id, intent, parseResult.data.content, userId, estimatedCost)
     }
 
     // Generate assistant response (based on created tickets, not execution result)
     const responseContent = await chatService.generateReply(id, intent, parseResult.data.content, tasks)
     const assistantMsg = await chatService.addMessage(id, 'assistant', responseContent, {
       intent,
+      estimatedCost,
       tickets: tasks.map((t) => ({
         id: t.ticketId,
         role: t.workerRole,
@@ -118,6 +142,7 @@ export const sendMessage = async (req: Request, res: Response) => {
         message: assistantMsg,
         intent,
         tasks,
+        estimatedCost,
       },
     })
   } catch (error) {
@@ -161,15 +186,34 @@ export const executeTask = async (req: Request, res: Response) => {
       })
     }
 
+    const userId = (req as any).userId as string | undefined
+    if (!userId) {
+      return res.status(401).json({ code: 401, message: '未授权' , data: null })
+    }
+
     const session = await chatService.getSession(id)
     if (!session) {
       return res.status(404).json({ code: 404, message: '会话不存在' , data: null })
     }
 
     const { intent } = await chatService.classifyIntent(parseResult.data.content)
-    const tasks = await chatService.executeAgentTask(id, intent, parseResult.data.content)
 
-    res.json({ code: 200, message: 'success', data: { intent, tasks } })
+    // 根据意图推断主 workerRole 用于预估消耗
+    const primaryRole = intent === 'code_review' || intent === 'run_tests' ? 'qa' : 'backend'
+
+    // Pre-task balance check
+    const balanceResult = await checkBalance(userId, primaryRole)
+    if (!balanceResult.sufficient) {
+      return res.status(402).json({
+        code: 402,
+        message: 'Credits 余额不足，请充值或赚取 Credits',
+        data: { balance: balanceResult.balance, estimatedCost: balanceResult.estimatedCost },
+      })
+    }
+
+    const tasks = await chatService.executeAgentTask(id, intent, parseResult.data.content, userId, balanceResult.estimatedCost)
+
+    res.json({ code: 200, message: 'success', data: { intent, tasks, estimatedCost: balanceResult.estimatedCost } })
   } catch (error) {
     logger.error('Failed to execute task', error instanceof Error ? error : undefined)
     res.status(500).json({ code: 500, message: '执行任务失败' , data: null })

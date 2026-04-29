@@ -192,7 +192,7 @@ kubectl get ingress -n agenthive
 
 **新增文件**：
 - `k8s/overlays/demo-ask/base/00-namespace.yaml`
-- `k8s/overlays/demo-ask/base/01-secrets.yaml`
+- `k8s/overlays/demo-ask/base/01-externalsecrets.yaml` (通过 ESO 从 KMS 注入，替代原 01-secrets.yaml)
 - `k8s/overlays/demo-ask/base/03-redis.yaml`
 - `k8s/overlays/demo-ask/base/04-api.yaml`
 - `k8s/overlays/demo-ask/base/05-landing.yaml`

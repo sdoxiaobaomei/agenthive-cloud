@@ -35,7 +35,10 @@ Set-Location $ProjectRoot
 Write-Host "`n[3/6] Creating namespace and config..." -ForegroundColor Yellow
 kubectl apply -f k8s/base/00-namespace.yaml
 kubectl apply -f k8s/base/08-configmap.yaml
-kubectl apply -f k8s/base/01-secrets.yaml
+# 注意：本地开发若未安装 External Secrets Operator，需手动创建 Secret：
+# kubectl create secret generic app-secrets --from-literal=DB_USER=agenthive --from-literal=DB_PASSWORD=dev --from-literal=JWT_SECRET=dev-jwt-secret --from-literal=LLM_API_KEY=sk-your-llm-api-key -n agenthive --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f k8s/base/01-secretstore.yaml
+kubectl apply -f k8s/base/01-externalsecrets.yaml
 Write-Host "✓ Namespace and config created" -ForegroundColor Green
 
 Write-Host "`n[4/6] Deploying databases..." -ForegroundColor Yellow

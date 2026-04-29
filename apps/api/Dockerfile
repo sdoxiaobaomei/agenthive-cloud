@@ -44,6 +44,12 @@ RUN apk add --no-cache dumb-init
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S appuser -u 1001 -G nodejs
 
+# Create workspace data directory with proper ownership
+RUN mkdir -p /data/workspaces && chown -R appuser:nodejs /data
+
+# Declare workspace as a volume for persistence
+VOLUME /data/workspaces
+
 # Copy the deployed production bundle (already contains dist + prod node_modules)
 COPY --from=builder --chown=appuser:nodejs /prod/api .
 
@@ -52,6 +58,7 @@ USER appuser
 
 ENV NODE_ENV=production
 ENV PORT=3001
+ENV WORKSPACE_BASE=/data/workspaces
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \

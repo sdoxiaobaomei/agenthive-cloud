@@ -26,10 +26,26 @@
               <span>My Projects</span>
             </div>
             <div class="flex items-center gap-2">
+              <NuxtLink
+                to="/marketplace"
+                class="view-all-btn"
+                title="Marketplace"
+                @click.stop
+              >
+                <el-icon><ShoppingBag /></el-icon>
+              </NuxtLink>
+              <NuxtLink
+                to="/projects"
+                class="view-all-btn"
+                title="View all projects"
+                @click.stop
+              >
+                <el-icon><FolderOpened /></el-icon>
+              </NuxtLink>
               <button
                 class="view-all-btn"
                 @click.stop="showProjectSearchDialog = true"
-                title="View all projects"
+                title="Search projects"
               >
                 <el-icon><Search /></el-icon>
               </button>
@@ -54,6 +70,13 @@
                 <div class="project-name">{{ project.name }}</div>
                 <div class="project-desc">{{ project.description }}</div>
               </div>
+              <button
+                class="workspace-btn"
+                title="Open workspace"
+                @click.stop="openWorkspace(project.id)"
+              >
+                <el-icon><Document /></el-icon>
+              </button>
             </div>
             <div v-if="recentProjects.length === 0" class="empty-projects">
               <span class="empty-text">No projects yet</span>
@@ -83,6 +106,13 @@
         </div>
 
         <div class="top-actions">
+          <NuxtLink to="/credits" class="credits-badge">
+            <el-icon><Coin /></el-icon>
+            <span>{{ (mockCredits.account.value?.balance ?? 0).toFixed(0) }}</span>
+          </NuxtLink>
+          <NuxtLink to="/creator" class="nav-link" title="Creator Center">
+            <el-icon><ShoppingBag /></el-icon>
+          </NuxtLink>
           <button class="action-btn" @click="showNewProjectDialog = true">
             <el-icon><Plus /></el-icon>
             <span>New Project</span>
@@ -196,25 +226,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Plus,
   Folder,
+  FolderOpened,
   ArrowRight,
   Menu,
   Search,
   Check,
   HomeFilled,
   SwitchButton,
+  Document,
+  ShoppingBag,
+  Coin,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useProjectStore } from '~/stores/project'
 import { useAuthStore } from '~/stores/auth'
+import { useMockCredits } from '~/composables/useMockCredits'
 
 const router = useRouter()
 const projectStore = useProjectStore()
 const authStore = useAuthStore()
+const mockCredits = useMockCredits()
 
 // Auth
 const user = computed(() => authStore.currentUser)
@@ -256,6 +292,10 @@ const selectProject = (project: any) => {
   router.push('/chat')
 }
 
+const openWorkspace = (projectId: string) => {
+  router.push(`/workspace/${projectId}`)
+}
+
 // Fetch projects on mount
 onMounted(async () => {
   try {
@@ -264,6 +304,21 @@ onMounted(async () => {
     if (import.meta.dev) {
       console.debug('[AppLayout] Failed to fetch projects:', err.message)
     }
+  }
+})
+
+// Poll credits balance every 5s
+let creditsPollInterval: ReturnType<typeof setInterval> | null = null
+onMounted(() => {
+  mockCredits.refresh()
+  creditsPollInterval = setInterval(() => {
+    mockCredits.refresh()
+  }, 5000)
+})
+onUnmounted(() => {
+  if (creditsPollInterval) {
+    clearInterval(creditsPollInterval)
+    creditsPollInterval = null
   }
 })
 
@@ -493,6 +548,42 @@ onMounted(() => {
   color: rgba(255,255,255,0.7);
 }
 
+.project-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.workspace-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.project-item:hover .workspace-btn {
+  color: #9ca3af;
+}
+
+.project-item:hover .workspace-btn:hover {
+  background: #e5e7eb;
+  color: #4f46e5;
+}
+
+.project-item.active .workspace-btn:hover {
+  background: rgba(255,255,255,0.2);
+  color: white;
+}
+
 .project-name {
   font-size: 13px;
   font-weight: 500;
@@ -602,6 +693,42 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.credits-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b45309;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.credits-badge:hover {
+  background: #fef3c7;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #6b7280;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.nav-link:hover {
+  background: #f3f4f6;
+  color: #4f46e5;
 }
 
 .action-btn {

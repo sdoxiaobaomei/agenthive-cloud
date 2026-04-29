@@ -612,6 +612,25 @@ export function useApi() {
       get<any>(`/api/chat/sessions/${sessionId}/progress`, { silent: true }),
   }
 
+  // ============ Credits 相关 API ============
+
+  const credits = {
+    /** 查询余额 */
+    getBalance: () =>
+      get<{ balance: number; currency: string }>('/api/credits/balance', { silent: true }),
+
+    /** 查询交易流水 */
+    getTransactions: (page?: number, pageSize?: number) =>
+      get<{ items: any[]; total: number; page: number; pageSize: number }>(
+        `/api/credits/transactions?page=${page || 1}&pageSize=${pageSize || 20}`,
+        { silent: true }
+      ),
+
+    /** 查询定价 */
+    getPricing: () =>
+      get<Array<{ workerRole: string; baseCost: number; tokenPricePer1k: number }>>('/api/credits/pricing', { silent: true }),
+  }
+
   // ============ 代码相关 API ============
 
   const code = {
@@ -657,6 +676,7 @@ export function useApi() {
     tasks,
     code,
     chat,
+    credits,
 
     // 配置
     baseUrl,

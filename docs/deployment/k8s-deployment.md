@@ -107,18 +107,9 @@ metadata:
     istio-injection: disabled
 
 ---
-# k8s/base/01-secrets.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: app-secrets
-  namespace: agenthive
-type: Opaque
-stringData:
-  DB_PASSWORD: "ChangeMeToStrongPassword123!"
-  JWT_SECRET: "your-jwt-secret-here"
-  LLM_API_KEY: "sk-your-llm-api-key"
-
+# k8s/base/01-secretstore.yaml + 01-externalsecrets.yaml
+# 明文 Secret 已移除，改为 External Secrets Operator 从阿里云 KMS 动态注入
+# 详见：docs/deployment/external-secrets-operator.md
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -483,8 +474,9 @@ echo "🚀 部署 AgentHive 到 Kubernetes..."
 kubectl apply -f k8s/base/00-namespace.yaml
 
 # 创建配置和密钥
-echo "📦 创建 Secrets 和 ConfigMaps..."
-kubectl apply -f k8s/base/01-secrets.yaml
+echo "📦 创建 ConfigMap 和 External Secrets..."
+kubectl apply -f k8s/base/01-secretstore.yaml
+kubectl apply -f k8s/base/01-externalsecrets.yaml
 
 # 部署数据库
 echo "🗄️  部署 PostgreSQL..."

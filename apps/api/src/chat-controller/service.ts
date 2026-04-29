@@ -11,8 +11,8 @@ import { pool } from '../config/database.js'
 import redis, { key } from '../config/redis.js'
 import { getLLMService } from '../services/llm.js'
 import logger from '../utils/logger.js'
-import path from 'path'
 import { enqueueTask } from '../services/taskQueue.js'
+import { getChatWorkspacePath } from '../config/workspace.js'
 import type {
   ChatSession,
   ChatMessage,
@@ -22,8 +22,6 @@ import type {
   IntentClassificationResult,
 } from './types.js'
 import type { LLMMessage } from '../services/llm.js'
-
-const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/data/workspaces'
 
 // Prompt template for intent classification (from docs/architecture/chat-controller.md)
 const INTENT_CLASSIFICATION_PROMPT = `分析用户输入的意图，从以下选项中选择最匹配的一个：
@@ -159,10 +157,12 @@ export const chatService = {
   async executeAgentTask(
     sessionId: string,
     intent: ChatIntent,
-    content: string
+    content: string,
+    userId?: string,
+    estimatedCost?: number
   ): Promise<AgentTask[]> {
     // Create workspace for this session
-    const workspacePath = path.join(WORKSPACE_BASE, 'chat-sessions', sessionId)
+    const workspacePath = getChatWorkspacePath(sessionId)
     await redis.setex(key('chat:workspace', sessionId), 86400, workspacePath)
 
     // Create tickets based on intent
@@ -178,12 +178,19 @@ export const chatService = {
       workspacePath,
       ticketIds: tickets.map(t => t.ticketId),
       createdAt: Date.now(),
+      userId,
+      estimatedCost,
     })
 
     // Store taskId → sessionId mapping for progress lookups
     await redis.setex(key('chat:task', sessionId), 86400, taskId)
 
-    logger.info('Task queued', { taskId, sessionId, intent, ticketCount: tickets.length })
+    // Store userId mapping for billing
+    if (userId) {
+      await redis.setex(key('chat:task:user', taskId), 86400, userId)
+    }
+
+    logger.info('Task queued', { taskId, sessionId, intent, ticketCount: tickets.length, userId, estimatedCost })
 
     return tickets
   },
@@ -362,13 +369,20 @@ async function createTicketsForIntent(
       return []
   }
 
+  // 获取 session 的 project_id
+  const sessionResult = await pool.query(
+    'SELECT project_id FROM chat_sessions WHERE id = $1',
+    [sessionId]
+  )
+  const projectId = sessionResult.rows[0]?.project_id
+
   const tasks: AgentTask[] = []
   for (const cfg of ticketConfigs) {
     const result = await pool.query(
-      `INSERT INTO agent_tasks (session_id, ticket_id, worker_role, status, workspace_path)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO agent_tasks (session_id, project_id, ticket_id, worker_role, status, workspace_path)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [sessionId, cfg.ticketId, cfg.workerRole, 'pending', workspacePath]
+      [sessionId, projectId || null, cfg.ticketId, cfg.workerRole, 'pending', workspacePath]
     )
     tasks.push(dbRowToAgentTask(result.rows[0]))
   }

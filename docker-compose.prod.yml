@@ -39,6 +39,12 @@ services:
           memory: 128M
     networks:
       - agenthive-prod
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   # ==========================================
   # API 服务（镜像拉取）
@@ -71,6 +77,12 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost,https://localhost}
       - UV_THREADPOOL_SIZE=4
+      # ===== OpenTelemetry (unified observability) =====
+      - OTEL_SERVICE_NAME=agenthive-api
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=agenthive,deployment.environment=production
+    volumes:
+      - workspace_data:/data/workspaces
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
       interval: 15s
@@ -84,6 +96,14 @@ services:
           memory: 512M
     networks:
       - agenthive-prod
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   # ==========================================
   # Landing（镜像拉取）
@@ -112,6 +132,14 @@ services:
           memory: 1G
     networks:
       - agenthive-prod
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   # ==========================================
   # Java 微服务（profile: java）
@@ -142,6 +170,15 @@ services:
       - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
       # ===== JWT =====
       - JWT_SECRET=${JWT_SECRET}
+      # ===== OpenTelemetry (unified observability) =====
+      - OTEL_SERVICE_NAME=gateway-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=agenthive,deployment.environment=production
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES=true
+      - LOGGING_PATTERN_CONSOLE=%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n
     depends_on:
       nacos:
         condition: service_healthy
@@ -160,6 +197,14 @@ services:
       - agenthive-prod
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   java-auth:
     image: ${AUTH_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/auth-service:latest}
@@ -196,6 +241,15 @@ services:
       - ALIYUN_SMS_ENABLED=${ALIYUN_SMS_ENABLED:-false}
       - ALIBABA_CLOUD_ACCESS_KEY_ID=${ALIBABA_CLOUD_ACCESS_KEY_ID}
       - ALIBABA_CLOUD_ACCESS_KEY_SECRET=${ALIBABA_CLOUD_ACCESS_KEY_SECRET}
+      # ===== OpenTelemetry (unified observability) =====
+      - OTEL_SERVICE_NAME=auth-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=agenthive,deployment.environment=production
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES=true
+      - LOGGING_PATTERN_CONSOLE=%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n
     depends_on:
       nacos:
         condition: service_healthy
@@ -214,6 +268,14 @@ services:
       - agenthive-prod
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   java-user:
     image: ${USER_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/user-service:latest}
@@ -244,6 +306,15 @@ services:
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
       - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      # ===== OpenTelemetry (unified observability) =====
+      - OTEL_SERVICE_NAME=user-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=agenthive,deployment.environment=production
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES=true
+      - LOGGING_PATTERN_CONSOLE=%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n
     depends_on:
       nacos:
         condition: service_healthy
@@ -262,6 +333,14 @@ services:
       - agenthive-prod
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   java-payment:
     image: ${PAYMENT_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/payment-service:latest}
@@ -298,6 +377,15 @@ services:
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-agenthive}
       - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-agenthive-secret}
+      # ===== OpenTelemetry (unified observability) =====
+      - OTEL_SERVICE_NAME=payment-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=agenthive,deployment.environment=production
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES=true
+      - LOGGING_PATTERN_CONSOLE=%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n
     depends_on:
       nacos:
         condition: service_healthy
@@ -316,6 +404,14 @@ services:
       - agenthive-prod
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   java-order:
     image: ${ORDER_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/order-service:latest}
@@ -352,6 +448,15 @@ services:
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-agenthive}
       - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-agenthive-secret}
+      # ===== OpenTelemetry (unified observability) =====
+      - OTEL_SERVICE_NAME=order-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=agenthive,deployment.environment=production
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES=true
+      - LOGGING_PATTERN_CONSOLE=%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n
     depends_on:
       nacos:
         condition: service_healthy
@@ -370,6 +475,14 @@ services:
       - agenthive-prod
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   java-cart:
     image: ${CART_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/cart-service:latest}
@@ -405,6 +518,15 @@ services:
       - SPRING_RABBITMQ_PORT=5672
       - SPRING_RABBITMQ_USERNAME=${RABBITMQ_USER:-agenthive}
       - SPRING_RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-agenthive-secret}
+      # ===== OpenTelemetry (unified observability) =====
+      - OTEL_SERVICE_NAME=cart-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=agenthive,deployment.environment=production
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES=true
+      - LOGGING_PATTERN_CONSOLE=%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n
     depends_on:
       nacos:
         condition: service_healthy
@@ -425,6 +547,14 @@ services:
       - agenthive-prod
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   java-logistics:
     image: ${LOGISTICS_IMAGE:-crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/logistics-service:latest}
@@ -461,6 +591,15 @@ services:
       - SPRING_DATA_REDIS_HOST=${REDIS_HOST:-172.24.146.165}
       - SPRING_DATA_REDIS_PORT=${REDIS_PORT:-6379}
       - SPRING_DATA_REDIS_PASSWORD=${REDIS_PASSWORD}
+      # ===== OpenTelemetry (unified observability) =====
+      - OTEL_SERVICE_NAME=logistics-service
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=agenthive,deployment.environment=production
+      - OTEL_TRACES_EXPORTER=otlp
+      - OTEL_METRICS_EXPORTER=otlp
+      - OTEL_LOGS_EXPORTER=otlp
+      - OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES=true
+      - LOGGING_PATTERN_CONSOLE=%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n
     depends_on:
       nacos:
         condition: service_healthy
@@ -479,6 +618,14 @@ services:
       - agenthive-prod
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
 
   nacos:
     image: nacos/nacos-server:v2.3.0
@@ -508,6 +655,12 @@ services:
       - agenthive-prod
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -533,6 +686,12 @@ services:
       - agenthive-prod
     profiles:
       - java
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   # ==========================================
   # 监控栈（profile: monitoring）
@@ -559,6 +718,12 @@ services:
           memory: 512M
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   grafana:
     image: grafana/grafana:10.0.0
@@ -580,6 +745,12 @@ services:
           memory: 512M
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   tempo:
     image: grafana/tempo:2.5.0
@@ -599,6 +770,12 @@ services:
           memory: 1G
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   loki:
     image: grafana/loki:3.0.0
@@ -618,6 +795,12 @@ services:
           memory: 512M
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.96.0
@@ -637,12 +820,44 @@ services:
           memory: 512M
     profiles:
       - monitoring
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "5"
+        compress: "true"
+
+  # ==========================================
+  # Watchtower - 自动镜像更新
+  # ==========================================
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: agenthive-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_POLL_INTERVAL=300
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_INCLUDE_STOPPED=true
+      - WATCHTOWER_REVIVE_STOPPED=true
+      - WATCHTOWER_NOTIFICATIONS=webhook
+      - WATCHTOWER_NOTIFICATION_WEBHOOK_URL=${WATCHTOWER_WEBHOOK_URL}
+    command: --label-enable
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - agenthive-prod
 
 networks:
   agenthive-prod:
     driver: bridge
 
 volumes:
+  workspace_data:
   prometheus-data:
   grafana-data:
   tempo-data:

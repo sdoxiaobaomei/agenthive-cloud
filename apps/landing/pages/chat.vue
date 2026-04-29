@@ -1,58 +1,39 @@
 <template>
   <div class="chat-page">
     <!-- Left Chat Panel -->
-    <aside class="chat-sidebar">
-      <ChatPanel :current-project="currentProject" embedded />
+    <aside class="chat-sidebar" :class="{ collapsed: isChatSidebarCollapsed }">
+      <div class="chat-sidebar-header">
+        <button
+          class="sidebar-collapse-btn"
+          :title="isChatSidebarCollapsed ? 'Expand chat' : 'Collapse chat'"
+          @click="toggleChatSidebar"
+        >
+          <el-icon><ArrowLeft v-if="!isChatSidebarCollapsed" /><ArrowRight v-else /></el-icon>
+        </button>
+      </div>
+      <div v-show="!isChatSidebarCollapsed" class="chat-sidebar-body">
+        <ChatPanel :current-project="currentProject" embedded />
+      </div>
+      <div v-show="isChatSidebarCollapsed" class="chat-sidebar-collapsed">
+        <button class="collapsed-expand-btn" @click="toggleChatSidebar">
+          <img src="/avatars/shiba_tl.png" class="collapsed-avatar" alt="Agent" />
+          <span class="collapsed-badge">AI</span>
+        </button>
+      </div>
     </aside>
 
     <!-- Center Content Area -->
     <div class="center-area">
-      <!-- Project Header -->
-      <div v-if="currentProject" class="project-header">
-        <div class="project-header-info">
-          <span class="project-header-name">{{ currentProject.name }}</span>
-          <span class="project-header-desc">{{ currentProject.description || '暂无描述' }}</span>
-        </div>
-        <div class="project-header-actions">
-          <el-button size="small" text @click="goHome">
-            <el-icon><HomeFilled /></el-icon>
-            <span>返回首页</span>
-          </el-button>
-          <el-button size="small" text @click="switchProject">
-            <el-icon><Switch /></el-icon>
-            <span>切换项目</span>
-          </el-button>
-        </div>
-      </div>
-      <div v-else class="project-header project-header--empty">
-        <span class="project-header-placeholder">未选择项目</span>
-        <el-button size="small" type="primary" @click="goHome">选择或创建项目</el-button>
-      </div>
-
-      <!-- Tab Navigation -->
-      <div class="center-tabs">
-        <button 
-          v-for="tab in tabs" 
-          :key="tab.id"
-          class="tab-btn"
-          :class="{ active: activeTab === tab.id }"
-          @click="activeTab = tab.id"
-        >
-          <el-icon><component :is="tab.icon" /></el-icon>
-          <span>{{ tab.label }}</span>
-        </button>
-      </div>
-
       <!-- Tab Content -->
       <div class="center-content">
         <!-- Files Tab - Full File System -->
-        <div v-if="activeTab === 'files'" class="files-view">
+        <div v-if="chatStore.activeTab === 'files'" class="files-view">
           <div class="files-header">
             <span class="files-title">File System</span>
           </div>
           <div class="file-tree">
-            <FileTreeNode 
-              v-for="node in chatStore.fileTree" 
+            <FileTreeNode
+              v-for="node in chatStore.fileTree"
               :key="node.path"
               :node="node"
               :selected-path="chatStore.selectedFile || undefined"
@@ -69,7 +50,7 @@
         </div>
 
         <!-- Editor Tab - Apps Directory Only -->
-        <div v-if="activeTab === 'editor'" class="editor-view">
+        <div v-if="chatStore.activeTab === 'editor'" class="editor-view">
           <!-- Editor Sidebar - Apps Files -->
           <div class="editor-sidebar">
             <div class="editor-sidebar-header">
@@ -84,8 +65,8 @@
               </div>
             </div>
             <div class="editor-file-tree">
-              <FileTreeNode 
-                v-for="node in editorFileTree" 
+              <FileTreeNode
+                v-for="node in editorFileTree"
                 :key="node.path"
                 :node="node"
                 :selected-path="chatStore.selectedFile || undefined"
@@ -104,8 +85,8 @@
           <div class="code-editor">
             <!-- Opened Files Tabs -->
             <div v-if="chatStore.openedFiles.length > 0" class="code-tabs">
-              <div 
-                v-for="file in chatStore.openedFiles" 
+              <div
+                v-for="file in chatStore.openedFiles"
                 :key="file.path"
                 class="code-tab"
                 :class="{ active: chatStore.activeFilePath === file.path }"
@@ -118,7 +99,7 @@
                 </button>
               </div>
             </div>
-            
+
             <div class="code-content">
               <div v-if="currentFile" class="code-header">
                 <span class="code-path">{{ currentFile.path }}</span>
@@ -135,7 +116,7 @@
         </div>
 
         <!-- Preview Tab -->
-        <div v-if="activeTab === 'preview'" class="preview-view">
+        <div v-if="chatStore.activeTab === 'preview'" class="preview-view">
           <div class="preview-frame">
             <div class="preview-header">
               <div class="window-controls">
@@ -173,8 +154,8 @@
     </div>
 
     <!-- Context Menu -->
-    <div 
-      v-if="contextMenu.visible" 
+    <div
+      v-if="contextMenu.visible"
       class="context-menu"
       :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
     >
@@ -203,8 +184,8 @@
       :title="createDialog.isDirectory ? 'New Folder' : 'New File'"
       width="400px"
     >
-      <el-input 
-        v-model="createDialog.name" 
+      <el-input
+        v-model="createDialog.name"
         :placeholder="createDialog.isDirectory ? 'Folder name' : 'File name'"
         @keyup.enter="confirmCreate"
       />
@@ -222,8 +203,8 @@
       title="Rename"
       width="400px"
     >
-      <el-input 
-        v-model="renameDialog.name" 
+      <el-input
+        v-model="renameDialog.name"
         placeholder="New name"
         @keyup.enter="confirmRename"
       />
@@ -264,15 +245,15 @@ import {
   FolderAdd,
   Close,
   Monitor,
-  View,
   Edit,
   Delete,
-  HomeFilled,
-  Switch
+  ArrowLeft,
+  ArrowRight,
 } from '@element-plus/icons-vue'
 import ChatPanel from '~/components/ChatPanel.vue'
 import FileTreeNode from '~/components/FileTreeNode.vue'
 import { useChatStore, type FileTreeNode as FileTreeNodeType } from '~/stores/chat'
+import { useProjectStore } from '~/stores/project'
 
 definePageMeta({
   layout: 'chat',
@@ -291,9 +272,15 @@ interface Project {
 
 const router = useRouter()
 const chatStore = useChatStore()
-const currentProject = ref<Project | null>(null)
-const activeTab = ref<'files' | 'editor' | 'preview'>('editor')
+const projectStore = useProjectStore()
+const currentProject = computed(() => projectStore.currentProject)
 const fileContent = ref('')
+
+// Chat sidebar collapse state
+const isChatSidebarCollapsed = ref(false)
+const toggleChatSidebar = () => {
+  isChatSidebarCollapsed.value = !isChatSidebarCollapsed.value
+}
 
 // Context Menu State
 const contextMenu = ref({
@@ -324,13 +311,6 @@ const deleteDialog = ref({
   node: null as FileTreeNodeType | null,
 })
 
-type TabId = 'files' | 'editor' | 'preview'
-const tabs: { id: TabId; label: string; icon: any }[] = [
-  { id: 'files', label: 'Files', icon: 'Folder' },
-  { id: 'editor', label: 'Editor', icon: Edit },
-  { id: 'preview', label: 'Preview', icon: View },
-]
-
 // Editor file tree - filter to show only app directory or full tree
 const editorFileTree = computed(() => {
   // For now, show full tree in editor, can be filtered later
@@ -353,17 +333,12 @@ watch(() => chatStore.activeFilePath, async (path) => {
 })
 
 onMounted(() => {
-  const saved = sessionStorage.getItem('pending-project')
-  if (saved) {
-    currentProject.value = JSON.parse(saved)
-  }
-  
   // Load file tree on mount
   chatStore.loadFileTree().catch((err) => {
     console.warn('Failed to load file tree:', err)
     // 不显示错误提示，因为用户可能未登录
   })
-  
+
   // Close context menu on click outside
   document.addEventListener('click', hideContextMenu)
 })
@@ -371,18 +346,6 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', hideContextMenu)
 })
-
-// Navigate back to home page
-function goHome() {
-  router.push('/')
-}
-
-// Switch project - go to home and open project dialog
-function switchProject() {
-  sessionStorage.removeItem('pending-project')
-  currentProject.value = null
-  router.push('/')
-}
 
 // Load file content from API
 async function loadFileContent(path: string) {
@@ -402,7 +365,7 @@ async function loadFileContent(path: string) {
 function handleFileSelect(node: FileTreeNodeType) {
   if (node.type === 'file') {
     chatStore.openFileInEditor(node)
-    activeTab.value = 'editor'
+    chatStore.setActiveTab('editor')
   }
   hideContextMenu()
 }
@@ -487,7 +450,7 @@ function showCreateDialog(type: 'file' | 'folder') {
 // Confirm create
 async function confirmCreate() {
   if (!createDialog.value.name) return
-  
+
   try {
     await chatStore.createFile(
       createDialog.value.parentPath,
@@ -504,7 +467,7 @@ async function confirmCreate() {
 // Confirm rename
 async function confirmRename() {
   if (!renameDialog.value.name || !renameDialog.value.node) return
-  
+
   try {
     await chatStore.renameFile(renameDialog.value.node.path, renameDialog.value.name)
     renameDialog.value.visible = false
@@ -517,7 +480,7 @@ async function confirmRename() {
 // Confirm delete
 async function confirmDelete() {
   if (!deleteDialog.value.node) return
-  
+
   try {
     await chatStore.deleteFile(deleteDialog.value.node.path)
     deleteDialog.value.visible = false
@@ -563,6 +526,88 @@ async function confirmDelete() {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.chat-sidebar.collapsed {
+  width: 56px;
+}
+
+.chat-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px;
+  border-bottom: 1px solid #f3f4f6;
+  flex-shrink: 0;
+}
+
+.sidebar-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sidebar-collapse-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.chat-sidebar-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-sidebar-collapsed {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.collapsed-expand-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: #f3f4f6;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.collapsed-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.collapsed-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #4f46e5;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
 }
 
 /* Center Area */
@@ -572,92 +617,6 @@ async function confirmDelete() {
   flex-direction: column;
   min-width: 0;
   background: #ffffff;
-}
-
-/* Project Header */
-.project-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
-  flex-shrink: 0;
-}
-
-.project-header-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.project-header-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #111827;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.project-header-desc {
-  font-size: 12px;
-  color: #6b7280;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 300px;
-}
-
-.project-header-actions {
-  display: flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.project-header--empty {
-  justify-content: center;
-  gap: 12px;
-  color: #6b7280;
-}
-
-.project-header-placeholder {
-  font-size: 13px;
-}
-
-/* Center Tabs */
-.center-tabs {
-  display: flex;
-  padding: 8px 16px;
-  gap: 8px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f9fafb;
-}
-
-.tab-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: #6b7280;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.tab-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.tab-btn.active {
-  background: #4f46e5;
-  color: white;
 }
 
 /* Center Content */
@@ -999,74 +958,77 @@ async function confirmDelete() {
   margin-bottom: 16px;
 }
 
-.preview-placeholder h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #374151;
-  margin: 0 0 8px;
-}
-
-.preview-placeholder p {
-  font-size: 14px;
-  margin: 0;
-}
-
 .preview-content {
-  min-height: 100%;
-  padding: 40px;
+  padding: 24px;
 }
 
 .mock-hero {
   text-align: center;
-  padding: 60px 40px;
-  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-  border-radius: 16px;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 }
 
 .mock-hero h1 {
-  font-size: 42px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 600;
   color: #111827;
-  margin: 0 0 16px;
+  margin-bottom: 8px;
 }
 
 .mock-hero p {
-  font-size: 18px;
+  font-size: 14px;
   color: #6b7280;
-  margin: 0;
 }
 
 .mock-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
+  gap: 16px;
 }
 
 .mock-card {
   background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
+  border: 1px solid #e5e7eb;
 }
 
 .mock-card-img {
-  height: 160px;
-  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+  height: 120px;
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
 }
 
 .mock-card-text {
-  padding: 16px;
+  padding: 12px;
 }
 
 .mock-line {
   height: 12px;
   background: #e5e7eb;
-  border-radius: 2px;
+  border-radius: 6px;
   margin-bottom: 8px;
 }
 
 .mock-line.short {
   width: 60%;
+}
+
+@media (max-width: 768px) {
+  .chat-sidebar {
+    position: fixed;
+    top: 48px;
+    left: 0;
+    height: calc(100vh - 48px);
+    z-index: 45;
+    transform: translateX(0);
+  }
+
+  .chat-sidebar.collapsed {
+    transform: translateX(-100%);
+    width: 320px;
+  }
+
+  .mock-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

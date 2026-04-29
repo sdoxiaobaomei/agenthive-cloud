@@ -31,6 +31,12 @@
 | 文档 | 说明 |
 |------|------|
 | [K8s 部署指南](./k8s-deployment.md) | 生产环境 K8s 部署 |
+| [TLS / HTTPS 配置](./tls-https-setup.md) | cert-manager + Let's Encrypt + HSTS |
+| [External Secrets Operator](./external-secrets-operator.md) | KMS 动态 Secret 注入 |
+| [Redis 持久化策略](./redis-persistence-strategy.md) | PVC + AOF/RDB + 云托管评估 |
+| [Docker 日志轮转](./docker-logging.md) | 日志限制 + 磁盘监控 + 自动清理 |
+| [Nginx HTTPS 证书](./nginx-https.md) | 阿里云证书部署 + TLS 强制跳转 |
+| [Watchtower 自动更新](./watchtower.md) | CI/CD 镜像自动检测与安全重启 |
 | [Docker 转 K8s 迁移](../archive/DOCKER-TO-K8S-MIGRATION.md) | 完整迁移方案 |
 | [手把手 K8s 迁移](../HANDS-ON-K8S-MIGRATION.md) | 从零开始教程 |
 | [本地 K8s 部署](../archive/LOCAL-K8S-DOCKER-DESKTOP.md) | Docker Desktop K8s |

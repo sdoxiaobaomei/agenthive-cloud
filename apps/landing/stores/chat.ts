@@ -61,6 +61,8 @@ export interface FileTreeNode {
   children?: FileTreeNode[]
 }
 
+export type ChatTab = 'files' | 'editor' | 'preview'
+
 /** 聊天状态 */
 interface ChatState {
   messages: ChatMessage[]
@@ -76,6 +78,8 @@ interface ChatState {
   selectedFile: string | null
   openedFiles: FileTreeNode[]
   activeFilePath: string | null
+  // 页面活动标签
+  activeTab: ChatTab
 }
 
 // 默认演示文件树数据（当 API 不可用时使用）
@@ -137,6 +141,8 @@ export const useChatStore = defineStore('chat', {
     selectedFile: null,
     openedFiles: [],
     activeFilePath: null,
+    // 页面活动标签
+    activeTab: 'editor',
   }),
 
   getters: {
@@ -787,6 +793,13 @@ export const useChatStore = defineStore('chat', {
         m => m.conversationId !== this.currentConversation!.id
       )
       this.currentConversation.messageCount = 0
+    },
+
+    /**
+     * 设置活动标签
+     */
+    setActiveTab(tab: ChatTab): void {
+      this.activeTab = tab
     },
   },
 

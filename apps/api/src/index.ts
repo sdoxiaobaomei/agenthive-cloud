@@ -14,9 +14,11 @@ import { initWebSocket, getStats } from './websocket/hub.js'
 import { initLLM } from './services/llm.js'
 import { initializeTaskExecution } from './services/taskExecution.js'
 import { initTaskQueue } from './services/taskQueue.js'
+import { BillingRetryWorker } from './services/billingRetry.js'
+import logger from './utils/logger.js'
+import { WORKSPACE_BASE } from './config/workspace.js'
 
 const PORT = process.env.PORT || 3001
-const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/data/workspaces'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -26,7 +28,7 @@ async function initDatabaseSchema(): Promise<void> {
     await pool.query('SELECT 1 FROM projects LIMIT 1')
   } catch (err: any) {
     if (err.code === '42P01') {
-      console.log('[Database] Tables not found, running schema initialization...')
+      logger.info('[Database] Tables not found, running schema initialization...')
       try {
         const schemaPath = resolve(__dirname, './db/schema.sql')
         const schema = readFileSync(schemaPath, 'utf-8')
@@ -40,13 +42,13 @@ async function initDatabaseSchema(): Promise<void> {
             await pool.query(stmt)
           } catch (e: any) {
             if (e.code !== '42P07' && !e.message?.includes('already exists')) {
-              console.warn('[Database] Schema init warning:', e.message)
+              logger.warn('[Database] Schema init warning', { message: e.message })
             }
           }
         }
-        console.log('[Database] Schema initialization complete.')
+        logger.info('[Database] Schema initialization complete.')
       } catch (readErr) {
-        console.error('[Database] Failed to read schema file:', readErr)
+        logger.error('[Database] Failed to read schema file', readErr as Error)
       }
     }
   }
@@ -57,7 +59,7 @@ const startServer = async () => {
   // 测试数据库连接
   const dbConnected = await testConnection()
   if (!dbConnected) {
-    console.error('[Server] Failed to connect to database. Starting with limited functionality...')
+    logger.error('[Server] Failed to connect to database. Starting with limited functionality...')
   } else {
     // 自动初始化数据库表（如果不存在）
     await initDatabaseSchema()
@@ -66,31 +68,41 @@ const startServer = async () => {
   // 测试 Redis 连接
   const redisConnected = await testRedisConnection()
   if (!redisConnected) {
-    console.error('[Server] Failed to connect to Redis. Starting with limited functionality...')
+    logger.error('[Server] Failed to connect to Redis. Starting with limited functionality...')
   }
 
   // 初始化 LLM 服务
   try {
     await initLLM()
   } catch (error) {
-    console.error('[Server] LLM Service initialization failed:', error)
-    console.log('[Server] Continuing without LLM support...')
+    logger.error('[Server] LLM Service initialization failed', error as Error)
+    logger.info('[Server] Continuing without LLM support...')
   }
 
   // 创建工作区目录
   try {
     await mkdir(WORKSPACE_BASE, { recursive: true })
-    console.log(`[Server] Workspace directory ready: ${WORKSPACE_BASE}`)
+    logger.info('[Server] Workspace directory ready', { workspaceBase: WORKSPACE_BASE })
   } catch (error) {
-    console.error('[Server] Failed to create workspace directory:', error)
+    logger.error('[Server] Failed to create workspace directory', error as Error)
   }
 
   // 初始化任务队列（Redis Stream）
   try {
     await initTaskQueue()
-    console.log('[Server] Task Queue initialized')
+    logger.info('[Server] Task Queue initialized')
   } catch (error) {
-    console.error('[Server] Task Queue initialization failed:', error)
+    logger.error('[Server] Task Queue initialization failed', error as Error)
+  }
+
+  // 初始化计费重试 Worker
+  let billingWorker: BillingRetryWorker | null = null
+  try {
+    billingWorker = new BillingRetryWorker()
+    await billingWorker.start(30000)
+    logger.info('[Server] Billing Retry Worker initialized')
+  } catch (error) {
+    logger.error('[Server] Billing Retry Worker initialization failed', error as Error)
   }
 
   // 初始化任务执行服务
@@ -101,9 +113,9 @@ const startServer = async () => {
       maxConcurrentTasks: 3,
       timeoutMs: 10 * 60 * 1000, // 10 minutes
     })
-    console.log('[Server] Task Execution Service initialized')
+    logger.info('[Server] Task Execution Service initialized')
   } catch (error) {
-    console.error('[Server] Task Execution Service initialization failed:', error)
+    logger.error('[Server] Task Execution Service initialization failed', error as Error)
   }
 
   // 创建 HTTP 服务器
@@ -116,93 +128,19 @@ const startServer = async () => {
       initWebSocket(server)
       wsEnabled = true
     } catch (error) {
-      console.error('[Server] WebSocket initialization failed:', error)
+      logger.error('[Server] WebSocket initialization failed', error as Error)
     }
   }
 
   // 启动服务器
   server.listen(PORT, () => {
-    console.log(`
-🚀 AgentHive API Server started!
-
-📡 Server: http://localhost:${PORT}
-🗄️  Database: ${dbConnected ? 'Connected' : 'Disconnected'}
-📦 Redis: ${redisConnected ? 'Connected' : 'Disconnected'}
-🔌 WebSocket: ${wsEnabled ? 'Enabled' : 'Disabled'}
-📚 API Docs: http://localhost:${PORT}/api/health
-
-Available endpoints:
-  - GET  /api/agents             Agent 列表
-  - POST /api/agents             创建 Agent
-  - GET  /api/agents/:id         Agent 详情
-  - PATCH /api/agents/:id        更新 Agent
-  - DELETE /api/agents/:id       删除 Agent
-  - POST /api/agents/:id/start   启动 Agent
-  - POST /api/agents/:id/stop    停止 Agent
-  - POST /api/agents/:id/pause   暂停 Agent
-  - POST /api/agents/:id/resume  恢复 Agent
-  - POST /api/agents/:id/command 发送命令
-  - GET  /api/agents/:id/logs    获取日志
-  
-  - GET  /api/tasks              任务列表
-  - POST /api/tasks              创建任务
-  - GET  /api/tasks/:id          任务详情
-  - PATCH /api/tasks/:id         更新任务
-  - DELETE /api/tasks/:id        删除任务
-  - POST /api/tasks/:id/execute  执行任务 ⭐ NEW
-  - POST /api/tasks/:id/cancel   取消任务
-  - GET  /api/tasks/:id/progress 任务进度 ⭐ NEW
-  - GET  /api/tasks/:id/subtasks 获取子任务
-  
-  - GET  /api/code/workspace/files        工作区文件列表 ⭐ NEW
-  - GET  /api/code/workspace/files/content 读取工作区文件 ⭐ NEW
-  - POST /api/code/workspace/files/save   保存工作区文件 ⭐ NEW
-  - DELETE /api/code/workspace/files      删除工作区文件 ⭐ NEW
-  
-  - GET  /api/code/files         文件列表
-  - GET  /api/code/files/*       文件内容
-  - PUT  /api/code/files/*       更新文件
-  - DELETE /api/code/files/*     删除文件
-  - GET  /api/code/search        搜索文件
-  - GET  /api/code/recent        最近文件
-  
-  - GET  /api/demo/plan          示例计划
-  - GET  /api/demo/agents        示例 Agents
-  - GET  /api/demo/tasks         示例任务
-  - GET  /api/demo/visitor-status 访客状态
-  
-  - GET  /api/health             健康检查
-  
-  - GET  /api/projects            项目列表
-  - POST /api/projects            创建项目
-  - GET  /api/projects/:id        项目详情
-  - PATCH /api/projects/:id       更新项目
-  - DELETE /api/projects/:id      删除项目
-  
-  - GET  /api/chat/sessions       会话列表
-  - POST /api/chat/sessions       创建会话
-  - GET  /api/chat/sessions/:id   会话详情
-  - POST /api/chat/sessions/:id/messages 发送消息
-  - GET  /api/chat/sessions/:id/messages 获取消息
-  - POST /api/chat/sessions/:id/execute  执行 Agent 任务
-  - GET  /api/chat/sessions/:id/tasks    获取任务列表
-  - GET  /api/chat/sessions/:id/progress 获取进度
-
-WebSocket Events:
-  - /chat namespace
-    - session:join <sessionId>     加入会话房间
-    - session:leave <sessionId>    离开会话房间
-    - session:logs <sessionId>     获取实时日志
-  - / namespace
-    - agent:subscribe <agentId>    订阅 Agent 状态
-    - agent:unsubscribe <agentId>  取消订阅
-    - agent:command                发送命令给 Agent
-    - task:subscribe <taskId>      订阅任务进度
-    - task:progress                更新任务进度
-    - task:log                     任务日志
-    - terminal:subscribe <agentId> 订阅终端输出
-    - terminal:input               发送终端命令
-  `)
+    logger.info('AgentHive API Server started', {
+      port: PORT,
+      database: dbConnected ? 'Connected' : 'Disconnected',
+      redis: redisConnected ? 'Connected' : 'Disconnected',
+      websocket: wsEnabled ? 'Enabled' : 'Disabled',
+      healthEndpoint: `http://localhost:${PORT}/api/health`,
+    })
   })
 
   // 定期打印连接统计
@@ -210,10 +148,13 @@ WebSocket Events:
     setInterval(async () => {
       const stats = await getStats()
       if (stats.total > 0) {
-        console.log(`[WebSocket] Connections: ${stats.total} (Auth: ${stats.authenticated}, Visitors: ${stats.visitors})`)
+        logger.info('[WebSocket] Connections', { total: stats.total, authenticated: stats.authenticated, visitors: stats.visitors })
       }
     }, 60000) // 每分钟打印一次
   }
 }
 
-startServer().catch(console.error)
+startServer().catch((err) => {
+  logger.error('Server startup failed', err)
+  process.exit(1)
+})

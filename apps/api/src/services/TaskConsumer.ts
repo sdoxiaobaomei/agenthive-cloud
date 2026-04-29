@@ -9,6 +9,8 @@ import { redis, redisPub } from '../config/redis.js'
 import { pool } from '../config/database.js'
 import { key } from '../config/redis.js'
 import logger from '../utils/logger.js'
+import { debitCredits } from './credits.js'
+import { enqueueBillingRetry } from './billingRetry.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const STREAM_KEY = 'agenthive:agent:task:queue'
@@ -23,6 +25,8 @@ interface TaskFields {
   workspacePath: string
   ticketIds: string
   createdAt: string
+  userId?: string
+  estimatedCost?: string
 }
 
 export class TaskConsumer {
@@ -101,6 +105,75 @@ export class TaskConsumer {
       )
     } catch (dbError) {
       logger.error('Failed to update agent_tasks', dbError as Error, { sessionId: task.sessionId })
+    }
+
+    // Post-task billing
+    if (result.success && task.userId) {
+      try {
+        // 尝试从 Redis 读取 Agent Runtime 上报的实际 token 消耗
+        const usageData = await redis.get(`agenthive:task:usage:${task.taskId}`)
+        let tokensUsed = 0
+        if (usageData) {
+          try {
+            const usage = JSON.parse(usageData)
+            tokensUsed = usage.totalTokens || usage.tokensUsed || 0
+          } catch {
+            tokensUsed = parseInt(usageData, 10) || 0
+          }
+        }
+
+        const debitResult = await debitCredits({
+          userId: task.userId,
+          taskId: task.taskId,
+          sessionId: task.sessionId,
+          workerRole: task.intent === 'code_review' || task.intent === 'run_tests' ? 'qa' : 'backend',
+          tokensUsed,
+        })
+
+        if (!debitResult.success) {
+          logger.error('Post-task billing failed, enqueuing retry', undefined, {
+            taskId: task.taskId,
+            error: debitResult.errorCode,
+          })
+          await enqueueBillingRetry({
+            taskId: task.taskId,
+            userId: task.userId,
+            sessionId: task.sessionId,
+            workerRole: task.intent === 'code_review' || task.intent === 'run_tests' ? 'qa' : 'backend',
+            tokensUsed,
+            originalError: debitResult.errorCode || 'debit_failed',
+          })
+        } else {
+          logger.info('Post-task billing success', {
+            taskId: task.taskId,
+            creditsDeducted: debitResult.creditsDeducted,
+            remaining: debitResult.creditsRemaining,
+          })
+        }
+      } catch (billingError) {
+        logger.error('Post-task billing exception, enqueuing retry', billingError as Error, { taskId: task.taskId })
+        if (task.userId) {
+          // 重新读取 usage（可能在异常前已更新）
+          const retryUsageData = await redis.get(`agenthive:task:usage:${task.taskId}`)
+          let retryTokensUsed = 0
+          if (retryUsageData) {
+            try {
+              const usage = JSON.parse(retryUsageData)
+              retryTokensUsed = usage.totalTokens || usage.tokensUsed || 0
+            } catch {
+              retryTokensUsed = parseInt(retryUsageData, 10) || 0
+            }
+          }
+          await enqueueBillingRetry({
+            taskId: task.taskId,
+            userId: task.userId,
+            sessionId: task.sessionId,
+            workerRole: task.intent === 'code_review' || task.intent === 'run_tests' ? 'qa' : 'backend',
+            tokensUsed: retryTokensUsed,
+            originalError: billingError instanceof Error ? billingError.message : 'billing_exception',
+          })
+        }
+      }
     }
 
     await redis.xack(STREAM_KEY, GROUP_NAME, streamId)

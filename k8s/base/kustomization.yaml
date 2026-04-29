@@ -5,7 +5,8 @@ namespace: agenthive
 
 resources:
   - 00-namespace.yaml
-  - 01-secrets.yaml
+  - 01-secretstore.yaml
+  - 01-externalsecrets.yaml
   - 02-postgres.yaml
   - 02-postgres-java.yaml
   - 03-redis.yaml
@@ -16,6 +17,7 @@ resources:
   - 08-configmap.yaml
   - 09-ingress.yaml
   - 10-java-services.yaml
+  - 11-backup-cronjob.yaml
 
 # 通用标签
 labels:
