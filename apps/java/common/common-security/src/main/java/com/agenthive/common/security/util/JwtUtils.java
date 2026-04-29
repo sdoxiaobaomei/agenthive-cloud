@@ -2,6 +2,7 @@ package com.agenthive.common.security.util;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SecureDigestAlgorithm;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.crypto.SecretKey;
@@ -12,12 +13,22 @@ import java.util.Map;
 @Slf4j
 public class JwtUtils {
 
+    private static final SecureDigestAlgorithm<SecretKey, SecretKey> SIGNATURE_ALGORITHM = Jwts.SIG.HS256;
+
     private final SecretKey key;
     private final long accessTokenExpiration;
     private final long refreshTokenExpiration;
 
     public JwtUtils(String secret, long accessTokenExpiration, long refreshTokenExpiration) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalArgumentException(
+                "JWT_SECRET must be at least 32 bytes (256 bits) for HS256. " +
+                "Got " + keyBytes.length + " bytes. " +
+                "Generate with: openssl rand -base64 32"
+            );
+        }
+        this.key = Keys.hmacShaKeyFor(keyBytes);
         this.accessTokenExpiration = accessTokenExpiration;
         this.refreshTokenExpiration = refreshTokenExpiration;
     }
@@ -37,7 +48,7 @@ public class JwtUtils {
                 .subject(subject)
                 .issuedAt(now)
                 .expiration(expiry)
-                .signWith(key);
+                .signWith(key, SIGNATURE_ALGORITHM);
         claims.forEach(builder::claim);
         return builder.compact();
     }

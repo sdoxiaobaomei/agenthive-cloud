@@ -27,6 +27,8 @@ import java.util.Date;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -179,6 +181,26 @@ class JwtValidationFilterTest {
     @DisplayName("getOrder 应返回 -100")
     void getOrder_shouldReturnMinus100() {
         assertThat(jwtValidationFilter.getOrder()).isEqualTo(-100);
+    }
+
+    @Test
+    @DisplayName("validateKeyLength 应在 jwtSecret 长度小于 32 字节时抛出 IllegalStateException")
+    void validateKeyLength_shouldThrowIllegalStateException_forShortSecret() {
+        ReflectionTestUtils.setField(jwtValidationFilter, "jwtSecret", "short");
+
+        assertThatThrownBy(() -> jwtValidationFilter.validateKeyLength())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("JWT_SECRET too short: ")
+                .hasMessageContaining("minimum 32 for HS256");
+    }
+
+    @Test
+    @DisplayName("validateKeyLength 应在 jwtSecret 长度大于等于 32 字节时不抛出异常")
+    void validateKeyLength_shouldNotThrow_forValidSecret() {
+        ReflectionTestUtils.setField(jwtValidationFilter, "jwtSecret", "gateway-test-secret-key-min-32-characters-long");
+
+        assertThatCode(() -> jwtValidationFilter.validateKeyLength())
+                .doesNotThrowAnyException();
     }
 
     private void mockRequestPath(String path) {

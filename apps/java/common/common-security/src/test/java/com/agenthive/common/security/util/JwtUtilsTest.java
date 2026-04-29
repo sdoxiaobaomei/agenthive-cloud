@@ -134,4 +134,15 @@ class JwtUtilsTest {
         assertThat(anotherInstance.getSubject(token)).isEqualTo("cross-check");
         assertThat(anotherInstance.parseToken(token).get("project")).isEqualTo("agenthive");
     }
+
+    @Test
+    @DisplayName("构造函数应在 secret 长度小于 32 字节时抛出 IllegalArgumentException")
+    void constructor_shouldThrowIllegalArgumentException_forShortSecret() {
+        String shortSecret = "too-short";
+
+        assertThatThrownBy(() -> new JwtUtils(shortSecret, ACCESS_EXPIRATION, REFRESH_EXPIRATION))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("JWT_SECRET must be at least 32 bytes")
+                .hasMessageContaining("Got " + shortSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length + " bytes");
+    }
 }

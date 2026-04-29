@@ -14,6 +14,8 @@ import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.StringUtils;
+
+import jakarta.annotation.PostConstruct;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
@@ -40,6 +42,16 @@ public class JwtValidationFilter implements GlobalFilter, Ordered {
             "/api/health",
             "/actuator/**"
     );
+
+    @PostConstruct
+    public void validateKeyLength() {
+        byte[] keyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                "JWT_SECRET too short: " + keyBytes.length + " bytes, minimum 32 for HS256"
+            );
+        }
+    }
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
