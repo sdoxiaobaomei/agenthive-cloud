@@ -171,34 +171,6 @@ export const deleteProject = async (req: Request, res: Response) => {
   }
 }
 
-// ============ Project Members ============
-
-const MEMBER_ROLES = ['owner', 'admin', 'member', 'viewer'] as const
-
-const inviteMemberSchema = z.object({
-  user_id: z.string().min(1),
-  role: z.enum(MEMBER_ROLES).optional(),
-})
-
-const updateMemberRoleSchema = z.object({
-  role: z.enum(MEMBER_ROLES),
-})
-
-/** 校验当前用户是否为项目 owner 或 admin */
-async function requireProjectAdmin(req: Request, res: Response, projectId: string): Promise<boolean> {
-  const userId = (req as any).userId as string | undefined
-  if (!userId) {
-    res.status(401).json({ code: 401, message: '未授权', data: null })
-    return false
-  }
-  const role = await projectService.getMemberRole(projectId, userId)
-  if (!role || (role !== 'owner' && role !== 'admin')) {
-    res.status(403).json({ code: 403, message: '无权限管理项目成员', data: null })
-    return false
-  }
-  return true
-}
-
 /** 校验当前用户是否为项目成员 */
 async function requireProjectMember(req: Request, res: Response, projectId: string): Promise<boolean> {
   const userId = (req as any).userId as string | undefined
@@ -282,113 +254,22 @@ export const getProjectDashboard = async (req: Request, res: Response) => {
   }
 }
 
-export const getProjectMembers = async (req: Request, res: Response) => {
-  try {
-    const { id: projectId } = req.params
-    if (!(await requireProjectMember(req, res, projectId))) return
-
-    const members = await projectService.findMembers(projectId)
-    res.json({ code: 200, message: 'success', data: members })
-  } catch (error) {
-    logger.error('Failed to get project members', error instanceof Error ? error : undefined)
-    res.status(500).json({ code: 500, message: '获取成员列表失败', data: null })
-  }
-}
-
-export const inviteProjectMember = async (req: Request, res: Response) => {
-  try {
-    const { id: projectId } = req.params
-    if (!(await requireProjectAdmin(req, res, projectId))) return
-
-    const parseResult = inviteMemberSchema.safeParse(req.body)
-    if (!parseResult.success) {
-      return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
-    }
-
-    const { user_id, role = 'member' } = parseResult.data
-    const member = await projectService.addMember(projectId, user_id, role)
-    logger.info('Project member invited', { projectId, userId: user_id, role, invitedBy: (req as any).userId })
-    res.status(201).json({ code: 201, message: 'success', data: member })
-  } catch (error) {
-    logger.error('Failed to invite project member', error instanceof Error ? error : undefined)
-    res.status(500).json({ code: 500, message: '邀请成员失败', data: null })
-  }
-}
-
-export const updateProjectMemberRole = async (req: Request, res: Response) => {
-  try {
-    const { id: projectId, userId: targetUserId } = req.params
-    if (!(await requireProjectAdmin(req, res, projectId))) return
-
-    const parseResult = updateMemberRoleSchema.safeParse(req.body)
-    if (!parseResult.success) {
-      return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
-    }
-
-    const { role } = parseResult.data
-
-    // 规则：viewer 不可被提升为 admin
-    const currentRole = await projectService.getMemberRole(projectId, targetUserId)
-    if (currentRole === 'viewer' && role === 'admin') {
-      return res.status(403).json({ code: 403, message: 'viewer 不可被提升为 admin', data: null })
-    }
-
-    // 规则：每个项目至少保留 1 个 owner
-    if (currentRole === 'owner' && role !== 'owner') {
-      const ownerCount = await projectService.countOwners(projectId)
-      if (ownerCount <= 1) {
-        return res.status(403).json({ code: 403, message: '项目至少保留 1 个 owner', data: null })
-      }
-    }
-
-    const member = await projectService.updateMemberRole(projectId, targetUserId, role)
-    if (!member) {
-      return res.status(404).json({ code: 404, message: '成员不存在', data: null })
-    }
-    logger.info('Project member role changed', { projectId, userId: targetUserId, newRole: role, changedBy: (req as any).userId })
-    res.json({ code: 200, message: 'success', data: member })
-  } catch (error) {
-    logger.error('Failed to update member role', error instanceof Error ? error : undefined)
-    res.status(500).json({ code: 500, message: '更新角色失败', data: null })
-  }
-}
-
-export const removeProjectMember = async (req: Request, res: Response) => {
-  try {
-    const { id: projectId, userId: targetUserId } = req.params
-    if (!(await requireProjectAdmin(req, res, projectId))) return
-
-    // 规则：每个项目至少保留 1 个 owner
-    const currentRole = await projectService.getMemberRole(projectId, targetUserId)
-    if (currentRole === 'owner') {
-      const ownerCount = await projectService.countOwners(projectId)
-      if (ownerCount <= 1) {
-        return res.status(403).json({ code: 403, message: '项目至少保留 1 个 owner', data: null })
-      }
-    }
-
-    const success = await projectService.removeMember(projectId, targetUserId)
-    if (!success) {
-      return res.status(404).json({ code: 404, message: '成员不存在', data: null })
-    }
-    logger.info('Project member removed', { projectId, userId: targetUserId, removedBy: (req as any).userId })
-    res.json({ code: 200, message: '成员已移除', data: null })
-  } catch (error) {
-    logger.error('Failed to remove project member', error instanceof Error ? error : undefined)
-    res.status(500).json({ code: 500, message: '移除成员失败', data: null })
-  }
-}
-
 // ============ Hosting & Deployment ============
 
 export const deployProjectController = async (req: Request, res: Response) => {
   try {
     const { id: projectId } = req.params
-    if (!(await requireProjectAdmin(req, res, projectId))) return
+    const userId = (req as any).userId as string | undefined
+    if (!userId) {
+      return res.status(401).json({ code: 401, message: '未授权', data: null })
+    }
 
     const project = await projectService.findById(projectId)
     if (!project) {
       return res.status(404).json({ code: 404, message: '项目不存在', data: null })
+    }
+    if (project.owner_id !== userId) {
+      return res.status(403).json({ code: 403, message: '无权限', data: null })
     }
 
     if (!project.workspace_path) {
@@ -417,7 +298,15 @@ export const deployProjectController = async (req: Request, res: Response) => {
 export const stopDeploymentController = async (req: Request, res: Response) => {
   try {
     const { id: projectId } = req.params
-    if (!(await requireProjectAdmin(req, res, projectId))) return
+    const userId = (req as any).userId as string | undefined
+    if (!userId) {
+      return res.status(401).json({ code: 401, message: '未授权', data: null })
+    }
+
+    const project = await projectService.findById(projectId)
+    if (!project || project.owner_id !== userId) {
+      return res.status(403).json({ code: 403, message: '无权限', data: null })
+    }
 
     const deployment = await findDeployment(projectId)
     if (!deployment) {

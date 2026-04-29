@@ -4,18 +4,6 @@
     <div class="page-header">
       <h1 class="page-title">Projects</h1>
       <div class="header-actions">
-        <el-radio-group
-          v-model="projectStore.viewMode"
-          size="small"
-          @change="onViewModeChange"
-        >
-          <el-radio-button label="card">
-            <el-icon><Grid /></el-icon>
-          </el-radio-button>
-          <el-radio-button label="table">
-            <el-icon><Tickets /></el-icon>
-          </el-radio-button>
-        </el-radio-group>
         <el-button type="primary" @click="goToCreate">
           <el-icon><Plus /></el-icon>
           <span>New Project</span>
@@ -100,7 +88,7 @@
       </el-empty>
 
       <!-- Card View -->
-      <div v-else-if="projectStore.viewMode === 'card'" class="card-grid">
+      <div v-else class="card-grid">
         <div
           v-for="project in paginatedProjects"
           :key="project.id"
@@ -129,92 +117,13 @@
           </p>
 
           <div class="card-footer">
-            <span class="meta-item" title="Members">
-              <el-icon><User /></el-icon>
-              <span>{{ project.memberCount || 0 }}</span>
-            </span>
             <span class="meta-item" title="Last updated">
               <el-icon><Clock /></el-icon>
               <span>{{ formatRelativeTime(project.updatedAt) }}</span>
             </span>
           </div>
-
-          <div class="card-hover-overlay">
-            <el-button type="primary" size="small">
-              <el-icon><ArrowRight /></el-icon>
-              Open Project
-            </el-button>
-          </div>
         </div>
       </div>
-
-      <!-- Table View -->
-      <el-table
-        v-else
-        :data="paginatedProjects"
-        style="width: 100%"
-        class="project-table"
-        highlight-current-row
-        @row-click="(row: Project) => goToProject(row.id)"
-      >
-        <el-table-column label="Project" min-width="280">
-          <template #default="{ row }">
-            <div class="table-project-cell">
-              <div
-                class="table-avatar"
-                :style="{ backgroundColor: stringToColor(row.name) }"
-              >
-                {{ row.name.charAt(0).toUpperCase() }}
-              </div>
-              <div class="table-project-info">
-                <span class="table-project-name" :title="row.name">{{ row.name }}</span>
-                <span class="table-project-desc">
-                  {{ row.description || 'No description' }}
-                </span>
-              </div>
-            </div>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="Status" width="110">
-          <template #default="{ row }">
-            <el-tag :type="statusTagType(row.status)" size="small" effect="light">
-              {{ row.status }}
-            </el-tag>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="Members" width="100">
-          <template #default="{ row }">
-            <span class="table-meta">
-              <el-icon><User /></el-icon>
-              <span>{{ row.memberCount || 0 }}</span>
-            </span>
-          </template>
-        </el-table-column>
-
-        <el-table-column label="Updated" width="160">
-          <template #default="{ row }">
-            <span class="table-meta">
-              <el-icon><Clock /></el-icon>
-              <span>{{ formatRelativeTime(row.updatedAt) }}</span>
-            </span>
-          </template>
-        </el-table-column>
-
-        <el-table-column width="70" align="right">
-          <template #default="{ row }">
-            <el-button
-              text
-              size="small"
-              class="open-btn"
-              @click.stop="goToProject(row.id)"
-            >
-              <el-icon><ArrowRight /></el-icon>
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
     </div>
 
     <!-- Pagination -->
@@ -235,15 +144,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
-  Grid,
-  Tickets,
   Plus,
   Search,
-  User,
   Clock,
-  ArrowRight,
 } from '@element-plus/icons-vue'
 import { useProjectStore, type Project } from '~/stores/project'
+import { useChatStore } from '~/stores/chat'
 
 definePageMeta({
   layout: 'app',
@@ -290,22 +196,25 @@ const paginatedProjects = computed(() => {
   return filteredProjects.value.slice(start, start + projectStore.itemsPerPage)
 })
 
-// ============ 视图与过滤事件 ============
-const onViewModeChange = () => {
-  // viewMode 由 v-model 自动同步到 store，无需额外逻辑
-}
-
+// ============ 过滤事件 ============
 const onStatusChange = () => {
   // tab-change 时 store 已同步，页码已在 store action 中重置
 }
 
 // ============ 导航 ============
-const goToProject = (projectId: string) => {
-  router.push(`/projects/${projectId}`)
+const goToProject = async (projectId: string) => {
+  const chatStore = useChatStore()
+  await chatStore.loadConversations(projectId)
+  if (chatStore.conversations.length > 0) {
+    router.push('/chat/' + chatStore.conversations[0].id)
+  } else {
+    const conv = await chatStore.createConversation('New Chat', projectId)
+    router.push('/chat/' + conv.id)
+  }
 }
 
 const goToCreate = () => {
-  router.push('/projects/create')
+  router.push('/')
 }
 
 // ============ 工具函数 ============
@@ -471,10 +380,6 @@ onMounted(async () => {
   transform: translateY(-2px);
 }
 
-.project-card:hover .card-hover-overlay {
-  opacity: 1;
-}
-
 .card-header {
   display: flex;
   align-items: center;
@@ -537,18 +442,6 @@ onMounted(async () => {
   font-size: 14px;
 }
 
-.card-hover-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 255, 255, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  backdrop-filter: blur(2px);
-}
-
 /* ============ Empty State ============ */
 .projects-empty :deep(.el-empty__description) {
   margin-top: 16px;
@@ -569,79 +462,6 @@ onMounted(async () => {
   font-size: 13px;
   color: #9ca3af;
   margin: 0;
-}
-
-/* ============ Table View ============ */
-.project-table :deep(.el-table__row) {
-  cursor: pointer;
-}
-
-.project-table :deep(.el-table__row:hover) {
-  background-color: #f9fafb;
-}
-
-.table-project-cell {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.table-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.table-project-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.table-project-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #111827;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.table-project-desc {
-  font-size: 12px;
-  color: #9ca3af;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.table-meta {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.table-meta .el-icon {
-  font-size: 14px;
-  color: #9ca3af;
-}
-
-.open-btn {
-  color: #9ca3af;
-}
-
-.open-btn:hover {
-  color: #4f46e5;
 }
 
 /* ============ Pagination ============ */

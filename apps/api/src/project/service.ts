@@ -102,6 +102,7 @@ export const projectService = {
     return (result.rowCount ?? 0) > 0
   },
 
+  // Deprecated: members feature removed from API
   // ============ Project Members ============
   async findMembers(projectId: string): Promise<ProjectMember[]> {
     const result = await pool.query(

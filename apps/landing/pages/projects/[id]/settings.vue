@@ -45,64 +45,8 @@
         </el-form>
       </div>
 
-      <!-- Members (only for owner/admin) -->
-      <div v-if="canManageMembers" class="settings-card">
-        <div class="card-header">
-          <h2 class="card-title">Members</h2>
-          <el-button size="small" @click="showInviteDialog = true">
-            <el-icon><Plus /></el-icon>
-            Invite Member
-          </el-button>
-        </div>
-
-        <el-table :data="members" style="width: 100%">
-          <el-table-column label="Member" min-width="200">
-            <template #default="{ row }">
-              <div class="member-cell">
-                <div class="member-avatar">{{ row.name.charAt(0).toUpperCase() }}</div>
-                <span class="member-name">{{ row.name }}</span>
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column label="Role" width="150">
-            <template #default="{ row }">
-              <el-select
-                v-if="canChangeRole(row)"
-                v-model="row.role"
-                size="small"
-                @change="(val: string) => updateRole(row, val)"
-              >
-                <el-option label="Owner" value="owner" :disabled="!isOwner" />
-                <el-option label="Admin" value="admin" :disabled="!isOwner && row.role !== 'admin'" />
-                <el-option label="Member" value="member" />
-                <el-option label="Viewer" value="viewer" />
-              </el-select>
-              <el-tag v-else size="small">{{ row.role }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="Joined" width="140">
-            <template #default="{ row }">
-              {{ formatDate(row.joinedAt) }}
-            </template>
-          </el-table-column>
-          <el-table-column width="80" align="right">
-            <template #default="{ row }">
-              <el-button
-                v-if="canRemoveMember(row)"
-                text
-                size="small"
-                type="danger"
-                @click="removeMember(row)"
-              >
-                Remove
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-
-      <!-- Danger Zone (only for owner/admin) -->
-      <div v-if="canManageMembers" class="settings-card danger-zone">
+      <!-- Danger Zone -->
+      <div class="settings-card danger-zone">
         <h2 class="card-title danger-title">Danger Zone</h2>
 
         <div class="danger-item">
@@ -123,25 +67,7 @@
       </div>
     </div>
 
-    <!-- Invite Dialog -->
-    <el-dialog v-model="showInviteDialog" title="Invite Member" width="400px">
-      <el-form label-position="top">
-        <el-form-item label="User ID">
-          <el-input v-model="inviteForm.userId" placeholder="Enter user ID" />
-        </el-form-item>
-        <el-form-item label="Role">
-          <el-select v-model="inviteForm.role" style="width: 100%">
-            <el-option label="Admin" value="admin" />
-            <el-option label="Member" value="member" />
-            <el-option label="Viewer" value="viewer" />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showInviteDialog = false">Cancel</el-button>
-        <el-button type="primary" :loading="inviting" @click="inviteMember">Invite</el-button>
-      </template>
-    </el-dialog>
+
   </div>
 </template>
 
@@ -151,9 +77,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ArrowLeft,
-  Plus,
 } from '@element-plus/icons-vue'
-import { useProjectStore, type ProjectMember } from '~/stores/project'
+import { useProjectStore } from '~/stores/project'
 
 definePageMeta({
   layout: 'app',
@@ -165,43 +90,13 @@ const projectStore = useProjectStore()
 
 const projectId = computed(() => route.params.id as string)
 const saving = ref(false)
-const inviting = ref(false)
-const showInviteDialog = ref(false)
 
 const editForm = ref({ name: '', description: '' })
-const inviteForm = ref({ userId: '', role: 'member' as ProjectMember['role'] })
-const members = ref<ProjectMember[]>([])
 
 const project = computed(() => projectStore.currentProject)
 
-// ============ 权限计算 ============
-const currentUserRole = computed((): string => {
-  // TODO: 从 auth store 获取当前用户 ID，然后匹配成员角色
-  // 简化：假设当前用户是 owner（等 auth 完善后修正）
-  return 'owner'
-})
-
-const isOwner = computed(() => currentUserRole.value === 'owner')
-const isAdmin = computed(() => currentUserRole.value === 'admin' || currentUserRole.value === 'owner')
-
-const canManageMembers = computed(() => isAdmin.value)
-
-const canChangeRole = (member: ProjectMember): boolean => {
-  if (isOwner.value) return true
-  if (isAdmin.value) {
-    return member.role !== 'owner' && member.role !== 'admin'
-  }
-  return false
-}
-
-const canRemoveMember = (member: ProjectMember): boolean => {
-  if (isOwner.value) return member.role !== 'owner'
-  if (isAdmin.value) return member.role === 'member' || member.role === 'viewer'
-  return false
-}
-
 // ============ 操作 ============
-const goBack = () => router.push(`/projects/${projectId.value}`)
+const goBack = () => router.push('/projects')
 const goToProjects = () => router.push('/projects')
 
 const saveBasicInfo = async () => {
@@ -216,74 +111,6 @@ const saveBasicInfo = async () => {
     ElMessage.error(err.message || 'Failed to update')
   } finally {
     saving.value = false
-  }
-}
-
-const inviteMember = async () => {
-  if (!inviteForm.value.userId.trim()) {
-    ElMessage.warning('User ID is required')
-    return
-  }
-  inviting.value = true
-  try {
-    const { post } = useApi()
-    const response = await post(`/api/projects/${projectId.value}/members`, {
-      user_id: inviteForm.value.userId.trim(),
-      role: inviteForm.value.role,
-    })
-    if (response.success) {
-      ElMessage.success('Member invited')
-      showInviteDialog.value = false
-      inviteForm.value = { userId: '', role: 'member' }
-      members.value = await projectStore.fetchMembers(projectId.value)
-    } else {
-      throw new Error(response.message || 'Invite failed')
-    }
-  } catch (err: any) {
-    ElMessage.error(err.message || 'Failed to invite')
-  } finally {
-    inviting.value = false
-  }
-}
-
-const updateRole = async (member: ProjectMember, newRole: string) => {
-  try {
-    const { patch } = useApi()
-    const response = await patch(`/api/projects/${projectId.value}/members/${member.userId}`, {
-      role: newRole,
-    })
-    if (response.success) {
-      ElMessage.success('Role updated')
-    } else {
-      throw new Error(response.message || 'Update failed')
-    }
-  } catch (err: any) {
-    ElMessage.error(err.message || 'Failed to update role')
-    // 恢复原始角色
-    members.value = await projectStore.fetchMembers(projectId.value)
-  }
-}
-
-const removeMember = async (member: ProjectMember) => {
-  try {
-    await ElMessageBox.confirm(
-      `Remove ${member.name} from the project?`,
-      'Remove Member',
-      { confirmButtonText: 'Remove', cancelButtonText: 'Cancel', type: 'warning' }
-    )
-
-    const { del } = useApi()
-    const response = await del(`/api/projects/${projectId.value}/members/${member.userId}`)
-    if (response.success) {
-      ElMessage.success('Member removed')
-      members.value = await projectStore.fetchMembers(projectId.value)
-    } else {
-      throw new Error(response.message || 'Remove failed')
-    }
-  } catch (err: any) {
-    if (err !== 'cancel') {
-      ElMessage.error(err.message || 'Failed to remove')
-    }
   }
 }
 
@@ -348,7 +175,6 @@ onMounted(async () => {
       editForm.value.name = project.value.name
       editForm.value.description = project.value.description || ''
     }
-    members.value = await projectStore.fetchMembers(projectId.value)
   } catch (err: any) {
     if (import.meta.dev) console.debug('[Settings] Failed to load:', err.message)
   }

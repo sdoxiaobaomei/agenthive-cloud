@@ -23,16 +23,6 @@ export interface Project {
   lastAccessedAt?: string
 }
 
-/** 项目成员 */
-export interface ProjectMember {
-  id: string
-  userId: string
-  name: string
-  avatar?: string
-  role: 'owner' | 'admin' | 'member' | 'viewer'
-  joinedAt: string
-}
-
 /** 视图模式 */
 export type ViewMode = 'card' | 'table'
 
@@ -43,7 +33,6 @@ export type StatusFilter = 'all' | 'active' | 'archived'
 interface ProjectState {
   projects: Project[]
   currentProject: Project | null
-  members: ProjectMember[]
   loading: boolean
   error: string | null
   /** 列表视图模式 */
@@ -60,7 +49,6 @@ export const useProjectStore = defineStore('project', {
   state: (): ProjectState => ({
     projects: [],
     currentProject: null,
-    members: [],
     loading: false,
     error: null,
     viewMode: 'card',
@@ -328,33 +316,6 @@ export const useProjectStore = defineStore('project', {
         }
       } catch (err: any) {
         this.error = err.message || '删除项目失败'
-        throw err
-      } finally {
-        this.loading = false
-      }
-    },
-
-    /**
-     * 获取项目成员 - 使用 useApi() 调用真实 API
-     * @param projectId 项目ID
-     */
-    async fetchMembers(projectId: string): Promise<ProjectMember[]> {
-      const { get } = useApi()
-      
-      this.loading = true
-      this.error = null
-
-      try {
-        const response = await get<ProjectMember[]>(`/api/projects/${projectId}/members`)
-
-        if (!response.success || !response.data) {
-          throw new Error(response.message || '获取成员列表失败')
-        }
-
-        this.members = response.data
-        return response.data
-      } catch (err: any) {
-        this.error = err.message || '获取成员列表失败'
         throw err
       } finally {
         this.loading = false

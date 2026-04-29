@@ -13,10 +13,6 @@ import {
   getProjectChatSessions,
   getProjectAgentTasks,
   getProjectDashboard,
-  getProjectMembers,
-  inviteProjectMember,
-  updateProjectMemberRole,
-  removeProjectMember,
   deployProjectController,
   stopDeploymentController,
   getProjectTraffic,
@@ -37,12 +33,6 @@ router.get('/:id/clone-status', getCloneStatus)
 router.get('/:id/chat-sessions', getProjectChatSessions)
 router.get('/:id/agent-tasks', getProjectAgentTasks)
 router.get('/:id/dashboard', getProjectDashboard)
-
-// Project Members
-router.get('/:id/members', getProjectMembers)
-router.post('/:id/members', inviteProjectMember)
-router.patch('/:id/members/:userId', updateProjectMemberRole)
-router.delete('/:id/members/:userId', removeProjectMember)
 
 // Hosting & Traffic
 router.post('/:id/deploy', deployProjectController)
