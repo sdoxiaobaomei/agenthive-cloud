@@ -5,11 +5,7 @@ namespace: agenthive
 
 resources:
   - 00-namespace.yaml
-  - 01-secretstore.yaml
-  - 01-externalsecrets.yaml
-  - 02-postgres.yaml
-  - 02-postgres-java.yaml
-  - 03-redis.yaml
+  - 01-secrets.yaml
   - 04-api.yaml
   - 05-landing.yaml
   - 06-networkpolicy.yaml
@@ -18,6 +14,9 @@ resources:
   - 09-ingress.yaml
   - 10-java-services.yaml
   - 11-backup-cronjob.yaml
+  - 12-nacos.yaml
+  - 13-rabbitmq.yaml
+  - gateway-cors-config.yaml
 
 # 通用标签
 labels:
@@ -25,8 +24,6 @@ labels:
       app.kubernetes.io/part-of: agenthive
       app.kubernetes.io/managed-by: kustomize
       app.kubernetes.io/version: "1.0.0"
-    includeSelectors: true
-    includeTemplates: true
 
 # 注释
 commonAnnotations:

@@ -55,20 +55,22 @@ spec:
           livenessProbe:
             exec:
               command:
-                - rabbitmq-diagnostics
-                - ping
-            initialDelaySeconds: 30
-            periodSeconds: 15
-            timeoutSeconds: 5
-            failureThreshold: 10
+                - sh
+                - -c
+                - rabbitmq-diagnostics -q ping || exit 1
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
           readinessProbe:
             exec:
               command:
-                - rabbitmq-diagnostics
-                - ping
-            initialDelaySeconds: 10
-            periodSeconds: 15
-            timeoutSeconds: 5
+                - sh
+                - -c
+                - rabbitmq-diagnostics -q status && rabbitmq-diagnostics -q check_virtual_hosts || exit 1
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
             failureThreshold: 5
           {{- if .Values.rabbitmq.pvc.enabled }}
           volumeMounts:

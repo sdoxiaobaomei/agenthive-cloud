@@ -161,8 +161,6 @@ api:
       key: DB_NAME
     - name: DB_USER
       key: DB_USER
-    - name: REDIS_HOST
-      key: REDIS_HOST
     - name: LLM_BASE_URL
       key: LLM_BASE_URL
     - name: LLM_MODEL
@@ -442,15 +440,15 @@ javaServices:
           key: JWT_SECRET
       probes:
         liveness:
-          path: /health
+          path: /actuator/health
           port: http
           initialDelaySeconds: 60
           periodSeconds: 10
         readiness:
-          path: /health
+          path: /actuator/health
           port: http
-          initialDelaySeconds: 10
-          periodSeconds: 5
+          initialDelaySeconds: 30
+          periodSeconds: 10
 
     auth:
       enabled: true
@@ -461,7 +459,7 @@ javaServices:
         - name: NACOS_SERVER
           value: "nacos:8848"
         - name: DB_HOST
-          value: "postgres-auth"
+          value: "postgres"
         - name: DB_PORT
           value: "5432"
         - name: DB_NAME
@@ -498,7 +496,7 @@ javaServices:
         - name: NACOS_SERVER
           value: "nacos:8848"
         - name: DB_HOST
-          value: "postgres-user"
+          value: "postgres"
         - name: DB_PORT
           value: "5432"
         - name: DB_NAME
@@ -533,7 +531,7 @@ javaServices:
         - name: NACOS_SERVER
           value: "nacos:8848"
         - name: DB_HOST
-          value: "postgres-business"
+          value: "postgres"
         - name: DB_PORT
           value: "5432"
         - name: DB_NAME
@@ -760,8 +758,9 @@ configmap:
     DB_PORT: "5432"
     DB_NAME: "agenthive"
     DB_USER: "agenthive"
-    REDIS_URL: "redis://redis:6379"
+    REDIS_URL: "redis://:agenthive@redis:6379"
     REDIS_HOST: "redis"
+    REDIS_PORT: "6379"
     API_URL: "http://gateway-service:8080"
     GATEWAY_URL: "http://gateway-service:8080"
     APP_NAME: "AgentHive Cloud"
@@ -805,7 +804,7 @@ configmap:
     LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
 
 # ----------------------------------------------------------------------------
-# Secret (template references existing secrets; actual secret managed externally)
+# Secret (Native K8s Secret — zero cost, managed by scripts/setup-secrets.sh)
 # ----------------------------------------------------------------------------
 secret:
   enabled: false
@@ -857,7 +856,7 @@ nacos:
 
   auth:
     enabled: true
-    token: "<NACOS_AUTH_TOKEN>"
+    token: "qDM03geLxo1dEcRLDi1R+ZYe3Tg9zsVsl5o95oSWo3A="
     identityKey: "agenthive"
     identityValue: "agenthive-secret-2024"
 

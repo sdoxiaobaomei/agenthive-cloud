@@ -26,6 +26,39 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
+      initContainers:
+      - name: wait-for-redis
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z redis 6379; do echo waiting for redis; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-nacos
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z nacos 8848; do echo waiting for nacos; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       containers:
       - name: gateway
         image: agenthive/gateway-service:latest
@@ -33,18 +66,40 @@ spec:
         ports:
         - containerPort: 8080
           name: http
+        envFrom:
+        - configMapRef:
+            name: app-config
         env:
+        - name: OTEL_SDK_DISABLED
+          value: "true"
+        - name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: REDIS_PASSWORD
         - name: NACOS_SERVER
           value: "nacos:8848"
-        - name: REDIS_HOST
+        - name: SPRING_CLOUD_NACOS_SERVER_ADDR
+          value: "nacos:8848"
+        - name: SPRING_DATA_REDIS_HOST
           value: "redis"
-        - name: REDIS_PORT
+        - name: SPRING_DATA_REDIS_PORT
           value: "6379"
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
               name: app-secrets
               key: JWT_SECRET
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_PASSWORD
+          value: "nacos"
+        - name: SPRING_CONFIG_ADDITIONAL_LOCATION
+          value: "/app/config/"
         resources:
           requests:
             memory: "256Mi"
@@ -54,16 +109,34 @@ spec:
             cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /health
+            path: /actuator/health
             port: http
           initialDelaySeconds: 60
           periodSeconds: 10
         readinessProbe:
           httpGet:
-            path: /health
+            path: /actuator/health
             port: http
           initialDelaySeconds: 10
           periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: gateway-cors-config
+          mountPath: /app/config
+          readOnly: true
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: gateway-cors-config
+        configMap:
+          name: gateway-cors-config
 ---
 apiVersion: v1
 kind: Service
@@ -104,6 +177,55 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z postgres-auth 5432; do echo waiting for postgres-auth; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-redis
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z redis 6379; do echo waiting for redis; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-nacos
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z nacos 8848; do echo waiting for nacos; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       containers:
       - name: auth
         image: agenthive/auth-service:latest
@@ -111,8 +233,20 @@ spec:
         ports:
         - containerPort: 8081
           name: http
+        envFrom:
+        - configMapRef:
+            name: app-config
         env:
+        - name: OTEL_SDK_DISABLED
+          value: "true"
+        - name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: REDIS_PASSWORD
         - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: SPRING_CLOUD_NACOS_SERVER_ADDR
           value: "nacos:8848"
         - name: DB_HOST
           value: "postgres-auth"
@@ -130,15 +264,32 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: DB_PASSWORD
-        - name: REDIS_HOST
+        - name: SPRING_DATA_REDIS_HOST
           value: "redis"
-        - name: REDIS_PORT
+        - name: SPRING_DATA_REDIS_PORT
           value: "6379"
         - name: JWT_SECRET
           valueFrom:
             secretKeyRef:
               name: app-secrets
               key: JWT_SECRET
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_PASSWORD
+          value: "nacos"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             memory: "256Mi"
@@ -158,6 +309,9 @@ spec:
             port: http
           initialDelaySeconds: 10
           periodSeconds: 5
+      volumes:
+      - name: tmp
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -198,6 +352,55 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z postgres-user 5432; do echo waiting for postgres-user; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-redis
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z redis 6379; do echo waiting for redis; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-nacos
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z nacos 8848; do echo waiting for nacos; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       containers:
       - name: user
         image: agenthive/user-service:latest
@@ -205,8 +408,20 @@ spec:
         ports:
         - containerPort: 8082
           name: http
+        envFrom:
+        - configMapRef:
+            name: app-config
         env:
+        - name: OTEL_SDK_DISABLED
+          value: "true"
+        - name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: REDIS_PASSWORD
         - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: SPRING_CLOUD_NACOS_SERVER_ADDR
           value: "nacos:8848"
         - name: DB_HOST
           value: "postgres-user"
@@ -224,10 +439,27 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: DB_PASSWORD
-        - name: REDIS_HOST
+        - name: SPRING_DATA_REDIS_HOST
           value: "redis"
-        - name: REDIS_PORT
+        - name: SPRING_DATA_REDIS_PORT
           value: "6379"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_PASSWORD
+          value: "nacos"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             memory: "256Mi"
@@ -247,6 +479,9 @@ spec:
             port: http
           initialDelaySeconds: 10
           periodSeconds: 5
+      volumes:
+      - name: tmp
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -287,6 +522,71 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z postgres-business 5432; do echo waiting for postgres-business; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-redis
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z redis 6379; do echo waiting for redis; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-nacos
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z nacos 8848; do echo waiting for nacos; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-rabbitmq
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       containers:
       - name: payment
         image: agenthive/payment-service:latest
@@ -294,8 +594,20 @@ spec:
         ports:
         - containerPort: 8083
           name: http
+        envFrom:
+        - configMapRef:
+            name: app-config
         env:
+        - name: OTEL_SDK_DISABLED
+          value: "true"
+        - name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: REDIS_PASSWORD
         - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: SPRING_CLOUD_NACOS_SERVER_ADDR
           value: "nacos:8848"
         - name: DB_HOST
           value: "postgres-business"
@@ -313,10 +625,47 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: DB_PASSWORD
-        - name: REDIS_HOST
+        - name: SPRING_DATA_REDIS_HOST
           value: "redis"
-        - name: REDIS_PORT
+        - name: SPRING_DATA_REDIS_PORT
           value: "6379"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_PASSWORD
+          value: "nacos"
+        - name: INTERNAL_API_TOKEN
+          value: "dev-internal-token-placeholder-32chars-min"
+        - name: WITHDRAWAL_ENCRYPT_KEY
+          value: "dev-withdrawal-encrypt-key-12345"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "agenthive"
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: RABBITMQ_PASSWORD
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             memory: "256Mi"
@@ -336,6 +685,9 @@ spec:
             port: http
           initialDelaySeconds: 10
           periodSeconds: 5
+      volumes:
+      - name: tmp
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -376,6 +728,71 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z postgres-business 5432; do echo waiting for postgres-business; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-redis
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z redis 6379; do echo waiting for redis; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-nacos
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z nacos 8848; do echo waiting for nacos; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-rabbitmq
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       containers:
       - name: order
         image: agenthive/order-service:latest
@@ -383,8 +800,20 @@ spec:
         ports:
         - containerPort: 8084
           name: http
+        envFrom:
+        - configMapRef:
+            name: app-config
         env:
+        - name: OTEL_SDK_DISABLED
+          value: "true"
+        - name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: REDIS_PASSWORD
         - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: SPRING_CLOUD_NACOS_SERVER_ADDR
           value: "nacos:8848"
         - name: DB_HOST
           value: "postgres-business"
@@ -402,10 +831,38 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: DB_PASSWORD
-        - name: REDIS_HOST
+        - name: SPRING_DATA_REDIS_HOST
           value: "redis"
-        - name: REDIS_PORT
+        - name: SPRING_DATA_REDIS_PORT
           value: "6379"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_PASSWORD
+          value: "nacos"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "agenthive"
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: RABBITMQ_PASSWORD
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             memory: "256Mi"
@@ -425,6 +882,9 @@ spec:
             port: http
           initialDelaySeconds: 10
           periodSeconds: 5
+      volumes:
+      - name: tmp
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -465,6 +925,71 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z postgres-business 5432; do echo waiting for postgres-business; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-redis
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z redis 6379; do echo waiting for redis; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-nacos
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z nacos 8848; do echo waiting for nacos; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-rabbitmq
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       containers:
       - name: cart
         image: agenthive/cart-service:latest
@@ -472,8 +997,20 @@ spec:
         ports:
         - containerPort: 8085
           name: http
+        envFrom:
+        - configMapRef:
+            name: app-config
         env:
+        - name: OTEL_SDK_DISABLED
+          value: "true"
+        - name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: REDIS_PASSWORD
         - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: SPRING_CLOUD_NACOS_SERVER_ADDR
           value: "nacos:8848"
         - name: DB_HOST
           value: "postgres-business"
@@ -491,10 +1028,43 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: DB_PASSWORD
-        - name: REDIS_HOST
+        - name: SPRING_DATA_REDIS_HOST
           value: "redis"
-        - name: REDIS_PORT
+        - name: SPRING_DATA_REDIS_PORT
           value: "6379"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_PASSWORD
+          value: "nacos"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "agenthive"
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: RABBITMQ_PASSWORD
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             memory: "256Mi"
@@ -514,6 +1084,9 @@ spec:
             port: http
           initialDelaySeconds: 10
           periodSeconds: 5
+      volumes:
+      - name: tmp
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -554,6 +1127,71 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         runAsGroup: 1000
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z postgres-business 5432; do echo waiting for postgres-business; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-redis
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z redis 6379; do echo waiting for redis; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-nacos
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z nacos 8848; do echo waiting for nacos; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      - name: wait-for-rabbitmq
+        image: busybox:1.36
+        command: ['sh', '-c', 'until nc -z rabbitmq 5672; do echo waiting for rabbitmq; sleep 2; done;']
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
       containers:
       - name: logistics
         image: agenthive/logistics-service:latest
@@ -561,8 +1199,20 @@ spec:
         ports:
         - containerPort: 8086
           name: http
+        envFrom:
+        - configMapRef:
+            name: app-config
         env:
+        - name: OTEL_SDK_DISABLED
+          value: "true"
+        - name: SPRING_DATA_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: REDIS_PASSWORD
         - name: NACOS_SERVER
+          value: "nacos:8848"
+        - name: SPRING_CLOUD_NACOS_SERVER_ADDR
           value: "nacos:8848"
         - name: DB_HOST
           value: "postgres-business"
@@ -580,10 +1230,43 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: DB_PASSWORD
-        - name: REDIS_HOST
+        - name: SPRING_DATA_REDIS_HOST
           value: "redis"
-        - name: REDIS_PORT
+        - name: SPRING_DATA_REDIS_PORT
           value: "6379"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_USERNAME
+          value: "nacos"
+        - name: SPRING_CLOUD_NACOS_CONFIG_PASSWORD
+          value: "nacos"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq"
+        - name: RABBITMQ_PORT
+          value: "5672"
+        - name: RABBITMQ_USER
+          value: "agenthive"
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: RABBITMQ_PASSWORD
+        - name: RABBITMQ_PASS
+          valueFrom:
+            secretKeyRef:
+              name: app-secrets
+              key: RABBITMQ_PASSWORD
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         resources:
           requests:
             memory: "256Mi"
@@ -603,6 +1286,9 @@ spec:
             port: http
           initialDelaySeconds: 10
           periodSeconds: 5
+      volumes:
+      - name: tmp
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

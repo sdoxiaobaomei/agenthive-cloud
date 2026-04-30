@@ -16,8 +16,10 @@ metadata:
     nginx.ingress.kubernetes.io/rate-limit-window: "1m"
     # 连接配置
     nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    # WebSocket 支持
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
     # 安全配置 — HTTPS 强制跳转
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
@@ -25,11 +27,6 @@ metadata:
     nginx.ingress.kubernetes.io/hsts: "true"
     nginx.ingress.kubernetes.io/hsts-max-age: "31536000"
     nginx.ingress.kubernetes.io/hsts-include-subdomains: "true"
-    # 其他安全头
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      add_header X-Frame-Options "SAMEORIGIN" always;
-      add_header X-Content-Type-Options "nosniff" always;
-      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     # CORS 配置（如需要）
     # nginx.ingress.kubernetes.io/enable-cors: "true"
     # nginx.ingress.kubernetes.io/cors-allow-origin: "https://example.com"
@@ -43,15 +40,39 @@ spec:
   - host: agenthive.example.com
     http:
       paths:
-      # API 路由
+      # Java Gateway 认证路由（必须排在 /api catch-all 之前）
+      - path: /api/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: gateway-service
+            port:
+              number: 8080
+      # API 路由 — 统一走 Gateway 做 JWT 认证和 X-User-Id 透传
       - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: gateway-service
+            port:
+              number: 8080
+      # WebSocket 路由 — Socket.IO
+      - path: /socket.io
         pathType: Prefix
         backend:
           service:
             name: api
             port:
               number: 3001
-      # 前端路由
+      # WebSocket 路由 — Chat
+      - path: /chat
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 3001
+      # 前端路由 (catch-all，必须放在最后)
       - path: /
         pathType: Prefix
         backend:
@@ -78,7 +99,30 @@ spec:
   - host: agenthive.local
     http:
       paths:
+      # Java Gateway 认证路由（必须排在 /api catch-all 之前）
+      - path: /api/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: gateway-service
+            port:
+              number: 8080
+      # API 路由 — 统一走 Gateway 做 JWT 认证和 X-User-Id 透传
       - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: gateway-service
+            port:
+              number: 8080
+      - path: /socket.io
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 3001
+      - path: /chat
         pathType: Prefix
         backend:
           service:

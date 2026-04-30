@@ -110,7 +110,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - $(POSTGRES_USER)
+            - agenthive
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -120,7 +120,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - $(POSTGRES_USER)
+            - agenthive
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
@@ -130,7 +130,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - $(POSTGRES_USER)
+            - agenthive
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
@@ -249,7 +249,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - $(POSTGRES_USER)
+            - agenthive
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -259,7 +259,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - $(POSTGRES_USER)
+            - agenthive
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
@@ -269,7 +269,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - $(POSTGRES_USER)
+            - agenthive
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
@@ -388,7 +388,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - $(POSTGRES_USER)
+            - agenthive
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -398,7 +398,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - $(POSTGRES_USER)
+            - agenthive
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
@@ -408,7 +408,7 @@ spec:
             command:
             - pg_isready
             - -U
-            - $(POSTGRES_USER)
+            - agenthive
           initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3

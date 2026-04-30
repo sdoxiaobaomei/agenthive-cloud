@@ -76,6 +76,51 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: DB_PASSWORD
+        - name: CHAT_DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: CHAT_DB_HOST
+        - name: CHAT_DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: CHAT_DB_PORT
+        - name: CHAT_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: CHAT_DB_NAME
+        - name: PROJECT_DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: PROJECT_DB_HOST
+        - name: PROJECT_DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: PROJECT_DB_PORT
+        - name: PROJECT_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: PROJECT_DB_NAME
+        - name: AGENT_DB_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: AGENT_DB_HOST
+        - name: AGENT_DB_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: AGENT_DB_PORT
+        - name: AGENT_DB_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: AGENT_DB_NAME
         - name: REDIS_URL
           valueFrom:
             configMapKeyRef:
@@ -91,6 +136,11 @@ spec:
             secretKeyRef:
               name: app-secrets
               key: LLM_API_KEY
+        - name: CORS_ORIGIN
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: CORS_ORIGIN
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true

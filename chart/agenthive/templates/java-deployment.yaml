@@ -107,6 +107,8 @@ spec:
                 secretKeyRef:
                   name: {{ $.Values.secret.name }}
                   key: REDIS_PASSWORD
+            - name: OTEL_SDK_DISABLED
+              value: "true"
             - name: OTEL_SERVICE_NAME
               value: {{ $svc.name | quote }}
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -132,6 +134,9 @@ spec:
             {{- toYaml $.Values.global.containerSecurityContext | nindent 12 }}
           resources:
             {{- toYaml $resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
           livenessProbe:
             httpGet:
               path: {{ $svc.probes.liveness.path }}
@@ -144,6 +149,9 @@ spec:
               port: {{ $svc.probes.readiness.port }}
             initialDelaySeconds: {{ $svc.probes.readiness.initialDelaySeconds }}
             periodSeconds: {{ $svc.probes.readiness.periodSeconds }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
 {{- end }}
 {{- end }}
 {{- end }}

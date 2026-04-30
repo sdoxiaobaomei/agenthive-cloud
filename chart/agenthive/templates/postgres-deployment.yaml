@@ -19,7 +19,9 @@ spec:
         app.kubernetes.io/component: database
     spec:
       securityContext:
-        runAsNonRoot: true
+        runAsUser: 70
+        runAsGroup: 70
+        fsGroup: 70
       containers:
         - name: postgres
           image: {{ include "agenthive.image" (list . .Values.postgres.image) }}

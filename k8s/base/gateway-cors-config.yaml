@@ -1,0 +1,51 @@
+# Gateway CORS ConfigMap
+# CORS 配置完全外部化，不打包在镜像中。
+# 各环境通过 overlay 覆盖此 ConfigMap 注入具体的 allowedOriginPatterns。
+# Base 中保留空配置作为 fallback：当 overlay 未覆盖时，CorsWebFilter bean 不会被创建。
+#
+# 最佳实践：
+#   - local  overlay: allowedOriginPatterns: ["http://agenthive.local:*", "http://localhost:*"]
+#   - prod   overlay: allowedOriginPatterns: ["https://*.xiaochaitian.asia"]
+#
+# 修改此配置后执行 kubectl apply -k <overlay> 即可生效，无需重建镜像。
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-cors-config
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: gateway-cors-config
+    app.kubernetes.io/part-of: agenthive
+    app.kubernetes.io/managed-by: kustomize
+data:
+  application.yml: |
+    # Base fallback: empty CORS configuration.
+    # CorsWebFilter is conditionally created only when cors-configurations is present.
+    spring:
+      cloud:
+        gateway:
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOrigins:
+                  - "http://localhost:3000"
+                  - "http://localhost:5173"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - PATCH
+                  - OPTIONS
+                allowedHeaders:
+                  - Content-Type
+                  - Accept
+                  - Authorization
+                  - X-Query-Params
+                  - X-Requested-With
+                  - X-User-Id
+                  - X-User-Name
+                  - X-User-Role
+                allowCredentials: true
+                maxAge: 3600

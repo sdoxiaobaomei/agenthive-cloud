@@ -17,18 +17,20 @@ k8s/
 │   └── kustomization.yaml        # Base Kustomization
 │
 ├── overlays/                      # 环境覆盖层
-│   ├── local/                    # 本地 Docker Desktop
+│   ├── local/                    # 本地 K3s / Docker Desktop
 │   │   ├── kustomization.yaml
 │   │   └── nodeport-services.yaml
-│   ├── staging/                  # 测试环境
-│   │   ├── kustomization.yaml
-│   │   └── ingress.yaml
 │   └── production/               # 生产环境
 │       ├── kustomization.yaml
 │       ├── ingress.yaml
 │       └── hpa.yaml              # 自动扩缩容
 │
 ├── components/                    # 可选组件
+│   ├── data-layer/               # 数据层 (Postgres + Redis)
+│   │   ├── postgres.yaml
+│   │   ├── postgres-java.yaml
+│   │   ├── redis.yaml
+│   │   └── kustomization.yaml
 │   ├── security/                 # 安全配置
 │   │   └── network-policies.yaml
 │   └── monitoring/               # 监控配置
@@ -38,48 +40,47 @@ k8s/
 
 ## 环境对比
 
-| 特性 | local | staging | production |
-|------|-------|---------|------------|
-| **副本数** | 1 | 2 | 3+ (HPA) |
-| **资源限制** | 较低 | 中等 | 高 |
-| **镜像拉取** | Never | IfNotPresent | IfNotPresent |
-| **Service 类型** | NodePort | ClusterIP + Ingress | ClusterIP + Ingress |
-| **数据库** | 单实例 | 单实例 | 建议外部 RDS |
-| **HPA** | 无 | 无 | 有 |
-| **PDB** | 1 | 1 | 50% |
-| **TLS** | 无 | Let's Encrypt Staging | Let's Encrypt Prod |
+| 特性 | local | production |
+|------|-------|------------|
+| **副本数** | 1 | 3+ (HPA) |
+| **资源限制** | 较低 | 高 |
+| **镜像拉取** | Never (本地构建) | IfNotPresent |
+| **Service 类型** | NodePort | ClusterIP + Ingress |
+| **数据库** | 单实例 (data-layer component) | 建议外部 RDS |
+| **HPA** | 无 | 有 |
+| **PDB** | 1 | 50% |
+| **TLS** | 无 | Let's Encrypt Prod |
+| **Secret 管理** | K8s 原生 Secret (setup-secrets.sh) | K8s 原生 Secret |
 
 ## 快速开始
 
-### 本地 Docker Desktop
+### 本地 K3s / Docker Desktop
 
 ```bash
-# 1. 构建本地镜像
-./scripts/build-local-k8s.sh
+# 1. 创建 Secret（首次部署必需）
+cp .env.example .env
+# 编辑 .env 填入真实值
+bash scripts/setup-secrets.sh
 
-# 2. 部署到本地 K8s
+# 2. 构建本地镜像
+bash scripts/archive/build-local-k8s.sh
+
+# 3. 部署到本地 K8s（包含数据层）
 kubectl apply -k k8s/overlays/local/
 
-# 3. 验证部署
+# 4. 验证部署
 kubectl get pods -n agenthive
 kubectl get svc -n agenthive
 
-# 4. 访问服务
+# 5. 访问服务
 open http://localhost:30000  # Landing
 open http://localhost:30001  # API
 
-# 5. 查看日志
-kubectl logs -f deployment/local-api -n agenthive
+# 6. 镜像 Promotion（dev 测试通过后推送统一版本到 prod）
+bash scripts/promote-images.sh --tag v1.2.3-g$(git rev-parse --short HEAD)
 
-# 6. 清理
+# 7. 清理
 kubectl delete -k k8s/overlays/local/
-```
-
-### 测试环境 (Staging)
-
-```bash
-# 前提：已配置镜像仓库和 Ingress Controller
-kubectl apply -k k8s/overlays/staging/
 ```
 
 ### 生产环境 (Production)
@@ -101,31 +102,26 @@ kubectl get hpa -n agenthive-production
 kubectl apply -k k8s/components/security/
 ```
 
-### Secret 管理最佳实践
+### Secret 管理（零成本方案）
 
-1. **所有环境**：使用 External Secrets Operator 从阿里云 KMS 动态注入 Secret
-2. **本地开发**：临时手动创建 Secret（见 `docs/deployment/external-secrets-operator.md`）
+**当前方案：K8s 原生 Secret + 注入脚本**
+- 不再依赖 External Secrets Operator 和阿里云 KMS（节省云费用）
+- 通过 `scripts/setup-secrets.sh` 从 `.env` 文件创建 Secret
+- `.env` 和真实 Secret 绝不提交 Git（已加入 .gitignore）
 
-```yaml
-# 当前配置：阿里云 KMS + RRSA 认证
-# 详见 docs/deployment/external-secrets-operator.md
-apiVersion: external-secrets.io/v1beta1
-kind: ExternalSecret
-metadata:
-  name: app-secrets
-  namespace: agenthive
-spec:
-  refreshInterval: 1h
-  secretStoreRef:
-    kind: ClusterSecretStore
-    name: alicloud-kms
-  target:
-    name: app-secrets
-  data:
-  - secretKey: DB_PASSWORD
-    remoteRef:
-      key: agenthive-production-db-password
+```bash
+# 首次部署或 Secret 变更时
+cp .env.example .env
+# 编辑 .env 填入真实值
+bash scripts/setup-secrets.sh
+
+# 验证 Secret 已创建
+kubectl get secret app-secrets -n agenthive
 ```
+
+**安全提示**：
+- 生产环境建议启用 K3s etcd 加密：`k3s server --secrets-encryption`
+- 定期轮换密钥：`bash scripts/security/rotate-secrets.sh`
 
 ## 常用命令
 

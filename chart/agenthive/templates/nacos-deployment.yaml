@@ -24,7 +24,9 @@ spec:
         app.kubernetes.io/component: service-discovery
     spec:
       securityContext:
-        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       containers:
         - name: nacos
           image: {{ include "agenthive.image" (list . .Values.nacos.image) }}
@@ -80,13 +82,19 @@ spec:
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 10
-          {{- if .Values.nacos.pvc.enabled }}
           volumeMounts:
             - name: data
               mountPath: /home/nacos/data
+            - name: logs
+              mountPath: /home/nacos/logs
       volumes:
         - name: data
+          {{- if .Values.nacos.pvc.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "agenthive.prefixedName" (list . .Values.nacos.name) }}-data
+          {{- else }}
+          emptyDir: {}
           {{- end }}
+        - name: logs
+          emptyDir: {}
 {{- end }}

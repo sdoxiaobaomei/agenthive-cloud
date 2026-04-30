@@ -354,13 +354,13 @@ configmap:
     OTEL_LOG_LEVEL: "error"
 
 # ----------------------------------------------------------------------------
-# Secret — Production (External Secrets Operator)
+# Secret — Production (Native K8s Secret, managed by scripts/setup-secrets.sh)
 # ----------------------------------------------------------------------------
 secret:
   enabled: true
   name: app-secrets
   externalSecret:
-    enabled: true
+    enabled: false
 
 # ----------------------------------------------------------------------------
 # NetworkPolicy — Production

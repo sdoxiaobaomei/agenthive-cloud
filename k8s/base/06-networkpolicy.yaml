@@ -22,11 +22,24 @@ spec:
     ports:
     - protocol: TCP
       port: 3001
+  # 允许来自 Gateway 服务的流量（内部路由转发）
+  - from:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: gateway-service
+    ports:
+    - protocol: TCP
+      port: 3001
   # 允许来自 Ingress Controller 的流量
+  # NOTE: K3s 默认使用 Traefik，但本项目 bootstrap 时通过 --disable=traefik 禁用了它，
+  # 并自行部署了 ingress-nginx。如环境使用 Traefik，请将 namespaceSelector 改为:
+  #   matchLabels:
+  #     kubernetes.io/metadata.name: kube-system
+  # 或 Traefik 实际所在的 namespace。
   - from:
     - namespaceSelector:
         matchLabels:
-          name: ingress-nginx
+          kubernetes.io/metadata.name: ingress-nginx
     ports:
     - protocol: TCP
       port: 3001
@@ -39,6 +52,30 @@ spec:
     ports:
     - protocol: TCP
       port: 5432
+  # 允许访问 Postgres-Chat
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: postgres-chat
+    ports:
+    - protocol: TCP
+      port: 5432
+  # 允许访问 Postgres-Project
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: postgres-project
+    ports:
+    - protocol: TCP
+      port: 5432
+  # 允许访问 Postgres-Agent
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: postgres-agent
+    ports:
+    - protocol: TCP
+      port: 5432
   # 允许访问 Redis
   - to:
     - podSelector:
@@ -47,6 +84,24 @@ spec:
     ports:
     - protocol: TCP
       port: 6379
+  # 允许访问 Nacos
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: nacos
+    ports:
+    - protocol: TCP
+      port: 8848
+    - protocol: TCP
+      port: 9848
+  # 允许访问 RabbitMQ
+  - to:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: rabbitmq
+    ports:
+    - protocol: TCP
+      port: 5672
   # 允许 DNS 解析
   - to:
     - namespaceSelector: {}
@@ -71,13 +126,14 @@ spec:
   - Egress
   ingress:
   # 允许来自 Ingress Controller 的流量
+  # NOTE: 同上，如使用 Traefik 请调整 namespaceSelector 匹配实际 ingress controller namespace。
   - from:
     - namespaceSelector:
         matchLabels:
-          name: ingress-nginx
+          kubernetes.io/metadata.name: ingress-nginx
     ports:
     - protocol: TCP
-      port: 3000
+      port: 80
   egress:
   # 允许访问 API
   - to:
@@ -109,11 +165,66 @@ spec:
   policyTypes:
   - Ingress
   ingress:
-  # 只允许 API 访问
+  # Allow all Pods in the same namespace to access Postgres
   - from:
-    - podSelector:
-        matchLabels:
-          app.kubernetes.io/name: api
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-chat-network-policy
+  namespace: agenthive
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres-chat
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow all Pods in the same namespace to access Postgres-Chat
+  - from:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-project-network-policy
+  namespace: agenthive
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres-project
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow all Pods in the same namespace to access Postgres-Project
+  - from:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-agent-network-policy
+  namespace: agenthive
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: postgres-agent
+  policyTypes:
+  - Ingress
+  ingress:
+  # Allow all Pods in the same namespace to access Postgres-Agent
+  - from:
+    - podSelector: {}
     ports:
     - protocol: TCP
       port: 5432
@@ -130,11 +241,9 @@ spec:
   policyTypes:
   - Ingress
   ingress:
-  # 只允许 API 访问
+  # Allow all Pods in the same namespace to access Redis
   - from:
-    - podSelector:
-        matchLabels:
-          app.kubernetes.io/name: api
+    - podSelector: {}
     ports:
     - protocol: TCP
       port: 6379

@@ -5,6 +5,8 @@ namespace: agenthive
 
 resources:
   - ../../base
+  - ../../components/data-layer
+  - nodeport-services.yaml
 
 # 本地覆盖：使用本地镜像
 images:
@@ -14,6 +16,11 @@ images:
     newTag: latest
 
 # 本地覆盖：使用本地镜像，不拉取远程
+# Dev 镜像策略：
+#   1. 开发者在本地构建镜像（scripts/build-local-k8s.sh）
+#   2. 测试通过后，运行 scripts/promote-images.sh --tag <version>
+#      将所有镜像统一 tag 并推送到生产 registry
+#   3. Prod 使用相同的 tag，确保 dev/prod 镜像一致性
 patches:
   - target:
       kind: Deployment
@@ -46,10 +53,120 @@ patches:
         path: /spec/replicas
         value: 1
 
+# Dev 环境禁用 OpenTelemetry（collector 未部署时避免日志噪音）
+  - target:
+      kind: ConfigMap
+      name: app-config
+    patch: |-
+      - op: replace
+        path: /data/OTEL_SDK_DISABLED
+        value: "true"
+      - op: replace
+        path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+        value: ""
+
+# Java 服务同样使用本地镜像
+  - target:
+      kind: Deployment
+      name: gateway-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: auth-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: user-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: payment-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: order-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: cart-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+  - target:
+      kind: Deployment
+      name: logistics-service
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/imagePullPolicy
+        value: Never
+
+  # Gateway CORS: local 环境通配端口，零摩擦开发体验
+  - target:
+      kind: ConfigMap
+      name: gateway-cors-config
+    patch: |-
+      - op: replace
+        path: /data
+        value:
+          application.yml: |
+            spring:
+              cloud:
+                gateway:
+                  globalcors:
+                    add-to-simple-url-handler-mapping: true
+                    cors-configurations:
+                      '[/**]':
+                        allowedOrigins:
+                          - "http://agenthive.local:8080"
+                          - "http://agenthive.local:3000"
+                          - "http://localhost:3000"
+                          - "http://localhost:5173"
+                        allowedMethods:
+                          - GET
+                          - POST
+                          - PUT
+                          - DELETE
+                          - PATCH
+                          - OPTIONS
+                        allowedHeaders:
+                          - Content-Type
+                          - Accept
+                          - Authorization
+                          - X-Query-Params
+                          - X-Requested-With
+                          - X-User-Id
+                          - X-User-Name
+                          - X-User-Role
+                        allowCredentials: true
+                        maxAge: 3600
+
+  # Gateway Service 在 dev 环境使用 ClusterIP 而非 LoadBalancer
+  - target:
+      kind: Service
+      name: gateway-service
+    patch: |-
+      - op: replace
+        path: /spec/type
+        value: ClusterIP
+
 labels:
   - pairs:
       environment: local
-    includeSelectors: true
+    includeSelectors: false
     includeTemplates: true
-
-namePrefix: local-

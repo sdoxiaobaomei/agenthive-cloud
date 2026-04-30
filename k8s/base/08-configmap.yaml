@@ -18,11 +18,28 @@ data:
   DB_NAME: "agenthive"
   DB_USER: "agenthive"
   
+  # Chat 数据库配置
+  CHAT_DB_HOST: "postgres-chat"
+  CHAT_DB_PORT: "5432"
+  CHAT_DB_NAME: "chat_db"
+  
+  # Project 数据库配置
+  PROJECT_DB_HOST: "postgres-project"
+  PROJECT_DB_PORT: "5432"
+  PROJECT_DB_NAME: "project_db"
+  
+  # Agent 数据库配置
+  AGENT_DB_HOST: "postgres-agent"
+  AGENT_DB_PORT: "5432"
+  AGENT_DB_NAME: "agent_db"
+  
   # Redis 配置
-  REDIS_URL: "redis://redis:6379"
+  REDIS_URL: "redis://:agenthive@redis:6379"
   
   # API 配置
   API_URL: "http://api:3001"
+  GATEWAY_URL: "http://gateway-service:8080"
+  CORS_ORIGIN: "http://agenthive.local,http://agenthive.local:8080,http://localhost,http://localhost:3000,http://localhost:5173,https://*.xiaochaitian.asia"
   
   # 应用配置
   APP_NAME: "AgentHive Cloud"
@@ -35,7 +52,7 @@ data:
   CACHE_TTL: "3600"
 
   # OpenTelemetry
-  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-gateway.monitoring:4317"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.monitoring:4317"
   OTEL_EXPORTER_OTLP_INSECURE: "true"
   OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
   OTEL_TRACES_SAMPLER_ARG: "0.1"

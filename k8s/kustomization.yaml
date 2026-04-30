@@ -1,10 +1,13 @@
 # Kustomize 配置入口
 # 使用方式: kubectl apply -k k8s/
 #
-# 推荐使用具体环境的 overlay:
-#   kubectl apply -k k8s/overlays/local/
-#   kubectl apply -k k8s/overlays/staging/
-#   kubectl apply -k k8s/overlays/production/
+# 注意：此入口仅部署应用层，不包含数据层。
+# 如需完整部署（应用 + 数据层），请使用具体环境的 overlay:
+#   kubectl apply -k k8s/overlays/local/      # Dev (本地镜像 + 内嵌数据层)
+#   kubectl apply -k k8s/overlays/production/ # Prod (镜像仓库 + 内嵌数据层)
+#
+# 如需单独部署数据层:
+#   kubectl apply -k k8s/components/data-layer/
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -12,5 +15,5 @@ kind: Kustomization
 resources:
   - base
 
-# 默认使用本地配置
-# 如需其他环境，请使用 overlays 目录
+# 默认仅部署应用层
+# 如需完整环境，请使用 overlays 目录

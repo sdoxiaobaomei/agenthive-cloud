@@ -40,7 +40,7 @@ spec:
         image: agenthive/landing:latest
         imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 3000
+        - containerPort: 80
           name: http
           protocol: TCP
         env:
@@ -127,7 +127,7 @@ spec:
     app.kubernetes.io/name: landing
   ports:
   - port: 3000
-    targetPort: 3000
+    targetPort: 80
     name: http
   type: ClusterIP
 ---
