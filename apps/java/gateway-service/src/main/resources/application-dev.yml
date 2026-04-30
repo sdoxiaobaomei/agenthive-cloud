@@ -1,27 +1,5 @@
 spring:
   cloud:
     gateway:
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOrigins:
-              - "http://localhost:3000"
-              - "http://localhost:3001"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - PATCH
-              - OPTIONS
-            allowedHeaders:
-              - Content-Type
-              - Accept
-              - Authorization
-              - X-Query-Params
-              - X-Requested-With
-              - X-User-Id
-              - X-User-Name
-              - X-User-Role
-            allowCredentials: true
-            maxAge: 3600
+      # CORS configuration is externalized to K8s ConfigMap.
+      # See k8s/base/gateway-cors-config.yaml and overlay-specific patches.

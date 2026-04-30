@@ -26,6 +26,10 @@ spring:
           max-active: 30
           max-idle: 15
           min-idle: 5
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
   cloud:
     nacos:
       config:

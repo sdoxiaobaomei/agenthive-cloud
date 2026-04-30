@@ -42,7 +42,7 @@ INSERT INTO sys_user (id, username, password, phone, email, status)
 VALUES (1, 'admin', '$2b$10$3bS6M4YTBRcCs/axmj7V6OP1OQoNAEUb3K0gijdnz3/xL.EsxwKei', '', 'admin@agenthive.cloud', 1)
 ON CONFLICT DO NOTHING;
 INSERT INTO sys_user (id, username, password, phone, email, status)
-VALUES (2, '18829355062', '$2b$10$3bS6M4YTBRcCs/axmj7V6OP1OQoNAEUb3K0gijdnz3/xL.EsxwKei', '18829355062', 'user@agenthive.cloud', 1)
+VALUES (2, '18829355062', '$2a$10$gc4DSGsvOcTlHK19oUGyruFS3jasB9q9h3VsmJJtTimAJp155lIky', '18829355062', 'user@agenthive.cloud', 1)
 ON CONFLICT DO NOTHING;
 INSERT INTO sys_user_role (user_id, role_id) VALUES (1, 1) ON CONFLICT DO NOTHING;
 INSERT INTO sys_user_role (user_id, role_id) VALUES (2, 2) ON CONFLICT DO NOTHING;
