@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# AgentHive Cloud â€” Environment Validation Script
+# AgentHive Cloud â€?Environment Validation Script
 # Usage: bash scripts/validate-env.sh [path-to-env-file]
 # Default: .env.prod
 

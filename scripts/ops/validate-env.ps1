@@ -1,4 +1,4 @@
-# AgentHive Cloud â€” Environment Validation Script (Windows)
+# AgentHive Cloud â€?Environment Validation Script (Windows)
 # Usage: .\scripts\validate-env.ps1 [-EnvFile <path>]
 # Default: .env.prod
 
