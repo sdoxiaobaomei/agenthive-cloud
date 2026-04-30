@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
 # AgentHive Cloud — Secret Rotation Script
-# TICKET: PLATFORM-009
-# Purpose: Rotate K8s secrets and update External Secrets references
+# TICKET: PLATFORM-021-optimization
+# Purpose: Rotate K8s native secrets (zero-cost, no KMS required)
 # Usage  : bash scripts/rotate-secrets.sh [--dry-run]
 # =============================================================================
 
@@ -65,7 +65,7 @@ for key in "${!SECRETS[@]}"; do
   if [[ -z "${SECRETS[$key]}" ]]; then
     # For user-provided secrets, generate a placeholder and prompt
     SECRETS[$key]="$(openssl rand -base64 24)"
-    log_warn "$key auto-generated. You MUST update this in your secret store (KMS/1Password)."
+    log_warn "$key auto-generated. Remember to update .env and re-run scripts/setup-secrets.sh if needed."
   fi
 done
 
@@ -101,6 +101,7 @@ kubectl rollout restart deployment -n "$NAMESPACE" -l app.kubernetes.io/part-of=
 
 log_ok "Secret rotation complete!"
 log_info "Next steps:"
-log_info "  1. Update your secret store (KMS/1Password) with the new values"
-log_info "  2. Verify pods are running: kubectl get pods -n $NAMESPACE"
-log_info "  3. Check application health: kubectl get events -n $NAMESPACE"
+log_info "  1. Update .env with the new values"
+log_info "  2. Re-run scripts/setup-secrets.sh to sync to K8s"
+log_info "  3. Verify pods are running: kubectl get pods -n $NAMESPACE"
+log_info "  4. Check application health: kubectl get events -n $NAMESPACE"

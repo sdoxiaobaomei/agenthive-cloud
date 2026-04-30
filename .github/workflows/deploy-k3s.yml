@@ -33,6 +33,22 @@ env:
   K3S_HOST: 39.107.87.106
   HELM_TIMEOUT: 10m
 
+# =============================================================================
+# Image Promotion Flow (Dev → Prod Consistency)
+# TICKET: PLATFORM-021-optimization
+# 
+# 1. DEV: Developers build images locally and test on local K3s
+#    bash scripts/archive/build-local-k8s.sh
+#    kubectl apply -k k8s/overlays/local/
+# 
+# 2. PROMOTION: Once dev testing passes, CI builds ALL images with a unified tag
+#    and pushes them to the production registry. This guarantees that the exact
+#    same image digest tested in dev is what runs in prod.
+# 
+# 3. PROD: This workflow deploys the unified tag to production K3s via Helm.
+#    If deployment fails, automatic rollback is triggered.
+# =============================================================================
+
 jobs:
   # ===========================================
   # Stage 1: Build & Push Images
