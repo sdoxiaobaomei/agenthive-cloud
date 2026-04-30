@@ -23,7 +23,11 @@
           </button>
         </div>
         <div v-show="!isChatSidebarCollapsed" class="chat-sidebar-body">
-          <ChatPanel :chat-id="chatId" embedded />
+          <ChatPanel
+            :chat-id="chatId"
+            :project-id="chatStore.currentConversation?.projectId"
+            embedded
+          />
         </div>
         <div v-show="isChatSidebarCollapsed" class="chat-sidebar-collapsed">
           <button class="collapsed-expand-btn" @click="toggleChatSidebar">

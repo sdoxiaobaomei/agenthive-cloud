@@ -334,7 +334,9 @@ const connectWebSocket = (sid: string) => {
   const wsUrl = baseUrl.replace(/^http/, 'ws')
   socket = io(`${wsUrl}/chat`, {
     auth: { token: localStorage.getItem('agenthive:auth-token') || '' },
-    transports: ['websocket'],
+    transports: ['websocket', 'polling'],
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
   })
 
   socket.on('connect', () => {
@@ -346,8 +348,9 @@ const connectWebSocket = (sid: string) => {
     wsConnected.value = false
   })
 
-  socket.on('connect_error', () => {
+  socket.on('connect_error', (err: Error) => {
     wsConnected.value = false
+    console.error('[WebSocket] connect_error:', err.message)
   })
 
   socket.on('error', () => {
