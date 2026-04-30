@@ -61,10 +61,11 @@ export const userDb = {
            phone = COALESCE($2, phone),
            email = COALESCE($3, email),
            role = COALESCE($4, role),
-           avatar = COALESCE($5, avatar)
-       WHERE id = $6 
+           avatar = COALESCE($5, avatar),
+           external_user_id = COALESCE($6, external_user_id)
+       WHERE id = $7 
        RETURNING *`,
-      [data.username, data.phone, data.email, data.role, data.avatar, id]
+      [data.username, data.phone, data.email, data.role, data.avatar, data.external_user_id, id]
     )
     return result.rows[0] || undefined
   },

@@ -1,11 +1,14 @@
 // WebSocket Hub - Socket.io 实时通信
 import { Server as SocketIOServer, Socket } from 'socket.io'
+import { createAdapter } from '@socket.io/redis-adapter'
+import { Redis } from 'ioredis'
 import { Server as HttpServer } from 'http'
 import { trace, SpanStatusCode } from '@opentelemetry/api'
 import { AI_ATTRIBUTES, AI_SPAN_NAMES, extractTraceContextFromPayload } from '@agenthive/observability'
 import { redisCache } from '../services/redis-cache.js'
 import { resolveLocalUser } from '../services/userMapping.js'
 import { initChatNamespace } from '../chat-controller/websocket.js'
+import { redisConfig } from '../config/redis.js'
 import logger from '../utils/logger.js'
 
 // 访客房间管理
@@ -26,6 +29,11 @@ export function initWebSocket(server: HttpServer): SocketIOServer {
     pingTimeout: 60000,
     pingInterval: 25000,
   })
+
+  // Attach Redis Adapter for cross-pod broadcasting
+  const pubClient = new Redis(redisConfig)
+  const subClient = pubClient.duplicate()
+  io.adapter(createAdapter(pubClient, subClient))
 
   // 中间件：身份验证 + Trace Context 提取
   io.use(async (socket: Socket, next) => {

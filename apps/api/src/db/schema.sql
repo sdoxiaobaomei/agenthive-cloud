@@ -11,10 +11,13 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255),
     role VARCHAR(20) DEFAULT 'user',
     avatar TEXT,
-    external_user_id VARCHAR(50),
+    external_user_id VARCHAR(36),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 为已部署环境添加 external_user_id 字段
+ALTER TABLE users ADD COLUMN IF NOT EXISTS external_user_id VARCHAR(36);
 
 -- 项目表
 CREATE TABLE IF NOT EXISTS projects (

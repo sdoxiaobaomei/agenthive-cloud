@@ -50,6 +50,9 @@ function createLimiter(options: {
     max: options.max,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: {
+      keyGeneratorIpFallback: false,
+    },
     store: new RedisStore(options.prefix),
     keyGenerator: (req: Request) => {
       // Use authenticated user ID if available, otherwise IP

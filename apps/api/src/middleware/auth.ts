@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import { resolveLocalUser } from '../services/userMapping.js'
+import { userDb } from '../db/index.js'
 import logger from '../utils/logger.js'
 
 const PUBLIC_PATHS = [
@@ -9,6 +10,10 @@ const PUBLIC_PATHS = [
   '/api-docs',
   '/swagger-ui',
   '/api-docs.json',
+  '/auth/login',
+  '/auth/register',
+  '/auth/sms/send',
+  '/auth/refresh',
 ]
 
 /**
@@ -39,13 +44,24 @@ async function injectDevUser(req: Request): Promise<boolean> {
     return true
   } catch (error) {
     logger.error('Dev user injection failed', error instanceof Error ? error : undefined)
-    // 降级：直接注入，不保证数据库有记录（可能后续仍会外键失败）
-    ;(req as any).userId = devUserId
-    ;(req as any).externalUserId = devUserId
-    ;(req as any).user = {
-      userId: devUserId,
-      username: devUserName,
-      role: devUserRole,
+    // 修复：使用预定义的有效 UUID，并尝试创建 fallback 用户
+    try {
+      const fallbackUser = await userDb.create({
+        username: devUserName || 'Developer',
+        role: devUserRole || 'admin',
+        external_user_id: devUserId,
+      })
+      ;(req as any).userId = fallbackUser.id
+      ;(req as any).externalUserId = devUserId
+      ;(req as any).user = {
+        userId: fallbackUser.id,
+        username: fallbackUser.username,
+        role: fallbackUser.role,
+      }
+    } catch (createErr) {
+      // 如果连创建都失败，记录错误并返回 false（让请求走 401）
+      logger.error('Dev user fallback creation failed', createErr instanceof Error ? createErr : undefined)
+      return false
     }
     return true
   }

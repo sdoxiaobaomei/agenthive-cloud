@@ -10,6 +10,7 @@ export interface User {
   role: string
   avatar?: string
   external_user_id?: string
+  externalUserId?: string
   created_at: string
   updated_at: string
 }

@@ -20,7 +20,7 @@ const getRedisConfig = () => {
   }
 }
 
-const redisConfig = {
+export const redisConfig = {
   ...getRedisConfig(),
   retryStrategy: (times: number) => {
     const delay = Math.min(times * 50, 2000)

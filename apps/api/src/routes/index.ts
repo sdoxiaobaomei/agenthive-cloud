@@ -7,6 +7,7 @@ import demoRoutes from './demo.js'
 import projectRoutes from '../project/routes.js'
 import chatRoutes from '../chat-controller/routes.js'
 import creditsRoutes from './credits.js'
+import authRoutes from './auth.js'
 import { pool } from '../config/database.js'
 import redis from '../config/redis.js'
 import { checkLLMConnection } from '../services/llm.js'
@@ -89,5 +90,6 @@ router.use('/demo', demoRoutes)
 router.use('/projects', projectRoutes)
 router.use('/chat', chatRoutes)
 router.use('/credits', creditsRoutes)
+router.use('/auth', authRoutes)
 
 export default router
