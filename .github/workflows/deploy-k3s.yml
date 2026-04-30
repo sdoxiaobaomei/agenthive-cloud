@@ -83,6 +83,14 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      - name: 📦 Build API Workspace
+        run: |
+          npm install -g pnpm@9
+          pnpm install --frozen-lockfile
+          pnpm --filter=@agenthive/observability build
+          pnpm --filter=@agenthive/agent-runtime build
+          pnpm --filter=@agenthive/api build
+
       - name: 🐳 Build & Push API Image
         run: |
           docker build -t ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }} -f apps/api/Dockerfile .
