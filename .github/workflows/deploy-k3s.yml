@@ -170,7 +170,13 @@ jobs:
       - name: 🔐 Setup kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.K3S_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          # Try base64 decode first, fallback to plain text
+          if echo "${{ secrets.K3S_KUBECONFIG }}" | base64 -d > ~/.kube/config 2>/dev/null; then
+            echo "Kubeconfig decoded from base64"
+          else
+            echo "${{ secrets.K3S_KUBECONFIG }}" > ~/.kube/config
+            echo "Kubeconfig written as plain text"
+          fi
           chmod 600 ~/.kube/config
 
       - name: 🚀 Helm Upgrade (Dry Run)
