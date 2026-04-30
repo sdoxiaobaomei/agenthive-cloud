@@ -201,8 +201,24 @@ jobs:
               data = m.group(2)
               # Collapse any whitespace/newlines inside base64 payload
               clean = ''.join(data.split())
+              # Try strict validation first
               try:
-                  base64.b64decode(clean)
+                  base64.b64decode(clean, validate=True)
+                  return f"{key}: {clean}"
+              except Exception:
+                  pass
+              # Fix padding by appending '=' chars (up to 3)
+              for pad in ['=', '==', '===']:
+                  try:
+                      base64.b64decode(clean + pad, validate=True)
+                      print(f"INFO: fixed padding for {key}", file=sys.stderr)
+                      return f"{key}: {clean}{pad}"
+                  except Exception:
+                      pass
+              # Last resort: non-strict decode (accepts missing padding)
+              try:
+                  base64.b64decode(clean, validate=False)
+                  print(f"INFO: relaxed validation for {key}", file=sys.stderr)
                   return f"{key}: {clean}"
               except Exception as e:
                   print(f"WARNING: could not fix {key}: {e}", file=sys.stderr)
