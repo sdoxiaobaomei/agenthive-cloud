@@ -25,9 +25,10 @@ on:
 
 env:
   REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
-  IMAGE_API: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/agenthive/api
-  IMAGE_LANDING: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/agenthive/landing
-  IMAGE_JAVA_PREFIX: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/agenthive
+  NAMESPACE: namespace-alpha
+  IMAGE_API: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/api
+  IMAGE_LANDING: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/landing
+  IMAGE_JAVA_PREFIX: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha
   CHART_PATH: chart/agenthive
   VALUES_FILE: chart/agenthive/values.prod.yaml
   K3S_HOST: 39.107.87.106
@@ -178,6 +179,9 @@ jobs:
           helm upgrade --install agenthive ${{ env.CHART_PATH }} \
             -f ${{ env.VALUES_FILE }} \
             --set global.imageRegistry=${{ env.REGISTRY }} \
+            --set api.image.repository=${{ env.NAMESPACE }}/api \
+            --set landing.image.repository=${{ env.NAMESPACE }}/landing \
+            --set javaServices.defaults.image.repositoryPrefix=${{ env.NAMESPACE }} \
             --set api.image.tag="$TAG" \
             --set landing.image.tag="$TAG" \
             --set javaServices.defaults.image.tag="$TAG" \
