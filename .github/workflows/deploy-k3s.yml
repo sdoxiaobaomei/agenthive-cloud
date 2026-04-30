@@ -156,6 +156,13 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
+      - name: 🔐 Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: 🔧 Prepare Helm values
         run: |
           TAG="${{ needs.build.outputs.image_tag }}"
@@ -170,8 +177,10 @@ jobs:
       - name: 🔐 Setup kubeconfig
         run: |
           mkdir -p ~/.kube
-          # Try base64 decode first, fallback to plain text
-          if echo "${{ secrets.K3S_KUBECONFIG }}" | base64 -d > ~/.kube/config 2>/dev/null; then
+          # Try base64 decode to temp file and validate it looks like kubeconfig
+          echo "${{ secrets.K3S_KUBECONFIG }}" | base64 -d > /tmp/kubeconfig-decoded 2>/dev/null || true
+          if grep -q 'apiVersion:' /tmp/kubeconfig-decoded 2>/dev/null && grep -q 'kind:' /tmp/kubeconfig-decoded 2>/dev/null; then
+            mv /tmp/kubeconfig-decoded ~/.kube/config
             echo "Kubeconfig decoded from base64"
           else
             echo "${{ secrets.K3S_KUBECONFIG }}" > ~/.kube/config
