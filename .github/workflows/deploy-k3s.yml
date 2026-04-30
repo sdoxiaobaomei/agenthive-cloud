@@ -85,12 +85,12 @@ jobs:
 
       - name: 🐳 Build & Push API Image
         run: |
-          docker build -t ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }} -f Dockerfile.api .
+          docker build -t ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }} -f apps/Dockerfile.api .
           docker push ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }}
 
       - name: 🐳 Build & Push Landing Image
         run: |
-          docker build -t ${{ env.IMAGE_LANDING }}:${{ steps.meta.outputs.tag }} -f Dockerfile.landing .
+          docker build -t ${{ env.IMAGE_LANDING }}:${{ steps.meta.outputs.tag }} -f apps/landing/Dockerfile .
           docker push ${{ env.IMAGE_LANDING }}:${{ steps.meta.outputs.tag }}
 
       # Java images: build from source with Maven, then push with unified tag
