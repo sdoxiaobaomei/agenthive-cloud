@@ -80,6 +80,9 @@ export const getProject = async (req: Request, res: Response) => {
 }
 
 export const createProject = async (req: Request, res: Response) => {
+  let userId: string | undefined
+  let data: z.infer<typeof createProjectWithTypeSchema> | undefined
+
   try {
     const parseResult = createProjectWithTypeSchema.safeParse(req.body)
     if (!parseResult.success) {
@@ -88,18 +91,16 @@ export const createProject = async (req: Request, res: Response) => {
       })
     }
 
-    const userId = (req as any).userId as string | undefined
+    userId = (req as any).userId as string | undefined
     if (!userId) {
       return res.status(401).json({ code: 401, message: '未授权' , data: null })
     }
 
-    const data = parseResult.data
+    data = parseResult.data
     const projectType = data.type || 'blank'
+    const techStack = data.tech_stack || 'blank'
 
     // 类型字段校验
-    if (projectType === 'blank' && !data.tech_stack) {
-      return res.status(400).json({ code: 400, message: 'blank 类型需要提供 tech_stack', data: null })
-    }
     if (projectType === 'git-import' && !data.git_url) {
       return res.status(400).json({ code: 400, message: 'git-import 类型需要提供 git_url', data: null })
     }
@@ -108,7 +109,7 @@ export const createProject = async (req: Request, res: Response) => {
 
     // blank 类型：复制模板到 workspace
     if (projectType === 'blank') {
-      await projectService.initBlankWorkspace(project.id, userId, data.tech_stack!)
+      await projectService.initBlankWorkspace(project.id, userId, techStack)
       const updated = await projectService.findById(project.id)
       res.status(201).json({ code: 201, message: 'success', data: updated })
       return
@@ -127,7 +128,11 @@ export const createProject = async (req: Request, res: Response) => {
 
     res.status(201).json({ code: 201, message: 'success', data: project })
   } catch (error) {
-    logger.error('Failed to create project', error instanceof Error ? error : undefined)
+    logger.error('Failed to create project', error instanceof Error ? error : undefined, {
+      ownerId: userId,
+      projectName: data?.name,
+      projectType: data?.type,
+    })
     res.status(500).json({ code: 500, message: '创建项目失败', data: null })
   }
 }

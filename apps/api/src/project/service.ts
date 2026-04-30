@@ -258,8 +258,23 @@ export const projectService = {
     const workspacePath = getWorkspacePath(userId, projectId)
     const templatePath = resolve(process.cwd(), 'apps/api/templates', techStack)
 
-    await mkdir(workspacePath, { recursive: true })
-    await cp(templatePath, workspacePath, { recursive: true, force: false })
+    try {
+      await mkdir(workspacePath, { recursive: true })
+    } catch (mkdirErr) {
+      const msg = mkdirErr instanceof Error ? mkdirErr.message : String(mkdirErr)
+      logger.error('Failed to create workspace directory', mkdirErr instanceof Error ? mkdirErr : undefined, {
+        workspacePath,
+        error: msg,
+      })
+      throw new Error(`Workspace directory creation failed: ${msg}`)
+    }
+
+    // 如果模板存在则复制，否则只创建空目录
+    try {
+      await cp(templatePath, workspacePath, { recursive: true, force: false })
+    } catch {
+      // 模板不存在，保留空目录
+    }
 
     await pool.query(
       `UPDATE projects SET workspace_path = $1 WHERE id = $2`,
