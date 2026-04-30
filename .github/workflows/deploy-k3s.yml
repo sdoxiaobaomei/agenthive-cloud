@@ -22,6 +22,10 @@ on:
         description: 'K8s 命名空间'
         required: false
         default: 'agenthive'
+      skip_build:
+        description: '跳过 Build 阶段，直接 Deploy（镜像必须已存在于仓库）'
+        required: false
+        default: 'false'
 
 env:
   REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
@@ -62,6 +66,7 @@ jobs:
       image_tag: ${{ steps.meta.outputs.tag }}
     steps:
       - name: 📥 Checkout
+        if: github.event.inputs.skip_build != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -71,6 +76,9 @@ jobs:
         run: |
           if [ -n "${{ github.event.inputs.tag }}" ]; then
             TAG="${{ github.event.inputs.tag }}"
+          elif [ "${{ github.event.inputs.skip_build }}" == "true" ]; then
+            echo "ERROR: 跳过 build 时必须通过 workflow_dispatch 提供 tag"
+            exit 1
           else
             TAG="v1.1.0-g$(git rev-parse --short HEAD)"
           fi
@@ -78,6 +86,7 @@ jobs:
           echo "Using image tag: $TAG"
 
       - name: 🔐 Login to ACR
+        if: github.event.inputs.skip_build != 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -85,6 +94,7 @@ jobs:
           password: ${{ secrets.ACR_PASSWORD }}
 
       - name: 📦 Build API Workspace
+        if: github.event.inputs.skip_build != 'true'
         run: |
           npm install -g pnpm@9
           pnpm install --frozen-lockfile
@@ -93,17 +103,20 @@ jobs:
           pnpm --filter=@agenthive/api build
 
       - name: 🐳 Build & Push API Image
+        if: github.event.inputs.skip_build != 'true'
         run: |
           docker build -t ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }} -f apps/api/Dockerfile .
           docker push ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }}
 
       - name: 🐳 Build & Push Landing Image
+        if: github.event.inputs.skip_build != 'true'
         run: |
           docker build -t ${{ env.IMAGE_LANDING }}:${{ steps.meta.outputs.tag }} -f apps/landing/Dockerfile .
           docker push ${{ env.IMAGE_LANDING }}:${{ steps.meta.outputs.tag }}
 
       # Java images: build from source with Maven, then push with unified tag
       - name: ☕ Setup Java & Maven
+        if: github.event.inputs.skip_build != 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '21'
@@ -111,6 +124,7 @@ jobs:
           cache: 'maven'
 
       - name: 🔨 Build Java Services (Maven)
+        if: github.event.inputs.skip_build != 'true'
         run: |
           cd apps/java
           mvn clean package -DskipTests -q
@@ -118,6 +132,7 @@ jobs:
           find . -name "*.jar" -path "*/target/*" | grep -v original
 
       - name: 📥 Download OpenTelemetry Java Agent
+        if: github.event.inputs.skip_build != 'true'
         run: |
           AGENT_URL="https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.6.0/opentelemetry-javaagent.jar"
           for svc in gateway-service auth-service user-service payment-service order-service cart-service logistics-service; do
@@ -126,6 +141,7 @@ jobs:
           done
 
       - name: 🏷️ Build & Push Java Images
+        if: github.event.inputs.skip_build != 'true'
         run: |
           TAG="${{ steps.meta.outputs.tag }}"
           for svc in gateway-service auth-service user-service payment-service order-service cart-service logistics-service; do
