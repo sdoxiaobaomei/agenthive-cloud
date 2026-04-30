@@ -85,7 +85,7 @@ jobs:
 
       - name: 🐳 Build & Push API Image
         run: |
-          docker build -t ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }} -f apps/Dockerfile.api .
+          docker build -t ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }} -f apps/api/Dockerfile .
           docker push ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }}
 
       - name: 🐳 Build & Push Landing Image
@@ -112,17 +112,16 @@ jobs:
         run: |
           TAG="${{ steps.meta.outputs.tag }}"
           for svc in gateway-service auth-service user-service payment-service order-service cart-service logistics-service; do
-            SHORT_SVC=$(echo "$svc" | sed 's/-service//')
             echo "Building $svc ..."
             docker build \
-              -t ${{ env.IMAGE_JAVA_PREFIX }}/${SHORT_SVC}:${TAG} \
+              -t ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:${TAG} \
               -f apps/java/${svc}/Dockerfile \
               --build-arg VERSION=${TAG} \
               --build-arg GIT_COMMIT=${{ github.sha }} \
               --build-arg BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
               apps/java/${svc}
-            docker push ${{ env.IMAGE_JAVA_PREFIX }}/${SHORT_SVC}:${TAG}
-            echo "Pushed ${{ env.IMAGE_JAVA_PREFIX }}/${SHORT_SVC}:${TAG}"
+            docker push ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:${TAG}
+            echo "Pushed ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:${TAG}"
           done
 
   # ===========================================
@@ -170,6 +169,7 @@ jobs:
           TAG="${{ needs.build.outputs.image_tag }}"
           helm upgrade --install agenthive ${{ env.CHART_PATH }} \
             -f ${{ env.VALUES_FILE }} \
+            --set global.imageRegistry=${{ env.REGISTRY }} \
             --set api.image.tag="$TAG" \
             --set landing.image.tag="$TAG" \
             --set javaServices.defaults.image.tag="$TAG" \

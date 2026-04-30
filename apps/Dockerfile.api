@@ -10,7 +10,7 @@ WORKDIR /app
 RUN npm install -g pnpm
 
 # 先复制 workspace 配置
-COPY pnpm-workspace.yaml package.json ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY packages/types ./packages/types
 
 # 复制 API 和依赖的 agent-runtime
