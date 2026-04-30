@@ -183,10 +183,51 @@ jobs:
             mv /tmp/kubeconfig-decoded ~/.kube/config
             echo "Kubeconfig decoded from base64"
           else
-            echo "${{ secrets.K3S_KUBECONFIG }}" > ~/.kube/config
+            printf '%s\n' "${{ secrets.K3S_KUBECONFIG }}" > ~/.kube/config
             echo "Kubeconfig written as plain text"
           fi
           chmod 600 ~/.kube/config
+
+          # Fix broken base64 fields (whitespace/newlines inside certificate data)
+          python3 << 'PYEOF'
+          import re, base64, sys, os
+
+          path = os.path.expanduser('~/.kube/config')
+          with open(path, 'r') as f:
+              content = f.read()
+
+          def fix_field(m):
+              key = m.group(1)
+              data = m.group(2)
+              # Collapse any whitespace/newlines inside base64 payload
+              clean = ''.join(data.split())
+              try:
+                  base64.b64decode(clean)
+                  return f"{key}: {clean}"
+              except Exception as e:
+                  print(f"WARNING: could not fix {key}: {e}", file=sys.stderr)
+                  return m.group(0)
+
+          # Certificate fields in kubeconfig may have line-wrapped base64
+          pattern = re.compile(
+              r'(certificate-authority-data|client-certificate-data|client-key-data):\s*([A-Za-z0-9+/=\s]+?)(?=\n\S|$)',
+              re.MULTILINE
+          )
+          fixed = pattern.sub(fix_field, content)
+
+          with open(path, 'w') as f:
+              f.write(fixed)
+          PYEOF
+
+          # Validate that kubectl can parse it
+          if kubectl config view >/dev/null 2>&1; then
+            echo "Kubeconfig is valid"
+          else
+            echo "ERROR: kubeconfig still invalid after repair"
+            # Print sanitized version for debugging
+            sed -E 's/(certificate-authority-data|client-certificate-data|client-key-data):.*/\1: ***REDACTED***/' ~/.kube/config | head -25
+            exit 1
+          fi
 
       - name: 🚀 Helm Upgrade (Dry Run)
         if: github.event.inputs.dry_run == 'true'
