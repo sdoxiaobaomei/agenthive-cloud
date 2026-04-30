@@ -53,7 +53,7 @@ fi
 
 # ── No hardcoded weak / default passwords ─────────────────────────────
 WEAK_PATTERNS=(
-    "<NACOS_AUTH_TOKEN>"
+    "<NACOS_AUTH_TOKEN_EXAMPLE>"
     "admin123"
     "123456"
     "password"

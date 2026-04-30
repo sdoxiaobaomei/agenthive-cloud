@@ -143,6 +143,8 @@ javaServices:
 
   services:
     gateway:
+      envOverrides:
+        REDIS_HOST: "172.24.146.165"
       replicas: 3
       resources:
         requests:
@@ -162,6 +164,9 @@ javaServices:
         minAvailable: 2
 
     auth:
+      envOverrides:
+        DB_HOST: "172.24.146.165"
+        REDIS_HOST: "172.24.146.165"
       replicas: 3
       resources:
         requests:
@@ -181,6 +186,9 @@ javaServices:
         minAvailable: 2
 
     user:
+      envOverrides:
+        DB_HOST: "172.24.146.165"
+        REDIS_HOST: "172.24.146.165"
       replicas: 3
       resources:
         requests:
@@ -200,6 +208,9 @@ javaServices:
         minAvailable: 2
 
     payment:
+      envOverrides:
+        DB_HOST: "172.24.146.165"
+        REDIS_HOST: "172.24.146.165"
       replicas: 3
       resources:
         requests:
@@ -219,6 +230,9 @@ javaServices:
         minAvailable: 2
 
     order:
+      envOverrides:
+        DB_HOST: "172.24.146.165"
+        REDIS_HOST: "172.24.146.165"
       replicas: 3
       resources:
         requests:
@@ -238,6 +252,9 @@ javaServices:
         minAvailable: 2
 
     cart:
+      envOverrides:
+        DB_HOST: "172.24.146.165"
+        REDIS_HOST: "172.24.146.165"
       replicas: 3
       resources:
         requests:
@@ -257,6 +274,9 @@ javaServices:
         minAvailable: 2
 
     logistics:
+      envOverrides:
+        DB_HOST: "172.24.146.165"
+        REDIS_HOST: "172.24.146.165"
       replicas: 3
       resources:
         requests:
@@ -279,6 +299,7 @@ javaServices:
 # Ingress — Production (HTTPS + Domain)
 # ----------------------------------------------------------------------------
 ingress:
+  className: nginx
   tls:
     enabled: true
     secretName: agenthive-tls
@@ -315,12 +336,9 @@ ingress:
           service: landing
           port: 3000
 
-# ----------------------------------------------------------------------------
-# Java Services Ingress — Production
-# ----------------------------------------------------------------------------
-javaServices:
   ingress:
     enabled: true
+    className: nginx
     tls:
       enabled: true
       secretName: agenthive-java-tls
@@ -348,10 +366,18 @@ javaServices:
 configmap:
   data:
     NODE_ENV: "production"
+    DB_HOST: "172.24.146.165"
+    DB_PORT: "5432"
+    DB_NAME: "agenthive"
+    DB_USER: "agenthive"
+    REDIS_URL: "redis://:REDACTED@172.24.146.165:6379"
+    REDIS_HOST: "172.24.146.165"
+    REDIS_PORT: "6379"
     API_URL: "https://api.agenthive.cloud"
     LOG_LEVEL: "warn"
     OTEL_TRACES_SAMPLER_ARG: "0.05"
     OTEL_LOG_LEVEL: "error"
+    CORS_ORIGIN: "https://agenthive.cloud,https://www.agenthive.cloud"
 
 # ----------------------------------------------------------------------------
 # Secret — Production (Native K8s Secret, managed by scripts/setup-secrets.sh)
@@ -372,7 +398,7 @@ networkPolicy:
 # Nacos — Production (Phase 1: enabled if needed)
 # ----------------------------------------------------------------------------
 nacos:
-  enabled: false
+  enabled: true
   replicas: 1
   resources:
     requests:

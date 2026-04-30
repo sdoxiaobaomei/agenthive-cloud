@@ -1,0 +1,48 @@
+{{- if .Values.javaServices.enabled }}
+{{- if index .Values.javaServices.services "gateway" "enabled" }}
+{{- $gatewayCors := default (dict) (.Values.javaServices.gatewayCors | default dict) }}
+{{- if $gatewayCors.enabled | default true }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-cors-config
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: gateway-cors-config
+    app.kubernetes.io/component: gateway
+    {{- include "agenthive.labels" . | nindent 4 }}
+data:
+  application.yml: |
+    spring:
+      cloud:
+        gateway:
+          globalcors:
+            add-to-simple-url-handler-mapping: true
+            cors-configurations:
+              '[/**]':
+                allowedOrigins:
+                {{- range $gatewayCors.allowedOrigins | default (list "https://agenthive.cloud" "https://www.agenthive.cloud") }}
+                  - "{{ . }}"
+                {{- end }}
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - PATCH
+                  - OPTIONS
+                allowedHeaders:
+                  - Content-Type
+                  - Accept
+                  - Authorization
+                  - X-Query-Params
+                  - X-Requested-With
+                  - X-User-Id
+                  - X-User-Name
+                  - X-User-Role
+                allowCredentials: true
+                maxAge: 3600
+{{- end }}
+{{- end }}
+{{- end }}

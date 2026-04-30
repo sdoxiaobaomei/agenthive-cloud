@@ -59,5 +59,9 @@ data:
   OTEL_LOG_LEVEL: "warn"
   OTEL_SDK_DISABLED: "false"
 
+  # LLM Configuration
+  LLM_BASE_URL: "https://api.kimi.com/coding/v1"
+  LLM_MODEL: "kimi-for-coding"
+
   # Logging
   STRUCTURED_LOGGING: "true"

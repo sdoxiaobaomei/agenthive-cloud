@@ -51,7 +51,7 @@ if (-not [string]::IsNullOrWhiteSpace($corsOrigin) -and $corsOrigin -match "loca
 
 # ── No hardcoded weak / default passwords ─────────────────────────────
 $weakPatterns = @(
-    "<NACOS_AUTH_TOKEN>",
+    "<NACOS_AUTH_TOKEN_EXAMPLE>",
     "admin123",
     "123456",
     "password",

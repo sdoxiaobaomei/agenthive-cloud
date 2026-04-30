@@ -93,13 +93,36 @@ jobs:
           docker build -t ${{ env.IMAGE_LANDING }}:${{ steps.meta.outputs.tag }} -f Dockerfile.landing .
           docker push ${{ env.IMAGE_LANDING }}:${{ steps.meta.outputs.tag }}
 
-      # Java images are built separately or assumed pre-built by CI
-      - name: 🏷️ Tag Java Images (pre-built)
+      # Java images: build from source with Maven, then push with unified tag
+      - name: ☕ Setup Java & Maven
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: 🔨 Build Java Services (Maven)
         run: |
-          for svc in gateway auth user payment order cart logistics; do
-            docker pull ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:latest || true
-            docker tag ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:latest ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:${{ steps.meta.outputs.tag }} || true
-            docker push ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:${{ steps.meta.outputs.tag }} || true
+          cd apps/java
+          mvn clean package -DskipTests -q
+          echo "Java JARs built:"
+          find . -name "*.jar" -path "*/target/*" | grep -v original
+
+      - name: 🏷️ Build & Push Java Images
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          for svc in gateway-service auth-service user-service payment-service order-service cart-service logistics-service; do
+            SHORT_SVC=$(echo "$svc" | sed 's/-service//')
+            echo "Building $svc ..."
+            docker build \
+              -t ${{ env.IMAGE_JAVA_PREFIX }}/${SHORT_SVC}:${TAG} \
+              -f apps/java/${svc}/Dockerfile \
+              --build-arg VERSION=${TAG} \
+              --build-arg GIT_COMMIT=${{ github.sha }} \
+              --build-arg BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
+              apps/java/${svc}
+            docker push ${{ env.IMAGE_JAVA_PREFIX }}/${SHORT_SVC}:${TAG}
+            echo "Pushed ${{ env.IMAGE_JAVA_PREFIX }}/${SHORT_SVC}:${TAG}"
           done
 
   # ===========================================
@@ -117,12 +140,16 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: 🔧 Update image tags in values.prod.yaml
+      - name: 🔧 Prepare Helm values
         run: |
           TAG="${{ needs.build.outputs.image_tag }}"
-          sed -i "s/tag: \"1.1.0\"/tag: \"$TAG\"/g" ${{ env.VALUES_FILE }}
-          echo "Updated image tag to $TAG"
-          grep "tag:" ${{ env.VALUES_FILE }} | head -5
+          echo "Using image tag: $TAG"
+          # Verify all images exist before deploying
+          for svc in api landing gateway auth user payment order cart logistics; do
+            if ! docker manifest inspect ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:${TAG} > /dev/null 2>&1; then
+              echo "⚠️ Image ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:${TAG} not found in registry"
+            fi
+          done
 
       - name: 🔐 Setup kubeconfig
         run: |
@@ -140,8 +167,12 @@ jobs:
       - name: 🚀 Helm Upgrade
         if: github.event.inputs.dry_run != 'true'
         run: |
+          TAG="${{ needs.build.outputs.image_tag }}"
           helm upgrade --install agenthive ${{ env.CHART_PATH }} \
             -f ${{ env.VALUES_FILE }} \
+            --set api.image.tag="$TAG" \
+            --set landing.image.tag="$TAG" \
+            --set javaServices.defaults.image.tag="$TAG" \
             -n ${{ github.event.inputs.namespace || 'agenthive' }} \
             --create-namespace \
             --atomic \

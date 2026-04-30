@@ -102,6 +102,21 @@ spec:
     ports:
     - protocol: TCP
       port: 5672
+  # 允许访问外部 LLM API (HTTPS)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+  # 允许访问外部数据库 (PostgreSQL on ECS)
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 5432
+  # 允许访问外部 Redis
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 6379
   # 允许 DNS 解析
   - to:
     - namespaceSelector: {}

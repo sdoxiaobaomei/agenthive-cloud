@@ -16,6 +16,7 @@ resources:
   - 11-backup-cronjob.yaml
   - 12-nacos.yaml
   - 13-rabbitmq.yaml
+  - 15-rbac.yaml
   - gateway-cors-config.yaml
 
 # 通用标签

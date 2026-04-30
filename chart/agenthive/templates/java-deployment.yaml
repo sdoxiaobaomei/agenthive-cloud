@@ -59,17 +59,25 @@ spec:
           ports:
             - containerPort: {{ $svc.port }}
               name: http
+          {{- $envOverrides := default (dict) $svc.envOverrides }}
           {{- if $svc.env }}
           env:
             {{- range $svc.env }}
             - name: {{ .name }}
-              value: {{ .value | quote }}
+              value: {{ default .value (index $envOverrides .name) | quote }}
             {{- end }}
             {{- range $svc.envFromSecret }}
             - name: {{ .name }}
               valueFrom:
                 secretKeyRef:
                   name: {{ $.Values.secret.name }}
+                  key: {{ .key }}
+            {{- end }}
+            {{- range $svc.envFromConfigMap | default (list) }}
+            - name: {{ .name }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ default $.Values.configmap.name $.name }}
                   key: {{ .key }}
             {{- end }}
             - name: SPRING_PROFILES_ACTIVE
@@ -137,6 +145,13 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            {{- if eq $svc.name "gateway-service" }}
+            {{- if ($.Values.javaServices.gatewayCors | default dict).enabled | default true }}
+            - name: gateway-cors-config
+              mountPath: /app/config
+              readOnly: true
+            {{- end }}
+            {{- end }}
           livenessProbe:
             httpGet:
               path: {{ $svc.probes.liveness.path }}
@@ -152,6 +167,13 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        {{- if eq $svc.name "gateway-service" }}
+        {{- if ($.Values.javaServices.gatewayCors | default dict).enabled | default true }}
+        - name: gateway-cors-config
+          configMap:
+            name: gateway-cors-config
+        {{- end }}
+        {{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

@@ -36,7 +36,7 @@ jobs:
           echo "=== Checking .env.prod NACOS_AUTH_TOKEN ==="
           if [ -f .env.prod ]; then
             TOKEN=$(grep "^NACOS_AUTH_TOKEN=" .env.prod | cut -d= -f2- | tr -d ' ' || true)
-            if [ -n "$TOKEN" ] && echo "$TOKEN" | grep -qE "<NACOS_AUTH_TOKEN>"; then
+            if [ -n "$TOKEN" ] && echo "$TOKEN" | grep -qE "<NACOS_AUTH_TOKEN_EXAMPLE>"; then
               echo "::error::Weak default NACOS_AUTH_TOKEN detected in .env.prod"
               exit 1
             fi

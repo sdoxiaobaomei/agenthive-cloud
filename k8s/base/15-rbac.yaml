@@ -1,0 +1,183 @@
+# ============================================================================
+# RBAC — Secret 最小权限原则
+# TICKET: PLATFORM-009
+# Purpose: Restrict Secret access to only Pods that need it
+# Security baseline: Only api, landing, and java services can read app-secrets
+# ============================================================================
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: secret-reader
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: secret-reader
+    app.kubernetes.io/component: security
+    app.kubernetes.io/managed-by: kustomize
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["app-secrets"]
+  verbs: ["get"]
+---
+# API ServiceAccount binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: api-secret-reader
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: api-secret-reader
+    app.kubernetes.io/component: security
+subjects:
+- kind: ServiceAccount
+  name: api
+  namespace: agenthive
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Landing ServiceAccount binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: landing-secret-reader
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: landing-secret-reader
+    app.kubernetes.io/component: security
+subjects:
+- kind: ServiceAccount
+  name: landing
+  namespace: agenthive
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Gateway ServiceAccount binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gateway-service-secret-reader
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: gateway-service-secret-reader
+    app.kubernetes.io/component: security
+subjects:
+- kind: ServiceAccount
+  name: gateway-service
+  namespace: agenthive
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Auth ServiceAccount binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: auth-service-secret-reader
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: auth-service-secret-reader
+    app.kubernetes.io/component: security
+subjects:
+- kind: ServiceAccount
+  name: auth-service
+  namespace: agenthive
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# User ServiceAccount binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: user-service-secret-reader
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: user-service-secret-reader
+    app.kubernetes.io/component: security
+subjects:
+- kind: ServiceAccount
+  name: user-service
+  namespace: agenthive
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Payment ServiceAccount binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: payment-service-secret-reader
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: payment-service-secret-reader
+    app.kubernetes.io/component: security
+subjects:
+- kind: ServiceAccount
+  name: payment-service
+  namespace: agenthive
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Order ServiceAccount binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: order-service-secret-reader
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: order-service-secret-reader
+    app.kubernetes.io/component: security
+subjects:
+- kind: ServiceAccount
+  name: order-service
+  namespace: agenthive
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Cart ServiceAccount binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cart-service-secret-reader
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: cart-service-secret-reader
+    app.kubernetes.io/component: security
+subjects:
+- kind: ServiceAccount
+  name: cart-service
+  namespace: agenthive
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Logistics ServiceAccount binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: logistics-service-secret-reader
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: logistics-service-secret-reader
+    app.kubernetes.io/component: security
+subjects:
+- kind: ServiceAccount
+  name: logistics-service
+  namespace: agenthive
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io

@@ -141,6 +141,18 @@ spec:
             configMapKeyRef:
               name: app-config
               key: CORS_ORIGIN
+        - name: WORKSPACE_BASE
+          value: "/data/workspaces"
+        - name: LLM_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: LLM_BASE_URL
+        - name: LLM_MODEL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: LLM_MODEL
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
@@ -181,6 +193,8 @@ spec:
         volumeMounts:
         - name: tmp
           mountPath: /tmp
+        - name: workspace
+          mountPath: /data/workspaces
       initContainers:
       - name: wait-for-db
         image: busybox:1.36
@@ -200,6 +214,8 @@ spec:
             - ALL
       volumes:
       - name: tmp
+        emptyDir: {}
+      - name: workspace
         emptyDir: {}
       affinity:
         podAntiAffinity:

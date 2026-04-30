@@ -1,0 +1,81 @@
+{{- if .Values.rbac.enabled | default true }}
+# ============================================================================
+# RBAC — Secret 最小权限原则
+# Only Pods that need app-secrets can read it
+# ============================================================================
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "agenthive.fullname" . }}-secret-reader
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    {{- include "agenthive.labels" . | nindent 4 }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: [{{ .Values.secret.name | default "app-secrets" | quote }}]
+  verbs: ["get"]
+
+{{- if .Values.api.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "agenthive.apiName" . }}-secret-reader
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    {{- include "agenthive.labels" . | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "agenthive.apiName" . }}
+  namespace: {{ include "agenthive.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "agenthive.fullname" . }}-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+
+{{- if .Values.landing.enabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "agenthive.landingName" . }}-secret-reader
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    {{- include "agenthive.labels" . | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "agenthive.landingName" . }}
+  namespace: {{ include "agenthive.namespace" . }}
+roleRef:
+  kind: Role
+  name: {{ include "agenthive.fullname" . }}-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+
+{{- if .Values.javaServices.enabled }}
+{{- range $key, $svc := .Values.javaServices.services }}
+{{- if $svc.enabled }}
+{{- $javaName := include "agenthive.prefixedName" (list $ $svc.name) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $javaName }}-secret-reader
+  namespace: {{ include "agenthive.namespace" $ }}
+  labels:
+    {{- include "agenthive.labels" $ | nindent 4 }}
+subjects:
+- kind: ServiceAccount
+  name: {{ $javaName }}
+  namespace: {{ include "agenthive.namespace" $ }}
+roleRef:
+  kind: Role
+  name: {{ include "agenthive.fullname" $ }}-secret-reader
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
