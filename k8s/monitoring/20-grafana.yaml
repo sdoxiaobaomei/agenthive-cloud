@@ -15,6 +15,7 @@ data:
         isDefault: true
         editable: false
       - name: Loki
+        uid: loki
         type: loki
         access: proxy
         url: http://loki:3100
@@ -24,6 +25,105 @@ data:
         access: proxy
         url: http://tempo:3200
         editable: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-providers
+  namespace: monitoring
+data:
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: agenthive
+        orgId: 1
+        folder: AgentHive
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/agenthive
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-agenthive-logs-dashboard
+  namespace: monitoring
+data:
+  agenthive-service-logs.json: |
+    {
+      "uid": "agenthive-service-logs",
+      "title": "AgentHive Service Logs",
+      "tags": ["agenthive", "logs", "local"],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 1,
+      "refresh": "10s",
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "templating": {
+        "list": [
+          {
+            "name": "namespace",
+            "type": "query",
+            "datasource": { "type": "loki", "uid": "loki" },
+            "query": "label_values(namespace)",
+            "current": { "selected": true, "text": "agenthive", "value": "agenthive" },
+            "refresh": 1,
+            "includeAll": false
+          },
+          {
+            "name": "app",
+            "type": "query",
+            "datasource": { "type": "loki", "uid": "loki" },
+            "query": "label_values({namespace=\"$namespace\"}, app)",
+            "current": { "selected": true, "text": "All", "value": "$__all" },
+            "refresh": 1,
+            "includeAll": true,
+            "allValue": ".+"
+          },
+          {
+            "name": "pod",
+            "type": "query",
+            "datasource": { "type": "loki", "uid": "loki" },
+            "query": "label_values({namespace=\"$namespace\", app=~\"$app\"}, pod)",
+            "current": { "selected": true, "text": "All", "value": "$__all" },
+            "refresh": 1,
+            "includeAll": true,
+            "allValue": ".+"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "title": "Service Logs",
+          "type": "logs",
+          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 24, "w": 24, "x": 0, "y": 0 },
+          "options": {
+            "showTime": true,
+            "showLabels": false,
+            "showCommonLabels": false,
+            "wrapLogMessage": true,
+            "prettifyLogMessage": true,
+            "enableLogDetails": true,
+            "dedupStrategy": "none",
+            "sortOrder": "Descending"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{namespace=\"$namespace\", app=~\"$app\", pod=~\"$pod\"}",
+              "queryType": "range",
+              "datasource": { "type": "loki", "uid": "loki" }
+            }
+          ]
+        }
+      ]
+    }
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -69,12 +169,20 @@ spec:
         - name: GF_SECURITY_ADMIN_PASSWORD
           value: admin123
         - name: GF_SERVER_ROOT_URL
-          value: http://grafana.agenthive.local
+          value: http://localhost:8080/grafana
+        - name: GF_SERVER_SERVE_FROM_SUB_PATH
+          value: "true"
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "false"
         volumeMounts:
         - name: datasources
           mountPath: /etc/grafana/provisioning/datasources
+          readOnly: true
+        - name: dashboard-providers
+          mountPath: /etc/grafana/provisioning/dashboards
+          readOnly: true
+        - name: dashboards
+          mountPath: /var/lib/grafana/dashboards/agenthive
           readOnly: true
         - name: data
           mountPath: /var/lib/grafana
@@ -89,6 +197,12 @@ spec:
       - name: datasources
         configMap:
           name: grafana-datasources
+      - name: dashboard-providers
+        configMap:
+          name: grafana-dashboard-providers
+      - name: dashboards
+        configMap:
+          name: grafana-agenthive-logs-dashboard
       - name: data
         persistentVolumeClaim:
           claimName: grafana-data
