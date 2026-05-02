@@ -1,7 +1,0 @@
--- Flyway migration: V1__init.sql
--- Service: user-service
--- Auto-converted from db/schema.sql
---
--- user_db schema
--- Note: user data is sourced from auth-service.sys_user
--- t_user has been removed (see JAVA-004)

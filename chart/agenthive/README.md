@@ -63,7 +63,6 @@ All Java services share a common template (`java-deployment.yaml`) and are confi
 |---------|------|------|---------|
 | `gateway-service` | 8080 | LoadBalancer | — |
 | `auth-service` | 8081 | ClusterIP | postgres-auth |
-| `user-service` | 8082 | ClusterIP | postgres-user |
 | `payment-service` | 8083 | ClusterIP | postgres-business |
 | `order-service` | 8084 | ClusterIP | postgres-business |
 | `cart-service` | 8085 | ClusterIP | postgres-business |

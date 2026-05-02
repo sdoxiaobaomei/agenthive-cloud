@@ -55,7 +55,7 @@ redis-cli -h localhost -p 6379 ping
 docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d gateway-service auth-service
 
 # 第二批：用户服务
-docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d user-service
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d auth-service
 
 # 第三批：业务服务（彼此通过 MQ 解耦，可并行启动）
 docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d payment-service order-service cart-service logistics-service
@@ -135,7 +135,6 @@ services:
 |------|-------------|----------|
 | Gateway | `http://localhost:8080/actuator/health` | `{"status":"UP"}` |
 | Auth | `http://localhost:8081/actuator/health` | `{"status":"UP"}` |
-| User | `http://localhost:8082/actuator/health` | `{"status":"UP"}` |
 | Payment | `http://localhost:8083/actuator/health` | `{"status":"UP"}` |
 | Order | `http://localhost:8084/actuator/health` | `{"status":"UP"}` |
 | Cart | `http://localhost:8085/actuator/health` | `{"status":"UP"}` |
@@ -185,7 +184,6 @@ http://localhost:8848/nacos
 
 - `gateway-service`
 - `auth-service`
-- `user-service`
 - `payment-service`
 - `order-service`
 - `cart-service`
@@ -281,7 +279,6 @@ echo "=== AgentHive Java 部署验证 ==="
 echo "[1/4] 检查服务健康..."
 curl -sf http://localhost:8080/actuator/health > /dev/null && echo "✅ Gateway" || echo "❌ Gateway"
 curl -sf http://localhost:8081/actuator/health > /dev/null && echo "✅ Auth" || echo "❌ Auth"
-curl -sf http://localhost:8082/actuator/health > /dev/null && echo "✅ User" || echo "❌ User"
 
 # 2. 检查 Nacos 注册
 echo "[2/4] 检查 Nacos 服务注册..."

@@ -1,0 +1,16 @@
+# Build artifacts
+BOOT-INF/
+target/
+build/
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.iml
+*.class
+
+# OS
+.DS_Store
+Thumbs.db

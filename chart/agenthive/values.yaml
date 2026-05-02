@@ -484,44 +484,6 @@ javaServices:
         readiness:
           path: /actuator/health
           port: http
-          initialDelaySeconds: 10
-          periodSeconds: 5
-
-    user:
-      enabled: true
-      name: user-service
-      component: user
-      port: 8082
-      env:
-        - name: NACOS_SERVER
-          value: "nacos:8848"
-        - name: DB_HOST
-          value: "postgres"
-        - name: DB_PORT
-          value: "5432"
-        - name: DB_NAME
-          value: "user_db"
-        - name: REDIS_HOST
-          value: "redis"
-        - name: REDIS_PORT
-          value: "6379"
-      envFromSecret:
-        - name: DB_USER
-          key: DB_USER
-        - name: DB_PASSWORD
-          key: DB_PASSWORD
-      probes:
-        liveness:
-          path: /actuator/health
-          port: http
-          initialDelaySeconds: 60
-          periodSeconds: 10
-        readiness:
-          path: /actuator/health
-          port: http
-          initialDelaySeconds: 10
-          periodSeconds: 5
-
     payment:
       enabled: true
       name: payment-service
