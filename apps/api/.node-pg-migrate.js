@@ -1,5 +1,5 @@
 /**
- * node-pg-migrate 配置文件
+ * node-pg-migrate 配置文件 (CommonJS)
  * 
  * 使用方式：
  *   npx node-pg-migrate up          # 执行所有待迁移
@@ -7,7 +7,7 @@
  *   npx node-pg-migrate create xxx  # 创建新迁移
  */
 
-export default {
+module.exports = {
   // 数据库连接配置
   // 优先使用环境变量 DATABASE_URL，否则使用本地默认配置
   databaseUrl: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/agenthive',
