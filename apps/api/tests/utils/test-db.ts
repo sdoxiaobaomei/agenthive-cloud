@@ -1,6 +1,5 @@
 // 测试数据库工具
-import bcrypt from 'bcrypt'
-import { agentDb, taskDb, userDb, codeDb } from '../../src/utils/database.js'
+import { agentDb, taskDb, userDb } from '../../src/db/index'
 
 // 清理所有数据
 export async function clearAllData() {
@@ -15,12 +14,6 @@ export async function clearAllData() {
   // 清理 Users
   const users = await userDb.getAll()
   for (const u of users) await userDb.delete(u.id)
-  
-  // 清理 Files
-  const files = await codeDb.findAll()
-  for (const f of files) await codeDb.delete(f.path)
-  
-  // SMS service removed - delegated to Java auth-service
 }
 
 // 初始化默认测试数据
@@ -34,11 +27,12 @@ export async function initTestData() {
     description: 'A test agent'
   })
   
-  // 创建默认测试用户（带 bcrypt 密码哈希）
-  const passwordHash = await bcrypt.hash('password', 10)
+  // 创建默认测试用户（测试环境用简单哈希，不走 bcrypt 原生模块）
+  const passwordHash = '$2b$10$testhash_not_for_production'
   await userDb.create({
     id: 'user-001',
     username: 'admin',
+    email: 'admin@test.local',
     phone: '13800138000',
     role: 'admin',
     password_hash: passwordHash,
@@ -51,20 +45,6 @@ export async function initTestData() {
     type: 'feature',
     status: 'pending',
     priority: 'medium'
-  })
-  
-  // 创建默认测试文件
-  await codeDb.create({
-    path: '/README.md',
-    name: 'README.md',
-    content: '# Test Project',
-    language: 'markdown'
-  })
-  await codeDb.create({
-    path: '/main.go',
-    name: 'main.go',
-    content: 'package main\n\nfunc main() {}',
-    language: 'go'
   })
 }
 
