@@ -355,10 +355,6 @@ ingress:
             pathType: Prefix
             service: auth-service
             port: 8081
-          - path: /user
-            pathType: Prefix
-            service: user-service
-            port: 8082
 
 # ----------------------------------------------------------------------------
 # ConfigMap — Production

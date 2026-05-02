@@ -23,7 +23,6 @@ REQUIRED_CONTAINERS=(
   "agenthive-nginx-dev"
   "agenthive-gateway-dev"
   "agenthive-auth-dev"
-  "agenthive-user-dev"
   "agenthive-order-dev"
   "agenthive-payment-dev"
   "agenthive-cart-dev"

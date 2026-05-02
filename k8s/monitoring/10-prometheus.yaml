@@ -23,7 +23,7 @@ data:
         relabel_configs:
           - source_labels: [__meta_kubernetes_service_name]
             action: keep
-            regex: (gateway-service|auth-service|user-service|payment-service|order-service|cart-service|logistics-service)
+            regex: (gateway-service|auth-service|payment-service|order-service|cart-service|logistics-service)
           - source_labels: [__meta_kubernetes_endpoint_port_name]
             action: keep
             regex: http

@@ -178,39 +178,6 @@ services:
       options:
         max-size: "100m"
         max-file: "5"
-        compress: "true"
-
-  java-user:
-    build:
-      context: ./apps/java/user-service
-      dockerfile: Dockerfile
-    container_name: agenthive-java-user
-    environment:
-      - JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=100
-      - NACOS_SERVER=nacos:8848
-      - DB_HOST=172.24.146.165
-      - DB_PORT=5432
-      - SPRING_PROFILES_ACTIVE=docker
-    depends_on:
-      - nacos
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    networks:
-      - agenthive-demo
-    profiles:
-      - java
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "5"
-        compress: "true"
-
-  nacos:
-    image: nacos/nacos-server:v2.3.0
     container_name: agenthive-nacos
     environment:
       - MODE=standalone

@@ -41,7 +41,6 @@
         <module>common/common-otel</module>
         <module>gateway-service</module>
         <module>auth-service</module>
-        <module>user-service</module>
         <module>payment-service</module>
         <module>order-service</module>
         <module>cart-service</module>

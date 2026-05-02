@@ -30,7 +30,7 @@ services:
       POSTGRES_USER: ${DB_USER:-agenthive}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-dev}
       POSTGRES_DB: ${DB_NAME:-agenthive}
-      POSTGRES_MULTIPLE_DATABASES: auth_db,user_db,payment_db,order_db,cart_db,logistics_db,agenthive
+      POSTGRES_MULTIPLE_DATABASES: auth_db,payment_db,order_db,cart_db,logistics_db,agenthive
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -436,79 +436,6 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
-      interval: 20s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
-    volumes:
-      - maven-cache:/root/.m2
-    networks:
-      - agenthive-dev
-    deploy:
-      resources:
-        limits:
-          memory: 768M
-        reservations:
-          memory: 384M
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "100m"
-        max-file: "5"
-        compress: "true"
-  user-service:
-    build:
-      context: ./apps/java/user-service
-      dockerfile: Dockerfile
-    container_name: agenthive-user-dev
-    restart: unless-stopped
-    dns:
-      - 223.5.5.5
-      - 114.114.114.114
-    environment:
-      NACOS_SERVER: nacos:8848
-      SPRING_CLOUD_NACOS_SERVER_ADDR: nacos:8848
-      SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
-      SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
-      SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
-      SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: ${NACOS_PASSWORD}
-      SPRING_CLOUD_NACOS_CONFIG_USERNAME: nacos
-      SPRING_CLOUD_NACOS_CONFIG_PASSWORD: ${NACOS_PASSWORD}
-      NACOS_USERNAME: nacos
-      NACOS_PASSWORD: ${NACOS_PASSWORD}
-      NACOS_NAMESPACE: ${NACOS_NAMESPACE}
-      SPRING_PROFILES_ACTIVE: docker
-      SPRING_CLOUD_NACOS_CONFIG_IMPORT_CHECK_ENABLED: "false"
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: user_db
-      DB_USER: ${DB_USER:-agenthive}
-      DB_PASSWORD: ${DB_PASSWORD:-dev}
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      SPRING_DATA_REDIS_PASSWORD: ${REDIS_PASSWORD}
-      JAVA_OPTS: "-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m"
-      OTEL_SERVICE_NAME: user-service
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-      OTEL_RESOURCE_ATTRIBUTES: service.namespace=agenthive,deployment.environment=dev
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
-      OTEL_INSTRUMENTATION_LOGBACK_APPENDER_EXPERIMENTAL_CAPTURE_KEY_VALUE_PAIR_ATTRIBUTES: "true"
-      LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
-    ports:
-      - "8082:8082"
-    depends_on:
-      nacos:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      otel-collector:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
       interval: 20s
       timeout: 5s
       retries: 5

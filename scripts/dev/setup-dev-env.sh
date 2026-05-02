@@ -143,9 +143,11 @@ if ! grep -qE "^OTEL_LOG_LEVEL=" "$ENV_FILE"; then
   echo "# OTEL_LOG_LEVEL=info   # <-- set to 'debug' for verbose OTel SDK logs" >> "$ENV_FILE"
 fi
 
-echo ""
 echo "[DONE] Review $ENV_FILE and uncomment or adjust the placeholder values."
 echo "       JWT_SECRET has already been written as an active (uncommented) value."
+echo "       NACOS_AUTH_TOKEN has already been written as an active (uncommented) value."
+echo "       NACOS_AUTH_IDENTITY_VALUE has already been written as an active (uncommented) value."
+echo "       NACOS_PASSWORD has already been written as an active (uncommented) value."
 echo ""
 echo "[INFO] OpenTelemetry instrumentation is now enabled by default for Java services."
 echo "       Start the monitoring profile to view traces:"

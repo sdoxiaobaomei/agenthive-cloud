@@ -111,7 +111,7 @@ jobs:
       - name: 🏷️ Build & Push Java Images
         run: |
           TAG="${{ steps.meta.outputs.tag }}"
-          for svc in gateway-service auth-service user-service payment-service order-service cart-service logistics-service; do
+          for svc in gateway-service auth-service payment-service order-service cart-service logistics-service; do
             SHORT_SVC=$(echo "$svc" | sed 's/-service//')
             echo "Building $svc ..."
             docker build \

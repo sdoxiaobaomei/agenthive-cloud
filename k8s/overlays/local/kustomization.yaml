@@ -83,13 +83,6 @@ patches:
         value: Never
   - target:
       kind: Deployment
-      name: user-service
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
-  - target:
-      kind: Deployment
       name: payment-service
     patch: |-
       - op: replace
