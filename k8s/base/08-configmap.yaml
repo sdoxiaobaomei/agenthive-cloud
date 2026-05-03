@@ -39,7 +39,7 @@ data:
   # API 配置
   API_URL: "http://api:3001"
   GATEWAY_URL: "http://gateway-service:8080"
-  CORS_ORIGIN: "http://agenthive.local,http://agenthive.local:8080,http://localhost,http://localhost:3000,http://localhost:5173,https://*.xiaochaitian.asia"
+  CORS_ORIGIN: "http://agenthive.local,http://agenthive.local:8080,http://localhost,http://localhost:3000,http://localhost:5173,http://localhost:8080,https://*.xiaochaitian.asia"
   
   # 应用配置
   APP_NAME: "AgentHive Cloud"
