@@ -124,7 +124,6 @@ declare -a SERVICES=(
   "landing:agenthive-landing-dev"
   "gateway-service:agenthive-gateway-dev"
   "auth-service:agenthive-auth-dev"
-  "user-service:agenthive-user-dev"
   "payment-service:agenthive-payment-dev"
   "order-service:agenthive-order-dev"
   "cart-service:agenthive-cart-dev"
@@ -179,7 +178,6 @@ check_http() {
 
 check_http "Gateway"     "http://localhost:8080/actuator/health" "agenthive-gateway-dev"
 check_http "Auth"        "http://localhost:8081/actuator/health" "agenthive-auth-dev"
-check_http "User"        "http://localhost:8082/actuator/health" "agenthive-user-dev"
 check_http "Payment"     "http://localhost:8083/actuator/health" "agenthive-payment-dev"
 check_http "Order"       "http://localhost:8084/actuator/health" "agenthive-order-dev"
 check_http "Cart"        "http://localhost:8085/actuator/health" "agenthive-cart-dev"
@@ -240,7 +238,7 @@ else
 fi
 
 # Check individual Java services registered in Nacos
-NACOS_SERVICES=("gateway-service" "auth-service" "user-service" "payment-service" "order-service" "cart-service" "logistics-service")
+NACOS_SERVICES=("gateway-service" "auth-service" "payment-service" "order-service" "cart-service" "logistics-service")
 for svc in "${NACOS_SERVICES[@]}"; do
   svc_url="http://localhost:8848/nacos/v1/ns/service/list?pageNo=1&pageSize=10&serviceName=${svc}"
   [[ -n "$nacos_token" ]] && svc_url="${svc_url}&accessToken=${nacos_token}"

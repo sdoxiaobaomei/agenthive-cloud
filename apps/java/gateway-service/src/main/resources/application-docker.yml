@@ -25,8 +25,8 @@ spring:
             - Path=/api/auth/**
           filters:
             - StripPrefix=1
-        - id: user-service
-          uri: lb://user-service
+        - id: auth-service-users
+          uri: lb://auth-service
           predicates:
             - Path=/api/users/**
           filters:

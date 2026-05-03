@@ -94,7 +94,6 @@ docker build -f apps/agent-runtime/Dockerfile -t agenthive/agent-runtime:latest 
 |------|------|---------|------|
 | **Gateway** | `apps/java/gateway-service/Dockerfile` | `eclipse-temurin:21-jre-alpine` | 8080 |
 | **Auth** | `apps/java/auth-service/Dockerfile` | `eclipse-temurin:21-jre-alpine` | 8081 |
-| **User** | `apps/java/user-service/Dockerfile` | `eclipse-temurin:21-jre-alpine` | 8082 |
 | **Payment** | `apps/java/payment-service/Dockerfile` | `eclipse-temurin:21-jre-alpine` | 8083 |
 | **Order** | `apps/java/order-service/Dockerfile` | `eclipse-temurin:21-jre-alpine` | 8084 |
 | **Cart** | `apps/java/cart-service/Dockerfile` | `eclipse-temurin:21-jre-alpine` | 8085 |
@@ -269,7 +268,6 @@ docker compose up -d
 | Node Exporter | 9100 | monitoring |
 | Java Gateway | 8080 | dev (profile), prod (profile), demo (profile) |
 | Java Auth | 8081 | dev (profile), prod (profile), demo (profile) |
-| Java User | 8082 | dev (profile), prod (profile), demo (profile) |
 | Java Payment | 8083 | dev (profile) |
 | Java Order | 8084 | dev (profile) |
 | Java Cart | 8085 | dev (profile) |

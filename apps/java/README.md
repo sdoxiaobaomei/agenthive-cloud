@@ -6,7 +6,6 @@
 |------|------|------|
 | gateway-service | 8080 | Spring Cloud Gateway，统一入口 |
 | auth-service | 8081 | 认证中心，JWT + OAuth2 |
-| user-service | 8082 | 用户管理 |
 | payment-service | 8083 | 支付、钱包、对账 |
 | order-service | 8084 | 订单、状态机 |
 | cart-service | 8085 | 购物车 |
@@ -48,7 +47,7 @@ cd auth-service && mvn spring-boot:run
 
 或使用 Docker Compose：
 ```bash
-docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d gateway-service auth-service user-service
+docker compose -f docker-compose.dev.yml --env-file .env.dev --profile java up -d gateway-service auth-service
 ```
 
 ## 技术栈
