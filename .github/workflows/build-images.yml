@@ -1,0 +1,285 @@
+name: 🐳 Build & Push Images
+
+on:
+  push:
+    branches: [master, main]
+    tags: ['v*']
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'AGENTS/**'
+      - 'Dockerfile*'
+      - 'docker-compose*.yml'
+      - 'monitoring/**'
+      - '.github/workflows/build-images.yml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '镜像版本号 (如: v1.2.0)'
+        required: false
+        default: ''
+      push:
+        description: '是否推送到 ACR'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
+  NAMESPACE: namespace-alpha
+  NODE_VERSION: '20'
+
+jobs:
+  # ===========================================
+  # Job 1: Build Node.js Images (API + Landing + Agent Runtime)
+  # ===========================================
+  build-node-images:
+    name: 🟢 Build Node.js Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - app: api
+            dockerfile: ./apps/api/Dockerfile
+            context: .
+          - app: landing
+            dockerfile: ./apps/landing/Dockerfile
+            context: .
+          - app: agent-runtime
+            dockerfile: ./apps/agent-runtime/Dockerfile
+            context: .
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+          run_install: false
+
+      - name: 💾 Cache pnpm dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: 📥 Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: 🔨 Build workspace packages
+        run: |
+          pnpm --filter=@agenthive/observability build
+          pnpm --filter=@agenthive/agent-runtime build
+          pnpm --filter=@agenthive/api build
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Login to Alibaba Cloud ACR
+        if: github.event.inputs.push != 'false'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: 🏷️ Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.app }}
+          tags: |
+            type=sha,prefix=,suffix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event.inputs.version != '' }}
+
+      - name: 🐳 Build and push ${{ matrix.app }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: ${{ github.event.inputs.push != 'false' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=production
+
+  # ===========================================
+  # Job 2: Build Java Microservice Images
+  # ===========================================
+  build-java-images:
+    name: ☕ Build Java Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service:
+          - gateway-service
+          - auth-service
+          - user-service
+          - payment-service
+          - order-service
+          - cart-service
+          - logistics-service
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: ☕ Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: 🔨 Build Java services (Maven)
+        run: |
+          cd apps/java
+          mvn clean package -pl ${{ matrix.service }} -am -DskipTests -q
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Login to Alibaba Cloud ACR
+        if: github.event.inputs.push != 'false'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: 🏷️ Determine image tag
+        id: tag
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            TAG="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/v}"
+          else
+            TAG="sha-$(git rev-parse --short HEAD)"
+          fi
+          SHORT_SVC=$(echo "${{ matrix.service }}" | sed 's/-service//')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "short_svc=$SHORT_SVC" >> $GITHUB_OUTPUT
+          echo "Building ${{ matrix.service }} → $SHORT_SVC:$TAG"
+
+      - name: 🐳 Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/java/${{ matrix.service }}
+          file: ./apps/java/${{ matrix.service }}/Dockerfile
+          push: ${{ github.event.inputs.push != 'false' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ steps.tag.outputs.short_svc }}:${{ steps.tag.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ steps.tag.outputs.short_svc }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ steps.tag.outputs.tag }}
+            GIT_COMMIT=${{ github.sha }}
+            BUILD_TIME=${{ github.event.repository.updated_at }}
+
+  # ===========================================
+  # Job 3: Build Monitoring Images
+  # ===========================================
+  build-monitoring-images:
+    name: 📊 Build Monitoring Images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: |
+      contains(github.event.head_commit.modified, 'monitoring/') ||
+      contains(github.event.head_commit.added, 'monitoring/') ||
+      github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        include:
+          - component: prometheus
+            dockerfile: ./monitoring/prometheus/Dockerfile
+            context: ./monitoring/prometheus
+          - component: grafana
+            dockerfile: ./monitoring/grafana/Dockerfile
+            context: ./monitoring
+          - component: node-exporter
+            dockerfile: ./monitoring/node-exporter/Dockerfile
+            context: ./monitoring/node-exporter
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔧 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🔐 Login to Alibaba Cloud ACR
+        if: github.event.inputs.push != 'false'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: 🏷️ Determine version
+        id: meta
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.ref }}" == refs/tags/monitoring-v* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/monitoring-v}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🐳 Build and push ${{ matrix.component }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: ${{ github.event.inputs.push != 'false' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.component }}:${{ steps.meta.outputs.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/${{ matrix.component }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===========================================
+  # Job 4: Build Summary
+  # ===========================================
+  build-summary:
+    name: 📊 Build Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build-node-images, build-java-images, build-monitoring-images]
+    if: always()
+    steps:
+      - name: 📝 Summary
+        run: |
+          echo "## 🐳 Image Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Category | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Node.js Images (api/landing/agent-runtime)** | ${{ needs.build-node-images.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Java Images (7 microservices)** | ${{ needs.build-java-images.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Monitoring Images (prometheus/grafana/node-exporter)** | ${{ needs.build-monitoring-images.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> 部署请使用 \`deploy.yml\` workflow 或 ArgoCD 自动同步" >> $GITHUB_STEP_SUMMARY

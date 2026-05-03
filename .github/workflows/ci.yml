@@ -1,4 +1,4 @@
-name: 🚀 CI/CD Pipeline
+name: 🔍 CI Pipeline
 
 on:
   push:
@@ -7,11 +7,7 @@ on:
       - 'apps/**'
       - 'packages/**'
       - 'AGENTS/**'
-      - 'Dockerfile*'
-      - 'docker-compose*.yml'
-      - '.github/workflows/ci-cd.yml'
-      - '.github/workflows/deploy-*.yml'
-      - '.github/workflows/build-*.yml'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [master, main]
     paths:
@@ -20,14 +16,11 @@ on:
       - 'AGENTS/**'
 
 env:
-  REGISTRY: ghcr.io
-  IMAGE_API: ghcr.io/sdoxiaobaomei/agenthive-api
-  IMAGE_LANDING: ghcr.io/sdoxiaobaomei/agenthive-landing
   NODE_VERSION: '20'
 
 jobs:
   # ===========================================
-  # Stage 1: Code Quality
+  # Stage 1: Code Quality + Env Security
   # ===========================================
   code-quality:
     name: 🔍 Code Quality Check
@@ -47,7 +40,7 @@ jobs:
       - name: 📦 Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 10
+          version: 9
           run_install: false
 
       - name: 📂 Get pnpm store directory
@@ -74,18 +67,44 @@ jobs:
         run: |
           cd packages/observability
           pnpm run build
-          cd ../../apps/agent-runtime
-          pnpm run build || true
 
-      - name: 🔍 Type Check
-        run: pnpm --filter './packages/*' --filter './apps/api' run typecheck
+      - name: 🔍 Type Check (packages + api + landing)
+        run: |
+          pnpm --filter './packages/*' --filter './apps/api' run typecheck
+          cd apps/landing
+          pnpm run typecheck
 
       - name: 🎨 Lint Check
         run: pnpm run lint
 
-      - name: 📝 Commitlint (PR only)
-        if: github.event_name == 'pull_request'
-        run: echo "Commitlint skipped for now"
+      # --- Env Security Checks (migrated from env-check.yml) ---
+      - name: 🔒 Check for leaked LLM API keys
+        run: |
+          if grep -rE "sk-kimi-[A-Za-z0-9]{20,}" --include=".env*" . 2>/dev/null; then
+            echo "::error::Real LLM API key (sk-kimi-...) detected in .env files"
+            exit 1
+          fi
+          echo "OK: No leaked LLM API keys found"
+
+      - name: 🔒 Check .env.prod CORS_ORIGIN is not localhost
+        run: |
+          if [ -f .env.prod ]; then
+            CORS=$(grep "^CORS_ORIGIN=" .env.prod | cut -d= -f2- || true)
+            if echo "$CORS" | grep -qi "localhost"; then
+              echo "::error::.env.prod CORS_ORIGIN contains localhost: $CORS"
+              exit 1
+            fi
+          fi
+
+      - name: 🔒 Check .env.prod for weak Nacos token
+        run: |
+          if [ -f .env.prod ]; then
+            TOKEN=$(grep "^NACOS_AUTH_TOKEN=" .env.prod | cut -d= -f2- | tr -d ' ' || true)
+            if [ -n "$TOKEN" ] && echo "$TOKEN" | grep -qE "<NACOS_AUTH_TOKEN_EXAMPLE>"; then
+              echo "::error::Weak default NACOS_AUTH_TOKEN detected in .env.prod"
+              exit 1
+            fi
+          fi
 
   # ===========================================
   # Stage 2: Build & Test
@@ -122,8 +141,6 @@ jobs:
         run: |
           cd packages/observability
           pnpm run build
-          cd ../../apps/agent-runtime
-          pnpm run build || true
 
       - name: 🔨 Build API
         run: |
@@ -138,7 +155,7 @@ jobs:
       - name: 🧪 Run Tests
         run: pnpm test
 
-      - name: 📦 Build Artifacts
+      - name: 📦 Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts
@@ -159,11 +176,11 @@ jobs:
     steps:
       - name: 📝 Summary
         run: |
-          echo "## 🚀 CI Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 CI Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| **Code Quality** | ${{ needs.code-quality.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| **Build & Test** | ${{ needs.build-test.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> 镜像构建由 \\\`deploy-alicloud.yml\\\` 负责（push main 时自动构建并推送至 ACR）" >> $GITHUB_STEP_SUMMARY
+          echo "> 镜像构建由 \`build-images.yml\` 负责（push main 时自动构建并推送至 ACR）" >> $GITHUB_STEP_SUMMARY
