@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================================
-# init-data-layer.sh — 2C2G 数据层一键初始化
-# 用途: 在 2C2G 阿里云服务器上部署 PG + Redis，服务 Staging + Production
+# init-data-layer.sh — 2C2G 数据层一键初始化 (Production Only)
+# 用途: 在 2C2G 阿里云服务器上部署 PG + Redis，仅服务 Production
 # 前提: Docker + Docker Compose 已安装
 # 用法: bash init-data-layer.sh
 # ============================================================================
@@ -9,7 +9,6 @@
 set -euo pipefail
 
 # ---- 配置 ----
-PG_PASS_STAGING="${PG_PASS_STAGING:-staging_changeme}"
 PG_PASS_PROD="${PG_PASS_PROD:-prod_changeme}"
 REDIS_PASSWORD="${REDIS_PASSWORD:-redis_changeme}"
 BACKUP_OSS_PATH="${BACKUP_OSS_PATH:-}"  # oss://bucket/pg-backups/ 留空则只本地备份
@@ -17,28 +16,18 @@ DATA_DIR="/data/agenthive"
 BACKUP_DIR="/data/backups"
 
 echo "========================================"
-echo "  AgentHive 数据层初始化"
+echo "  AgentHive 数据层初始化 (Production)"
 echo "  目录: ${DATA_DIR}"
 echo "========================================"
 
 # ---- 创建目录 ----
 mkdir -p "${DATA_DIR}/postgres" "${DATA_DIR}/redis" "${BACKUP_DIR}"
 
-# ---- PG 初始化脚本 (创建多数据库) ----
+# ---- PG 初始化脚本 (创建 4 个 Production 数据库) ----
 cat > "${DATA_DIR}/init-db.sh" << 'EOSQL'
 #!/bin/bash
 set -e
 
-# Staging databases
-for DB in agent chat project user; do
-  psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-SQL
-    CREATE DATABASE staging_${DB};
-    CREATE USER staging_${DB} WITH PASSWORD '${PG_PASS_STAGING}';
-    GRANT ALL PRIVILEGES ON DATABASE staging_${DB} TO staging_${DB};
-SQL
-done
-
-# Production databases
 for DB in agent chat project user; do
   psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-SQL
     CREATE DATABASE prod_${DB};
@@ -47,7 +36,7 @@ for DB in agent chat project user; do
 SQL
 done
 
-echo "✅ 8 databases created (4 staging + 4 production)"
+echo "✅ 4 production databases created"
 EOSQL
 
 chmod +x "${DATA_DIR}/init-db.sh"
@@ -65,7 +54,6 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_PASSWORD: ${PG_SUPER_PASSWORD:-super_changeme}
-      PG_PASS_STAGING: ${PG_PASS_STAGING:-staging_changeme}
       PG_PASS_PROD: ${PG_PASS_PROD:-prod_changeme}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -94,15 +82,15 @@ services:
     command: >
       redis-server
         --requirepass ${REDIS_PASSWORD:-redis_changeme}
-        --maxmemory 128mb
+        --maxmemory 256mb
         --maxmemory-policy allkeys-lru
-        --databases 4
+        --databases 2
     volumes:
       - redisdata:/data
     deploy:
       resources:
         limits:
-          memory: 192M
+          memory: 320M
 
 volumes:
   pgdata:
@@ -152,23 +140,20 @@ chmod +x "${DATA_DIR}/backup.sh"
 
 echo ""
 echo "========================================"
-echo "  ✅ 数据层初始化完成"
+echo "  ✅ 数据层初始化完成 (Production Only)"
 echo "========================================"
 echo ""
 echo "连接信息:"
 echo "  PostgreSQL: <服务器IP>:5432"
-echo "    Staging:  staging_agent / staging_chat / staging_project / staging_user"
-echo "    Prod:     prod_agent / prod_chat / prod_project / prod_user"
+echo "    prod_agent / prod_chat / prod_project / prod_user"
 echo ""
 echo "  Redis: <服务器IP>:6379"
-echo "    Staging: db0"
-echo "    Prod:    db1"
+echo "    db0: production"
 echo ""
 echo "  备份: 每日 03:00 → ${BACKUP_DIR}/"
 echo "  手动备份: bash ${DATA_DIR}/backup.sh"
 echo ""
 echo "⚠️  请修改以下默认密码:"
 echo "  - PG_SUPER_PASSWORD (postgres 超级用户)"
-echo "  - PG_PASS_STAGING"
 echo "  - PG_PASS_PROD"
 echo "  - REDIS_PASSWORD"
