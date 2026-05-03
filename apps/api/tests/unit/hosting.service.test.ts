@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('../../src/config/database.js', () => ({
+vi.mock('../../src/config/database', () => ({
   pool: {
     query: vi.fn(),
   },
 }))
 
-vi.mock('../../src/config/redis.js', () => ({
+vi.mock('../../src/config/redis', () => ({
   redis: {
     keys: vi.fn().mockResolvedValue([]),
     del: vi.fn().mockResolvedValue(0),
@@ -14,7 +14,7 @@ vi.mock('../../src/config/redis.js', () => ({
   key: (ns: string, id: string) => `agenthive:${ns}:${id}`,
 }))
 
-vi.mock('../../src/utils/logger.js', () => ({
+vi.mock('../../src/utils/logger', () => ({
   default: {
     info: vi.fn(),
     error: vi.fn(),
@@ -31,7 +31,7 @@ vi.mock('fs/promises', () => ({
   ]),
 }))
 
-import { pool } from '../../src/config/database.js'
+import { pool } from '../../src/config/database'
 import {
   generateDeployConfig,
   deployProject,
@@ -41,7 +41,7 @@ import {
   updateDeploymentStatus,
   deleteDeploymentRecord,
   notifyJavaCreateHostedWebsite,
-} from '../../src/project/hosting-service.js'
+} from '../../src/project/hosting-service'
 
 const mockQuery = pool.query as ReturnType<typeof vi.fn>
 
