@@ -1,8 +1,36 @@
 import { defineStore } from 'pinia'
 import type { FileInfo } from '@agenthive/types'
 
-/** 消息类型 */
+/** 消息角色 */
 export type MessageRole = 'user' | 'assistant' | 'system'
+
+/** 消息类型（v2 扩展） */
+export type MessageType =
+  | 'message'      // 普通消息
+  | 'think'        // agent 思考过程
+  | 'task'         // 用户可 approve/decline 的任务
+  | 'recommend'    // 用户选择选项（不展示在历史消息中）
+  | 'system_event' // 系统事件
+
+/** 任务状态 */
+export type TaskStatus = 'pending' | 'approved' | 'declined' | 'running' | 'completed' | 'failed'
+
+/** 推荐选项 */
+export interface RecommendOption {
+  id: string
+  label: string
+  prompt: string
+  icon?: string
+}
+
+/** 任务项 */
+export interface TaskItem {
+  id: string
+  title: string
+  description?: string
+  status: TaskStatus
+  workerRole?: string
+}
 
 /** 消息内容类型 */
 export type MessageContentType = 'text' | 'code' | 'image' | 'file' | 'thinking'
@@ -16,21 +44,30 @@ export interface MessageContent {
   metadata?: Record<string, any>
 }
 
-/** 聊天消息 */
+/** 聊天消息（v2 扩展） */
 export interface ChatMessage {
   id: string
   role: MessageRole
+  type: MessageType        // v2: 消息类型
   content: string | MessageContent[]
   timestamp: string
   conversationId: string
   parentId?: string
+  versionId?: string       // v2: 所属版本 ID
+  // type === 'task' 时的专属结构
+  tasks?: TaskItem[]
+  // type === 'recommend' 时的专属结构
+  options?: RecommendOption[]
+  selectedOptionId?: string
+  // type === 'think' 时的专属结构
+  thinkContent?: string
+  thinkSummary?: string
   metadata?: {
     model?: string
     tokens?: number
     processingTime?: number
     files?: string[]
     intent?: string
-    tasks?: any[]
   }
 }
 
@@ -44,6 +81,18 @@ export interface Conversation {
   updatedAt: string
   messageCount: number
   isPinned?: boolean
+}
+
+/** 聊天版本 */
+export interface ChatVersion {
+  id: string
+  sessionId: string
+  versionNumber: number
+  title: string
+  description?: string
+  baseMessageId?: string
+  isActive: boolean
+  createdAt: string
 }
 
 /** 文件树节点 - 与组件兼容的类型 */
@@ -80,6 +129,9 @@ interface ChatState {
   activeFilePath: string | null
   // 页面活动标签
   activeTab: ChatTab
+  // v2: 版本管理
+  versions: ChatVersion[]
+  currentVersionId: string | null
 }
 
 // 默认演示文件树数据（当 API 不可用时使用）
@@ -143,6 +195,9 @@ export const useChatStore = defineStore('chat', {
     activeFilePath: null,
     // 页面活动标签
     activeTab: 'editor',
+    // v2: 版本管理
+    versions: [],
+    currentVersionId: null,
   }),
 
   getters: {
@@ -154,12 +209,43 @@ export const useChatStore = defineStore('chat', {
     projectId: (state): string | null =>
       state.currentConversation?.projectId || null,
 
-    /** 当前会话消息 */
+    /** 当前会话消息（含 recommend，原始全部消息） */
     currentMessages: (state): ChatMessage[] => {
       if (!state.currentConversation) return []
       return state.messages.filter(
         m => m.conversationId === state.currentConversation!.id
       )
+    },
+
+    /** v2: visibleMessages — 过滤掉已选择/已关闭的 recommend，其他 recommend inline 展示 */
+    visibleMessages: (state): ChatMessage[] => {
+      if (!state.currentConversation) return []
+      return state.messages.filter(
+        (m) =>
+          m.conversationId === state.currentConversation!.id &&
+          // 过滤掉已选择或已关闭的 recommend
+          !(m.type === 'recommend' && (m.selectedOptionId || m.metadata?.dismissed === true))
+      )
+    },
+
+    /** v2: 获取当前版本的消息 */
+    currentVersionMessages: (state): ChatMessage[] => {
+      if (!state.currentVersionId) return state.visibleMessages
+      return state.visibleMessages.filter(
+        m => m.versionId === state.currentVersionId
+      )
+    },
+
+    /** v2: 获取当前活跃的 recommend（如果有） */
+    activeRecommend: (state): ChatMessage | null => {
+      if (!state.currentConversation) return null
+      const recommends = state.messages.filter(
+        m => m.conversationId === state.currentConversation!.id
+          && m.type === 'recommend'
+          && !m.selectedOptionId           // 未选择
+          && m.metadata?.dismissed !== true // 未关闭
+      )
+      return recommends.length > 0 ? recommends[recommends.length - 1] : null
     },
 
     /** 消息数量 */
@@ -821,6 +907,182 @@ export const useChatStore = defineStore('chat', {
      */
     setActiveTab(tab: ChatTab): void {
       this.activeTab = tab
+    },
+
+    // ===== v2: 版本管理 =====
+
+    /**
+     * 加载版本列表
+     */
+    async loadVersions(sessionId: string): Promise<ChatVersion[]> {
+      this.isLoading = true
+      try {
+        const { chat } = useApi()
+        const result = await chat.listVersions(sessionId)
+        if (result.success && result.data) {
+          this.versions = result.data.versions || []
+        }
+        return this.versions
+      } catch (err: any) {
+        this.error = err.message || '加载版本列表失败'
+        return []
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * 切换版本
+     * 后端 PATCH 返回 version + messages，直接使用返回数据
+     */
+    async switchVersion(versionId: string): Promise<ChatMessage[]> {
+      if (!this.currentConversation) return []
+      const sessionId = this.currentConversation.id
+      this.isLoading = true
+      try {
+        const { chat } = useApi()
+        const result = await chat.switchVersion(sessionId, versionId)
+        if (result.success && result.data) {
+          this.currentVersionId = versionId
+          // 后端返回 messages，直接使用
+          if (result.data.messages && result.data.messages.length > 0) {
+            const loaded: ChatMessage[] = result.data.messages.map((msg: any) => ({
+              id: msg.id || `msg-${Date.now()}`,
+              role: msg.role as 'user' | 'assistant' | 'system',
+              type: msg.type || 'message',
+              content: msg.content,
+              timestamp: msg.timestamp || msg.createdAt,
+              conversationId: sessionId,
+              versionId: msg.versionId || versionId,
+              tasks: msg.tasks,
+              options: msg.options,
+              thinkContent: msg.thinkContent,
+              thinkSummary: msg.thinkSummary,
+              metadata: msg.metadata || {},
+            }))
+            // 清除当前会话旧消息，替换为返回的 messages
+            this.messages = this.messages.filter(
+              m => m.conversationId !== sessionId
+            )
+            this.messages.push(...loaded)
+          }
+        }
+        return this.currentVersionMessages
+      } catch (err: any) {
+        this.error = err.message || '切换版本失败'
+        return []
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    /**
+     * 创建新版本
+     * 后端返回直接 version 对象
+     */
+    async createVersion(title: string, description?: string): Promise<ChatVersion | null> {
+      if (!this.currentConversation) return null
+      const sessionId = this.currentConversation.id
+      this.isLoading = true
+      try {
+        const { chat } = useApi()
+        const result = await chat.createVersion(sessionId, { title, description })
+        if (result.success && result.data) {
+          const newVersion: ChatVersion = result.data as ChatVersion
+          this.versions.unshift(newVersion)
+          this.currentVersionId = newVersion.id
+          return newVersion
+        }
+        return null
+      } catch (err: any) {
+        this.error = err.message || '创建版本失败'
+        return null
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    // ===== v2: Task 操作 =====
+
+    /**
+     * 确认/拒绝任务
+     * 对齐后端: POST /messages/:messageId/approve { action: 'approve'|'decline', reason? }
+     */
+    async approveTask(taskId: string, approved: boolean): Promise<void> {
+      if (!this.currentConversation) return
+      const sessionId = this.currentConversation.id
+      // 找到包含该 task 的 message
+      const msg = this.messages.find(
+        m => m.conversationId === sessionId && m.tasks?.some(t => t.id === taskId)
+      )
+      if (!msg || !msg.tasks) {
+        this.error = '未找到对应任务'
+        return
+      }
+      try {
+        const { chat } = useApi()
+        await chat.approveTask(sessionId, msg.id, {
+          action: approved ? 'approve' : 'decline',
+        })
+        // 乐观更新本地状态
+        const task = msg.tasks.find(t => t.id === taskId)
+        if (task) {
+          task.status = approved ? 'approved' : 'declined'
+        }
+      } catch (err: any) {
+        this.error = err.message || '操作任务失败'
+      }
+    },
+
+    // ===== v2: Recommend 操作 =====
+
+    /**
+     * 选择推荐选项
+     * 对齐后端: POST /messages/:messageId/select { optionId }
+     */
+    async selectRecommend(optionId: string): Promise<void> {
+      if (!this.currentConversation) return
+      const sessionId = this.currentConversation.id
+      const recommendMsg = this.messages.find(
+        m => m.conversationId === sessionId
+          && m.type === 'recommend'
+          && !m.selectedOptionId
+          && m.metadata?.dismissed !== true
+      )
+      if (!recommendMsg) return
+      try {
+        const { chat } = useApi()
+        await chat.selectRecommend(sessionId, recommendMsg.id, { optionId })
+        // 标记为已选择，visibleMessages 自动过滤掉
+        recommendMsg.selectedOptionId = optionId
+      } catch (err: any) {
+        this.error = err.message || '选择推荐失败'
+      }
+    },
+
+    /**
+     * 关闭/忽略推荐
+     * 对齐后端: POST /messages/:messageId/dismiss
+     */
+    async dismissRecommend(): Promise<void> {
+      if (!this.currentConversation) return
+      const sessionId = this.currentConversation.id
+      const recommendMsg = this.messages.find(
+        m => m.conversationId === sessionId
+          && m.type === 'recommend'
+          && !m.selectedOptionId
+          && m.metadata?.dismissed !== true
+      )
+      if (!recommendMsg) return
+      try {
+        const { chat } = useApi()
+        await chat.dismissRecommend(sessionId, recommendMsg.id)
+        // 标记为已关闭，visibleMessages 自动过滤掉
+        if (!recommendMsg.metadata) recommendMsg.metadata = {}
+        recommendMsg.metadata.dismissed = true
+      } catch (err: any) {
+        this.error = err.message || '关闭推荐失败'
+      }
     },
   },
 

@@ -47,6 +47,9 @@ export interface PaginatedResponse<T> {
 
 // ============ 实体类型定义 ============
 
+/** v2: 消息类型 — 从 stores/chat.ts 统一导入 */
+export type { MessageType, TaskStatus } from '~/stores/chat'
+
 /** Agent 状态 */
 export type AgentStatus = 'idle' | 'running' | 'paused' | 'error' | 'stopped'
 
@@ -204,9 +207,29 @@ export interface CreateChatSessionParams {
   title?: string
 }
 
-/** 发送消息参数 */
+/** 发送消息参数（v2 扩展） */
 export interface SendChatMessageParams {
   content: string
+  type?: MessageType        // v2: 消息类型
+  metadata?: Record<string, any>
+}
+
+/** v2: 确认/拒绝任务参数 — 对齐后端 contract */
+export interface ApproveTaskParams {
+  action: 'approve' | 'decline'
+  reason?: string
+}
+
+/** v2: 选择推荐参数 — 对齐后端 contract */
+export interface SelectRecommendParams {
+  optionId: string
+}
+
+/** v2: 创建版本参数 */
+export interface CreateVersionParams {
+  title: string
+  description?: string
+  baseMessageId?: string
 }
 
 // ============ API 错误类 ============
@@ -583,7 +606,7 @@ export function useApi() {
       get<{ id: string; title: string; projectId?: string; createdAt: string; updatedAt: string }>(`/api/chat/sessions/${id}`, { silent: true }),
 
     /** 发送消息 */
-    sendMessage: (sessionId: string, data: { content: string }) =>
+    sendMessage: (sessionId: string, data: SendChatMessageParams) =>
       post<{
         message: { id: string; role: string; content: string; timestamp: string };
         intent: string;
@@ -610,6 +633,32 @@ export function useApi() {
     /** 获取进度 */
     getProgress: (sessionId: string) =>
       get<any>(`/api/chat/sessions/${sessionId}/progress`, { silent: true }),
+
+    // ===== v2: 新增接口（已对齐后端 PR#14 contract） =====
+
+    /** 确认/拒绝任务 — POST /messages/:messageId/approve */
+    approveTask: (sessionId: string, messageId: string, data: ApproveTaskParams) =>
+      post<{ id: string; role: string; content: string; timestamp: string; metadata?: any }>(`/api/chat/sessions/${sessionId}/messages/${messageId}/approve`, data, { silent: true }),
+
+    /** 选择推荐选项 — POST /messages/:messageId/select */
+    selectRecommend: (sessionId: string, messageId: string, data: SelectRecommendParams) =>
+      post<{ id: string; role: string; content: string; timestamp: string; metadata?: any }>(`/api/chat/sessions/${sessionId}/messages/${messageId}/select`, data, { silent: true }),
+
+    /** 关闭/忽略推荐 — POST /messages/:messageId/dismiss */
+    dismissRecommend: (sessionId: string, messageId: string) =>
+      post<{ dismissed: boolean }>(`/api/chat/sessions/${sessionId}/messages/${messageId}/dismiss`, {}, { silent: true }),
+
+    /** 获取版本列表 — GET /versions，返回 versions */
+    listVersions: (sessionId: string) =>
+      get<{ versions: Array<{ id: string; sessionId: string; versionNumber: number; title: string; description?: string; isActive: boolean; createdAt: string }>; total: number }>(`/api/chat/sessions/${sessionId}/versions`, { silent: true }),
+
+    /** 切换版本 — PATCH /versions/:vId/activate，返回 version + messages */
+    switchVersion: (sessionId: string, versionId: string) =>
+      patch<{ id: string; sessionId: string; versionNumber: number; title: string; description?: string; isActive: boolean; createdAt: string; messages?: Array<any> }>(`/api/chat/sessions/${sessionId}/versions/${versionId}/activate`, {}, { silent: true }),
+
+    /** 创建新版本 — POST /versions，返回直接 version 对象 */
+    createVersion: (sessionId: string, data: CreateVersionParams) =>
+      post<{ id: string; sessionId: string; versionNumber: number; title: string; description?: string; isActive: boolean; createdAt: string }>(`/api/chat/sessions/${sessionId}/versions`, data, { silent: true }),
   }
 
   // ============ Credits 相关 API ============
