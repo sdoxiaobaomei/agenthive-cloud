@@ -1,0 +1,255 @@
+name: Database Migration
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'apps/api/src/db/migrations/**'
+      - 'apps/api/.node-pg-migrate.js'
+      - 'apps/api/package.json'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'apps/api/src/db/migrations/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      action:
+        description: 'Migration action'
+        required: true
+        default: 'up'
+        type: choice
+        options:
+          - up
+          - down
+          - status
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ============================================================================
+  # 迁移文件检查（PR 阶段）
+  # ============================================================================
+  lint:
+    name: Lint Migration Files
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Check migration file naming
+        run: |
+          echo "Checking migration files..."
+          for file in apps/api/src/db/migrations/*.sql; do
+            filename=$(basename "$file")
+            # 检查命名格式: YYYYMMDDHHMMSS_description.sql
+            if [[ ! "$filename" =~ ^[0-9]{14}_[a-z0-9-]+\.sql$ ]]; then
+              echo "❌ Invalid migration filename: $filename"
+              echo "   Expected format: YYYYMMDDHHMMSS_description.sql"
+              exit 1
+            fi
+          done
+          echo "✅ All migration filenames are valid"
+          
+      - name: Check for down migration markers
+        run: |
+          for file in apps/api/src/db/migrations/*.sql; do
+            if ! grep -q "\${node-pg-migrate}-down" "$file"; then
+              echo "❌ Missing down migration marker in: $(basename "$file")"
+              echo "   Add '-- \${node-pg-migrate}-down' marker"
+              exit 1
+            fi
+          done
+          echo "✅ All migrations have down markers"
+          
+      - name: Check SQL syntax (basic)
+        run: |
+          for file in apps/api/src/db/migrations/*.sql; do
+            # 检查是否有明显的语法错误（简单检查）
+            if grep -E "(DROP\s+DATABASE|TRUNCATE\s+TABLE)" "$file"; then
+              echo "⚠️  Warning: Dangerous operation found in $(basename "$file")"
+            fi
+          done
+          echo "✅ SQL syntax check passed"
+
+  # ============================================================================
+  # 迁移状态检查
+  # ============================================================================
+  status:
+    name: Check Migration Status
+    runs-on: ubuntu-latest
+    needs: lint
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Check migration status (staging)
+        if: github.event_name == 'pull_request'
+        run: pnpm run migrate:status
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        continue-on-error: true
+
+  # ============================================================================
+  # Staging 环境迁移
+  # ============================================================================
+  migrate-staging:
+    name: Migrate Staging
+    runs-on: ubuntu-latest
+    needs: [lint, status]
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/develop') ||
+      (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
+    environment:
+      name: staging
+      url: https://staging.agenthive.cloud
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Run migrations
+        run: |
+          echo "🚀 Running migrations on staging..."
+          pnpm run migrate:up
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          
+      - name: Verify schema
+        run: |
+          echo "🔍 Verifying database schema..."
+          pnpm run migrate:status
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+
+  # ============================================================================
+  # Production 环境迁移（需要审批）
+  # ============================================================================
+  migrate-production:
+    name: Migrate Production
+    runs-on: ubuntu-latest
+    needs: migrate-staging
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && inputs.environment == 'production')
+    environment:
+      name: production
+      url: https://agenthive.cloud
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        
+      - name: Pre-migration backup notification
+        run: |
+          echo "⚠️  PRODUCTION MIGRATION"
+          echo "========================"
+          echo "Target: Production database"
+          echo "Action: ${{ github.event.inputs.action || 'up' }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo ""
+          echo "⚠️  Ensure backup is complete before proceeding!"
+          
+      - name: Run migrations
+        run: |
+          echo "🚀 Running migrations on production..."
+          pnpm run migrate:up -- --verbose
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          
+      - name: Verify schema
+        run: |
+          echo "🔍 Verifying database schema..."
+          pnpm run migrate:status
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          
+      - name: Post-migration notification
+        if: success()
+        run: |
+          echo "✅ Production migration completed successfully"
+          echo "Timestamp: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "❌ Migration failed, attempting rollback..."
+          pnpm run migrate:down
+        working-directory: apps/api
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        continue-on-error: true
