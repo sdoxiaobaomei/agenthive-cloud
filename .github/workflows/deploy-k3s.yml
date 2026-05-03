@@ -22,12 +22,17 @@ on:
         description: 'K8s 命名空间'
         required: false
         default: 'agenthive'
+      skip_build:
+        description: '跳过 Build 阶段，直接 Deploy（镜像必须已存在于仓库）'
+        required: false
+        default: 'false'
 
 env:
   REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
-  IMAGE_API: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/agenthive/api
-  IMAGE_LANDING: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/agenthive/landing
-  IMAGE_JAVA_PREFIX: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/agenthive
+  NAMESPACE: namespace-alpha
+  IMAGE_API: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/api
+  IMAGE_LANDING: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/landing
+  IMAGE_JAVA_PREFIX: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha
   CHART_PATH: chart/agenthive
   VALUES_FILE: chart/agenthive/values.prod.yaml
   K3S_HOST: 39.107.87.106
@@ -61,6 +66,7 @@ jobs:
       image_tag: ${{ steps.meta.outputs.tag }}
     steps:
       - name: 📥 Checkout
+        if: github.event.inputs.skip_build != 'true'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -70,6 +76,9 @@ jobs:
         run: |
           if [ -n "${{ github.event.inputs.tag }}" ]; then
             TAG="${{ github.event.inputs.tag }}"
+          elif [ "${{ github.event.inputs.skip_build }}" == "true" ]; then
+            echo "ERROR: 跳过 build 时必须通过 workflow_dispatch 提供 tag"
+            exit 1
           else
             TAG="v1.1.0-g$(git rev-parse --short HEAD)"
           fi
@@ -77,24 +86,37 @@ jobs:
           echo "Using image tag: $TAG"
 
       - name: 🔐 Login to ACR
+        if: github.event.inputs.skip_build != 'true'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: 🐳 Build & Push API Image
+      - name: 📦 Build API Workspace
+        if: github.event.inputs.skip_build != 'true'
         run: |
-          docker build -t ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }} -f Dockerfile.api .
+          npm install -g pnpm@9
+          pnpm install --frozen-lockfile
+          pnpm --filter=@agenthive/observability build
+          pnpm --filter=@agenthive/agent-runtime build
+          pnpm --filter=@agenthive/api build
+
+      - name: 🐳 Build & Push API Image
+        if: github.event.inputs.skip_build != 'true'
+        run: |
+          docker build -t ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }} -f apps/api/Dockerfile .
           docker push ${{ env.IMAGE_API }}:${{ steps.meta.outputs.tag }}
 
       - name: 🐳 Build & Push Landing Image
+        if: github.event.inputs.skip_build != 'true'
         run: |
-          docker build -t ${{ env.IMAGE_LANDING }}:${{ steps.meta.outputs.tag }} -f Dockerfile.landing .
+          docker build -t ${{ env.IMAGE_LANDING }}:${{ steps.meta.outputs.tag }} -f apps/landing/Dockerfile .
           docker push ${{ env.IMAGE_LANDING }}:${{ steps.meta.outputs.tag }}
 
       # Java images: build from source with Maven, then push with unified tag
       - name: ☕ Setup Java & Maven
+        if: github.event.inputs.skip_build != 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '21'
@@ -102,27 +124,37 @@ jobs:
           cache: 'maven'
 
       - name: 🔨 Build Java Services (Maven)
+        if: github.event.inputs.skip_build != 'true'
         run: |
           cd apps/java
           mvn clean package -DskipTests -q
           echo "Java JARs built:"
           find . -name "*.jar" -path "*/target/*" | grep -v original
 
+      - name: 📥 Download OpenTelemetry Java Agent
+        if: github.event.inputs.skip_build != 'true'
+        run: |
+          AGENT_URL="https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.6.0/opentelemetry-javaagent.jar"
+          for svc in gateway-service auth-service user-service payment-service order-service cart-service logistics-service; do
+            wget -q -O apps/java/${svc}/opentelemetry-javaagent-2.6.0.jar "$AGENT_URL"
+            echo "Downloaded agent for $svc"
+          done
+
       - name: 🏷️ Build & Push Java Images
+        if: github.event.inputs.skip_build != 'true'
         run: |
           TAG="${{ steps.meta.outputs.tag }}"
-          for svc in gateway-service auth-service payment-service order-service cart-service logistics-service; do
-            SHORT_SVC=$(echo "$svc" | sed 's/-service//')
+          for svc in gateway-service auth-service user-service payment-service order-service cart-service logistics-service; do
             echo "Building $svc ..."
             docker build \
-              -t ${{ env.IMAGE_JAVA_PREFIX }}/${SHORT_SVC}:${TAG} \
+              -t ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:${TAG} \
               -f apps/java/${svc}/Dockerfile \
               --build-arg VERSION=${TAG} \
               --build-arg GIT_COMMIT=${{ github.sha }} \
               --build-arg BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ") \
               apps/java/${svc}
-            docker push ${{ env.IMAGE_JAVA_PREFIX }}/${SHORT_SVC}:${TAG}
-            echo "Pushed ${{ env.IMAGE_JAVA_PREFIX }}/${SHORT_SVC}:${TAG}"
+            docker push ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:${TAG}
+            echo "Pushed ${{ env.IMAGE_JAVA_PREFIX }}/${svc}:${TAG}"
           done
 
   # ===========================================
@@ -140,6 +172,13 @@ jobs:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
+      - name: 🔐 Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: 🔧 Prepare Helm values
         run: |
           TAG="${{ needs.build.outputs.image_tag }}"
@@ -154,8 +193,73 @@ jobs:
       - name: 🔐 Setup kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.K3S_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          # Try base64 decode to temp file and validate it looks like kubeconfig
+          echo "${{ secrets.K3S_KUBECONFIG }}" | base64 -d > /tmp/kubeconfig-decoded 2>/dev/null || true
+          if grep -q 'apiVersion:' /tmp/kubeconfig-decoded 2>/dev/null && grep -q 'kind:' /tmp/kubeconfig-decoded 2>/dev/null; then
+            mv /tmp/kubeconfig-decoded ~/.kube/config
+            echo "Kubeconfig decoded from base64"
+          else
+            printf '%s\n' "${{ secrets.K3S_KUBECONFIG }}" > ~/.kube/config
+            echo "Kubeconfig written as plain text"
+          fi
           chmod 600 ~/.kube/config
+
+          # Fix broken base64 fields (whitespace/newlines inside certificate data)
+          python3 << 'PYEOF'
+          import re, base64, sys, os
+
+          path = os.path.expanduser('~/.kube/config')
+          with open(path, 'r') as f:
+              content = f.read()
+
+          def fix_field(m):
+              key = m.group(1)
+              data = m.group(2)
+              # Collapse any whitespace/newlines inside base64 payload
+              clean = ''.join(data.split())
+              # Try strict validation first
+              try:
+                  base64.b64decode(clean, validate=True)
+                  return f"{key}: {clean}"
+              except Exception:
+                  pass
+              # Fix padding by appending '=' chars (up to 3)
+              for pad in ['=', '==', '===']:
+                  try:
+                      base64.b64decode(clean + pad, validate=True)
+                      print(f"INFO: fixed padding for {key}", file=sys.stderr)
+                      return f"{key}: {clean}{pad}"
+                  except Exception:
+                      pass
+              # Last resort: non-strict decode (accepts missing padding)
+              try:
+                  base64.b64decode(clean, validate=False)
+                  print(f"INFO: relaxed validation for {key}", file=sys.stderr)
+                  return f"{key}: {clean}"
+              except Exception as e:
+                  print(f"WARNING: could not fix {key}: {e}", file=sys.stderr)
+                  return m.group(0)
+
+          # Certificate fields in kubeconfig may have line-wrapped base64
+          pattern = re.compile(
+              r'(certificate-authority-data|client-certificate-data|client-key-data):\s*([A-Za-z0-9+/=\s]+?)(?=\n\S|$)',
+              re.MULTILINE
+          )
+          fixed = pattern.sub(fix_field, content)
+
+          with open(path, 'w') as f:
+              f.write(fixed)
+          PYEOF
+
+          # Validate that kubectl can parse it
+          if kubectl config view >/dev/null 2>&1; then
+            echo "Kubeconfig is valid"
+          else
+            echo "ERROR: kubeconfig still invalid after repair"
+            # Print sanitized version for debugging
+            sed -E 's/(certificate-authority-data|client-certificate-data|client-key-data):.*/\1: ***REDACTED***/' ~/.kube/config | head -25
+            exit 1
+          fi
 
       - name: 🚀 Helm Upgrade (Dry Run)
         if: github.event.inputs.dry_run == 'true'
@@ -170,6 +274,10 @@ jobs:
           TAG="${{ needs.build.outputs.image_tag }}"
           helm upgrade --install agenthive ${{ env.CHART_PATH }} \
             -f ${{ env.VALUES_FILE }} \
+            --set global.imageRegistry=${{ env.REGISTRY }} \
+            --set api.image.repository=${{ env.NAMESPACE }}/api \
+            --set landing.image.repository=${{ env.NAMESPACE }}/landing \
+            --set javaServices.defaults.image.repositoryPrefix=${{ env.NAMESPACE }} \
             --set api.image.tag="$TAG" \
             --set landing.image.tag="$TAG" \
             --set javaServices.defaults.image.tag="$TAG" \
