@@ -80,6 +80,3 @@ springdoc:
 logging:
   level:
     org.springframework.cloud.gateway: debug
-ing:
-  level:
-    org.springframework.cloud.gateway: debug
