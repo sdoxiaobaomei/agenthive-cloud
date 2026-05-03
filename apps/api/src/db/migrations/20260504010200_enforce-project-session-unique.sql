@@ -1,6 +1,7 @@
 -- Migration: enforce 1 project 1 session constraint
 -- Created: 2026-05-04
 -- Description: chat_sessions 添加 workspace_id、session_type、current_version_id，并强制 project 唯一
+-- Dependency: Requires 20260504010100_add-workspaces.sql (workspaces table must exist first)
 
 -- ${node-pg-migrate}-up
 

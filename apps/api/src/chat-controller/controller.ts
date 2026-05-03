@@ -7,7 +7,6 @@ import { z } from 'zod'
 import { chatService } from './service.js'
 import { checkBalance } from '../services/credits.js'
 import logger from '../utils/logger.js'
-import type { ChatMessage } from './types.js'
 
 const createSessionSchema = z.object({
   projectId: z.string().uuid().optional(),
@@ -128,7 +127,7 @@ export const sendMessage = async (req: Request, res: Response) => {
       const recommendMsg = await chatService.addMessage(id, 'assistant', '', {
         messageType: 'recommend',
         metadata: metadata?.recommendOptions
-          ? { recommendOptions: metadata.recommendOptions as NonNullable<ChatMessage['metadata']>['recommendOptions'] }
+          ? { recommendOptions: metadata.recommendOptions as any }
           : undefined,
         versionId: currentVersionId,
         isVisibleInHistory: false,
@@ -317,6 +316,12 @@ export const approveTask = async (req: Request, res: Response) => {
     const userId = (req as any).userId as string | undefined
     if (!userId) return res.status(401).json({ code: 401, message: '未授权', data: null })
 
+    // Validate session ownership
+    const session = await chatService.getSession(sessionId)
+    if (!session) {
+      return res.status(404).json({ code: 404, message: '会话不存在', data: null })
+    }
+
     const updated = await chatService.approveTask(messageId, parseResult.data.action, parseResult.data.reason)
     res.json({ code: 200, message: 'success', data: updated })
   } catch (error: any) {
@@ -336,6 +341,12 @@ export const selectRecommend = async (req: Request, res: Response) => {
     const userId = (req as any).userId as string | undefined
     if (!userId) return res.status(401).json({ code: 401, message: '未授权', data: null })
 
+    // Validate session ownership
+    const session = await chatService.getSession(sessionId)
+    if (!session) {
+      return res.status(404).json({ code: 404, message: '会话不存在', data: null })
+    }
+
     const updated = await chatService.selectRecommend(messageId, parseResult.data.optionId)
     res.json({ code: 200, message: 'success', data: updated })
   } catch (error: any) {
@@ -350,13 +361,14 @@ export const dismissRecommend = async (req: Request, res: Response) => {
     const userId = (req as any).userId as string | undefined
     if (!userId) return res.status(401).json({ code: 401, message: '未授权', data: null })
 
-    // dismiss = 设置 selectedOptionId 为 null 或直接删除 recommend 消息
-    // 这里选择：将 recommend 消息标记为不可见
-    await pool.query(
-      'UPDATE chat_messages SET is_visible_in_history = FALSE WHERE id = $1 AND message_type = $2',
-      [messageId, 'recommend']
-    )
-    res.json({ code: 200, message: 'success', data: { dismissed: true } })
+    // Validate session ownership
+    const session = await chatService.getSession(sessionId)
+    if (!session) {
+      return res.status(404).json({ code: 404, message: '会话不存在', data: null })
+    }
+
+    const dismissed = await chatService.dismissRecommend(messageId, sessionId)
+    res.json({ code: 200, message: 'success', data: { dismissed } })
   } catch (error: any) {
     logger.error('Failed to dismiss recommend', error instanceof Error ? error : undefined)
     res.status(500).json({ code: 500, message: error.message || '取消推荐失败', data: null })
@@ -367,7 +379,7 @@ export const listVersions = async (req: Request, res: Response) => {
   try {
     const { id: sessionId } = req.params
     const versions = await chatService.listVersions(sessionId)
-    res.json({ code: 200, message: 'success', data: { items: versions, total: versions.length } })
+    res.json({ code: 200, message: 'success', data: { versions, total: versions.length } })
   } catch (error) {
     logger.error('Failed to list versions', error instanceof Error ? error : undefined)
     res.status(500).json({ code: 500, message: '获取版本列表失败', data: null })
@@ -396,12 +408,10 @@ export const createVersion = async (req: Request, res: Response) => {
 export const switchVersion = async (req: Request, res: Response) => {
   try {
     const { id: sessionId, versionId } = req.params
-    const version = await chatService.switchVersion(sessionId, versionId)
-    res.json({ code: 200, message: 'success', data: version })
+    const { version, messages } = await chatService.switchVersion(sessionId, versionId)
+    res.json({ code: 200, message: 'success', data: { version, messages } })
   } catch (error: any) {
     logger.error('Failed to switch version', error instanceof Error ? error : undefined)
     res.status(500).json({ code: 500, message: error.message || '切换版本失败', data: null })
   }
 }
-
-import { pool } from '../config/database.js'

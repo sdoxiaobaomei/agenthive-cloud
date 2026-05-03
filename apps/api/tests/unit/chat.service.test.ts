@@ -46,7 +46,6 @@ vi.mock('../../src/config/database', () => ({
 }))
 
 import { chatService } from '../../src/chat-controller/service'
-import { ChatMessage } from '../../src/chat-controller/types'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -205,11 +204,18 @@ describe('Task Interactions', () => {
           version_id: null, is_visible_in_history: true, created_at: '2026-05-04T00:00:00Z',
         }],
       })
+      // getSession call inside onTaskApproved
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{
+          id: 's-1', user_id: 'u-1', workspace_id: null, project_id: null,
+          title: 'Test', status: 'active', session_type: 'default',
+          created_at: '2026-05-04T00:00:00Z', updated_at: '2026-05-04T00:00:00Z',
+        }],
+      })
 
-    const updated = await chatService.approveTask('m-task', 'approve', 'let us go')
+    const updated = await chatService.approveTask('m-task', 'approve')
     expect(updated.metadata?.approvalStatus).toBe('approved')
-    // approveReason 会在 metadata 中被设置，但 mock 返回的是更新前的结构
-    // 这里只验证 approveTask 方法正确调用了 pool.query
   })
 
   it('approveTask throws when message not found', async () => {
@@ -248,6 +254,16 @@ describe('Recommend Interactions', () => {
         }],
       })
       .mockResolvedValueOnce({ rowCount: 1 })
+      // classifyIntent + system_event inside onRecommendSelected
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{
+          id: 'm-sys', session_id: 's-1', role: 'system', message_type: 'system_event',
+          content: '检测到意图: chat', metadata: '{}',
+          version_id: null, is_visible_in_history: true, created_at: '2026-05-04T00:00:00Z',
+        }],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 })
 
     const updated = await chatService.selectRecommend('m-rec', 'opt-1')
     expect(updated.metadata?.selectedOptionId).toBe('opt-1')
@@ -264,6 +280,26 @@ describe('Recommend Interactions', () => {
     })
 
     await expect(chatService.selectRecommend('m-rec', 'bad-opt')).rejects.toThrow('Option not found')
+  })
+
+  it('dismissRecommend marks message as invisible', async () => {
+    mockQuery
+      .mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{
+          id: 'm-rec', session_id: 's-1', role: 'assistant', message_type: 'recommend',
+          content: '', metadata: '{}', version_id: null, is_visible_in_history: true, created_at: '2026-05-04T00:00:00Z',
+        }],
+      })
+      .mockResolvedValueOnce({ rowCount: 1 })
+
+    const result = await chatService.dismissRecommend('m-rec', 's-1')
+    expect(result).toBe(true)
+  })
+
+  it('dismissRecommend throws when message not in session', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 0, rows: [] })
+    await expect(chatService.dismissRecommend('m-rec', 'wrong-session')).rejects.toThrow('Recommend message not found in session')
   })
 })
 
@@ -286,7 +322,7 @@ describe('Version Management', () => {
     expect(version.isActive).toBe(false)
   })
 
-  it('switchVersion uses transaction to swap active', async () => {
+  it('switchVersion uses transaction and returns messages', async () => {
     const mockClient = {
       query: vi.fn(),
       release: vi.fn(),
@@ -295,6 +331,7 @@ describe('Version Management', () => {
 
     mockClient.query
       .mockResolvedValueOnce(undefined) // BEGIN
+      .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'v-2' }] }) // version check
       .mockResolvedValueOnce({ rowCount: 1 }) // deactivate old
       .mockResolvedValueOnce({
         rowCount: 1,
@@ -307,8 +344,20 @@ describe('Version Management', () => {
       .mockResolvedValueOnce({ rowCount: 1 }) // update session
       .mockResolvedValueOnce(undefined) // COMMIT
 
-    const version = await chatService.switchVersion('s-1', 'v-2')
-    expect(version.isActive).toBe(true)
+    // getSessionMessages mock for fetching messages after switch
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: '1' }] }) // count
+    mockQuery.mockResolvedValueOnce({
+      rows: [{
+        id: 'm-1', session_id: 's-1', role: 'user', message_type: 'message',
+        content: 'hi', metadata: '{}', version_id: 'v-2', is_visible_in_history: true,
+        created_at: '2026-05-04T00:00:00Z',
+      }],
+    })
+
+    const result = await chatService.switchVersion('s-1', 'v-2')
+    expect(result.version.isActive).toBe(true)
+    expect(result.messages).toHaveLength(1)
+    expect(result.messages[0].versionId).toBe('v-2')
     expect(mockClient.query).toHaveBeenCalledWith('BEGIN')
     expect(mockClient.query).toHaveBeenCalledWith('COMMIT')
     expect(mockClient.release).toHaveBeenCalled()
@@ -323,10 +372,9 @@ describe('Version Management', () => {
 
     mockClient.query
       .mockResolvedValueOnce(undefined) // BEGIN
-      .mockResolvedValueOnce({ rowCount: 0, rows: [] }) // deactivate old (ok)
-      .mockResolvedValueOnce({ rowCount: 0 }) // activate new (not found)
+      .mockResolvedValueOnce({ rowCount: 0 }) // version not found
 
-    await expect(chatService.switchVersion('s-1', 'bad-v')).rejects.toThrow('Version not found')
+    await expect(chatService.switchVersion('s-1', 'bad-v')).rejects.toThrow('Version not found in session')
     expect(mockClient.query).toHaveBeenCalledWith('ROLLBACK')
     expect(mockClient.release).toHaveBeenCalled()
   })

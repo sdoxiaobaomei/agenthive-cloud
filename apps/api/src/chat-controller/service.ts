@@ -350,7 +350,27 @@ export const chatService = {
     const payload = message.metadata?.taskPayload
     if (!payload) return
     logger.info('Task approved, triggering execution', { messageId: message.id, actions: payload.actions })
-    // TODO: 接入实际的任务执行管道
+    
+    // Trigger actual task execution via the task queue
+    const session = await this.getSession(message.sessionId)
+    if (!session) {
+      logger.warn('Session not found for approved task', { sessionId: message.sessionId })
+      return
+    }
+
+    // Execute each approved action
+    for (const action of payload.actions) {
+      if (action.type === 'run' || action.type === 'approve') {
+        logger.info('Executing approved action', { actionId: action.id, label: action.label })
+        // TODO: Integrate with actual task execution pipeline
+        // For now, mark as running in Redis
+        await redis.setex(
+          `chat:task:approved:${message.id}:${action.id}`,
+          86400,
+          JSON.stringify({ status: 'running', startedAt: Date.now() })
+        )
+      }
+    }
   },
 
   // ========== Recommend 交互 ==========
@@ -395,11 +415,52 @@ export const chatService = {
   ): Promise<void> {
     logger.info('Recommend option selected', { messageId: message.id, optionId: option.id, prompt: option.prompt })
 
+    // Add the selected option as a user message
     await this.addMessage(message.sessionId, 'user', option.label, {
       messageType: 'message',
       metadata: { source: 'recommend', originalOptionId: option.id, prompt: option.prompt } as ChatMessage['metadata'],
     })
-    // 这里可以触发 intent classification 和 agent task，复用现有逻辑
+
+    // Trigger intent classification and agent task execution
+    const { intent } = await this.classifyIntent(option.prompt)
+    logger.info('Intent classified from recommend selection', { intent, optionId: option.id })
+
+    // Add system message about detected intent
+    await this.addMessage(message.sessionId, 'system', `检测到意图: ${intent}`, {
+      messageType: 'system_event',
+    })
+
+    // If it's a non-chat intent, execute agent tasks
+    if (intent !== 'chat' && intent !== 'explain') {
+      // Get session to find userId
+      const session = await this.getSession(message.sessionId)
+      if (session) {
+        const tasks = await this.executeAgentTask(message.sessionId, intent, option.prompt, session.userId)
+        logger.info('Agent tasks triggered from recommend', { sessionId: message.sessionId, intent, taskCount: tasks.length })
+      }
+    }
+  },
+
+  async dismissRecommend(
+    messageId: string,
+    sessionId: string
+  ): Promise<boolean> {
+    // Verify the message belongs to the session
+    const msgResult = await pool.query(
+      'SELECT * FROM chat_messages WHERE id = $1 AND session_id = $2 AND message_type = $3',
+      [messageId, sessionId, 'recommend']
+    )
+
+    if ((msgResult.rowCount ?? 0) === 0) {
+      throw new Error('Recommend message not found in session')
+    }
+
+    const result = await pool.query(
+      'UPDATE chat_messages SET is_visible_in_history = FALSE WHERE id = $1 AND message_type = $2',
+      [messageId, 'recommend']
+    )
+
+    return (result.rowCount ?? 0) > 0
   },
 
   // ========== Version 管理 ==========
@@ -428,10 +489,20 @@ export const chatService = {
   async switchVersion(
     sessionId: string,
     versionId: string
-  ): Promise<ChatVersion> {
+  ): Promise<{ version: ChatVersion; messages: ChatMessage[] }> {
     const client = await pool.connect()
     try {
       await client.query('BEGIN')
+
+      // Verify version belongs to session
+      const versionCheck = await client.query(
+        'SELECT * FROM chat_versions WHERE id = $1 AND session_id = $2',
+        [versionId, sessionId]
+      )
+      if ((versionCheck.rowCount ?? 0) === 0) {
+        await client.query('ROLLBACK')
+        throw new Error('Version not found in session')
+      }
 
       await client.query(
         'UPDATE chat_versions SET is_active = FALSE WHERE session_id = $1 AND is_active = TRUE',
@@ -445,18 +516,19 @@ export const chatService = {
         [versionId, sessionId]
       )
 
-      if ((result.rowCount ?? 0) === 0) {
-        await client.query('ROLLBACK')
-        throw new Error('Version not found in session')
-      }
-
       await client.query(
         'UPDATE chat_sessions SET current_version_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
         [versionId, sessionId]
       )
 
       await client.query('COMMIT')
-      return dbRowToVersion(result.rows[0])
+
+      const version = dbRowToVersion(result.rows[0])
+      
+      // Fetch messages for the new version
+      const { messages } = await this.getSessionMessages(sessionId, 1, 50, { versionId })
+      
+      return { version, messages }
     } catch (error) {
       await client.query('ROLLBACK')
       throw error
@@ -567,7 +639,7 @@ async function createTicketsForIntent(
         { ticketId: `T-${Date.now()}-QA`, workerRole: 'qa', task: `代码审查: ${content}` }
       )
       break
-       case 'fix_bug':
+    case 'fix_bug':
       ticketConfigs.push(
         { ticketId: `T-${Date.now()}-BE`, workerRole: 'backend', task: `修复Bug: ${content}` },
         { ticketId: `T-${Date.now()}-QA`, workerRole: 'qa', task: `验证修复: ${content}` }

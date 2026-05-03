@@ -1,6 +1,8 @@
 -- Migration: align chat_messages schema with actual usage
 -- Created: 2026-05-04
 -- Description: 移除废弃的 agent_id，添加 metadata JSONB，与代码层对齐
+-- CHANGELOG: This migration is irreversible. agent_id data is lost once dropped.
+--            If rollback is needed, restore from backup before running down.
 
 -- ${node-pg-migrate}-up
 
