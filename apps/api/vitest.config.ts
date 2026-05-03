@@ -1,9 +1,18 @@
 import { defineConfig } from 'vitest/config'
 import { config } from 'dotenv'
+import path from 'path'
 
 config({ path: '.env.test' })
 
 export default defineConfig({
+  resolve: {
+    extensionAlias: {
+      '.js': '.ts',
+    },
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
   test: {
     globals: true,
     environment: 'node',
