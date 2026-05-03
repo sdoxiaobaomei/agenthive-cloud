@@ -67,8 +67,6 @@ springdoc:
     urls:
       - name: auth-service
         url: /auth/v3/api-docs
-      - name: user-service
-        url: /users/v3/api-docs
       - name: payment-service
         url: /payments/v3/api-docs
       - name: order-service

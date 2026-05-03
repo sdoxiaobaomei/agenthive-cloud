@@ -43,7 +43,7 @@ while [[ $# -gt 0 ]]; do
     --help)
       echo "Usage: bash scripts/promote-images.sh --tag v1.2.3-gabc1234 [--registry REGISTRY]"
       echo ""
-      echo "Services promoted: api, landing, gateway-service, auth-service, user-service,"
+      echo "Services promoted: api, landing, gateway-service, auth-service, payment-service,"
       echo "                   payment-service, order-service, cart-service, logistics-service"
       exit 0
       ;;
@@ -65,7 +65,6 @@ SERVICES=(
   "agenthive/landing"
   "agenthive/gateway-service"
   "agenthive/auth-service"
-  "agenthive/user-service"
   "agenthive/payment-service"
   "agenthive/order-service"
   "agenthive/cart-service"

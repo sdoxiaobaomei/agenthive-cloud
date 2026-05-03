@@ -1,0 +1,49 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agenthive-ingress-localhost
+  namespace: agenthive
+  labels:
+    app.kubernetes.io/name: agenthive
+    app.kubernetes.io/component: testing
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /api/auth
+        pathType: Prefix
+        backend:
+          service:
+            name: gateway-service
+            port:
+              number: 8080
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: gateway-service
+            port:
+              number: 8080
+      - path: /socket.io
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 3001
+      - path: /chat
+        pathType: Prefix
+        backend:
+          service:
+            name: api
+            port:
+              number: 3001
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: landing
+            port:
+              number: 3000

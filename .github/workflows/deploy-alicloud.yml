@@ -88,8 +88,8 @@ jobs:
       - name: Build Java services
         run: |
           cd apps/java
-          echo "Building gateway-service, auth-service, user-service..."
-          mvn clean package -pl gateway-service,auth-service,user-service,payment-service,order-service,cart-service,logistics-service -am -DskipTests
+          echo "Building gateway-service, auth-service..."
+          mvn clean package -pl gateway-service,auth-service,payment-service,order-service,cart-service,logistics-service -am -DskipTests
 
       # ---------- Setup Docker ----------
       - name: Set up QEMU
@@ -161,19 +161,6 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
 
-      - name: Extract metadata for User Service
-        id: meta-user
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/user-service
-          tags: |
-            type=sha,prefix=,suffix=,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-
-      - name: Extract metadata for Payment Service
-        id: meta-payment
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.NAMESPACE }}/payment-service
@@ -277,19 +264,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push User Service image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./apps/java/user-service
-          file: ./apps/java/user-service/Dockerfile
-          push: true
-          tags: ${{ steps.meta-user.outputs.tags }}
-          labels: ${{ steps.meta-user.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push Payment Service image
-        uses: docker/build-push-action@v5
         with:
           context: ./apps/java/payment-service
           file: ./apps/java/payment-service/Dockerfile

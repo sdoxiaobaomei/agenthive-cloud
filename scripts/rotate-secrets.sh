@@ -200,7 +200,6 @@ trigger_rollout() {
     "landing"
     "gateway-service"
     "auth-service"
-    "user-service"
     "payment-service"
     "order-service"
     "cart-service"

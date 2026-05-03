@@ -130,7 +130,6 @@
   | 服务 | `spring.application.name` | 网关路由 URI |
   |------|---------------------------|--------------|
   | 认证服务 | `auth-service` | `lb://auth-service` |
-  | 用户服务 | `user-service` | `lb://user-service` |
   | 订单服务 | `order-service` | `lb://order-service` |
   | 支付服务 | `payment-service` | `lb://payment-service` |
   | 购物车服务 | `cart-service` | `lb://cart-service` |
