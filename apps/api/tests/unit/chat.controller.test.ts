@@ -172,7 +172,7 @@ describe('approveTask', () => {
     await approveTask(req, res)
 
     expect(mockGetSession).toHaveBeenCalledWith('sess-1')
-    expect(mockApproveTask).toHaveBeenCalledWith('m-1', 'approve', 'go ahead')
+    expect(mockApproveTask).toHaveBeenCalledWith('m-1', 'sess-1', 'approve', 'go ahead')
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 200 }))
   })
 
@@ -202,7 +202,7 @@ describe('selectRecommend', () => {
     await selectRecommend(req, res)
 
     expect(mockGetSession).toHaveBeenCalledWith('sess-1')
-    expect(mockSelectRecommend).toHaveBeenCalledWith('m-rec', 'opt-1')
+    expect(mockSelectRecommend).toHaveBeenCalledWith('m-rec', 'sess-1', 'opt-1')
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 200 }))
   })
 

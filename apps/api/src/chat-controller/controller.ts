@@ -322,7 +322,7 @@ export const approveTask = async (req: Request, res: Response) => {
       return res.status(404).json({ code: 404, message: '会话不存在', data: null })
     }
 
-    const updated = await chatService.approveTask(messageId, parseResult.data.action, parseResult.data.reason)
+    const updated = await chatService.approveTask(messageId, sessionId, parseResult.data.action, parseResult.data.reason)
     res.json({ code: 200, message: 'success', data: updated })
   } catch (error: any) {
     logger.error('Failed to approve task', error instanceof Error ? error : undefined)
@@ -347,7 +347,7 @@ export const selectRecommend = async (req: Request, res: Response) => {
       return res.status(404).json({ code: 404, message: '会话不存在', data: null })
     }
 
-    const updated = await chatService.selectRecommend(messageId, parseResult.data.optionId)
+    const updated = await chatService.selectRecommend(messageId, sessionId, parseResult.data.optionId)
     res.json({ code: 200, message: 'success', data: updated })
   } catch (error: any) {
     logger.error('Failed to select recommend', error instanceof Error ? error : undefined)

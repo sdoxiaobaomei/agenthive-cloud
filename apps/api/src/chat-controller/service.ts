@@ -316,16 +316,17 @@ export const chatService = {
 
   async approveTask(
     messageId: string,
+    sessionId: string,
     action: 'approve' | 'decline',
     reason?: string
   ): Promise<ChatMessage> {
     const msgResult = await pool.query(
-      'SELECT * FROM chat_messages WHERE id = $1 AND message_type = $2',
-      [messageId, 'task']
+      'SELECT * FROM chat_messages WHERE id = $1 AND session_id = $2 AND message_type = $3',
+      [messageId, sessionId, 'task']
     )
 
     if ((msgResult.rowCount ?? 0) === 0) {
-      throw new Error('Task message not found')
+      throw new Error('Task message not found in session')
     }
 
     const message = dbRowToMessage(msgResult.rows[0])
@@ -377,15 +378,16 @@ export const chatService = {
 
   async selectRecommend(
     messageId: string,
+    sessionId: string,
     optionId: string
   ): Promise<ChatMessage> {
     const msgResult = await pool.query(
-      'SELECT * FROM chat_messages WHERE id = $1 AND message_type = $2',
-      [messageId, 'recommend']
+      'SELECT * FROM chat_messages WHERE id = $1 AND session_id = $2 AND message_type = $3',
+      [messageId, sessionId, 'recommend']
     )
 
     if ((msgResult.rowCount ?? 0) === 0) {
-      throw new Error('Recommend message not found')
+      throw new Error('Recommend message not found in session')
     }
 
     const message = dbRowToMessage(msgResult.rows[0])

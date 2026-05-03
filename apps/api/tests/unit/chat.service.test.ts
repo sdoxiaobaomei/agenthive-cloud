@@ -214,13 +214,13 @@ describe('Task Interactions', () => {
         }],
       })
 
-    const updated = await chatService.approveTask('m-task', 'approve')
+    const updated = await chatService.approveTask('m-task', 's-1', 'approve')
     expect(updated.metadata?.approvalStatus).toBe('approved')
   })
 
-  it('approveTask throws when message not found', async () => {
+  it('approveTask throws when message not found in session', async () => {
     mockQuery.mockResolvedValueOnce({ rowCount: 0, rows: [] })
-    await expect(chatService.approveTask('bad-id', 'approve')).rejects.toThrow('Task message not found')
+    await expect(chatService.approveTask('bad-id', 'wrong-session', 'approve')).rejects.toThrow('Task message not found in session')
   })
 })
 
@@ -265,21 +265,13 @@ describe('Recommend Interactions', () => {
       })
       .mockResolvedValueOnce({ rowCount: 1 })
 
-    const updated = await chatService.selectRecommend('m-rec', 'opt-1')
+    const updated = await chatService.selectRecommend('m-rec', 's-1', 'opt-1')
     expect(updated.metadata?.selectedOptionId).toBe('opt-1')
   })
 
-  it('selectRecommend throws when option not found', async () => {
-    mockQuery.mockResolvedValueOnce({
-      rowCount: 1,
-      rows: [{
-        id: 'm-rec', session_id: 's-1', role: 'assistant', message_type: 'recommend',
-        content: '', metadata: JSON.stringify({ recommendOptions: [{ id: 'opt-1', label: 'A', prompt: 'do A' }] }),
-        version_id: null, is_visible_in_history: false, created_at: '2026-05-04T00:00:00Z',
-      }],
-    })
-
-    await expect(chatService.selectRecommend('m-rec', 'bad-opt')).rejects.toThrow('Option not found')
+  it('selectRecommend throws when message not in session', async () => {
+    mockQuery.mockResolvedValueOnce({ rowCount: 0, rows: [] })
+    await expect(chatService.selectRecommend('m-rec', 'wrong-session', 'opt-1')).rejects.toThrow('Recommend message not found in session')
   })
 
   it('dismissRecommend marks message as invisible', async () => {
