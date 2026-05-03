@@ -13,6 +13,7 @@
 import { pool } from '../src/config/database.js'
 import { readFileSync, readdirSync, existsSync, writeFileSync } from 'fs'
 import { join, basename } from 'path'
+import crypto from 'crypto'
 import logger from '../src/utils/logger.js'
 
 const MIGRATIONS_DIR = join(__dirname, '../src/db/migrations')
@@ -147,7 +148,6 @@ function getPendingMigrations(applied: Set<string>): string[] {
  * 计算 SQL 文件的校验和
  */
 function calculateChecksum(content: string): string {
-  const crypto = await import('crypto')
   return crypto.createHash('sha256').update(content).digest('hex').substring(0, 16)
 }
 
