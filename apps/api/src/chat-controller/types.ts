@@ -12,12 +12,21 @@ export type ChatIntent =
   | 'explain'
   | 'chat'
 
+export type MessageType = 'message' | 'think' | 'task' | 'recommend' | 'system_event'
+
+export type SessionType = 'default' | 'review' | 'debug' | 'template'
+
+export type ApprovalStatus = 'pending' | 'approved' | 'declined'
+
 export interface ChatSession {
   id: string
   userId: string
+  workspaceId?: string
   projectId?: string
   title?: string
   status: 'active' | 'archived'
+  sessionType: SessionType
+  currentVersionId?: string
   createdAt: string
   updatedAt: string
 }
@@ -25,14 +34,37 @@ export interface ChatSession {
 export interface ChatMessage {
   id: string
   sessionId: string
+  versionId?: string
   role: 'user' | 'assistant' | 'system' | 'agent'
+  messageType: MessageType
   content: string
+  isVisibleInHistory: boolean
   metadata?: {
     intent?: ChatIntent
+    estimatedCost?: number
+    thinkContent?: string
+    thinkSummary?: string
+    taskPayload?: {
+      title: string
+      description: string
+      actions: Array<{
+        id: string
+        label: string
+        type: 'approve' | 'decline' | 'run'
+      }>
+    }
+    approvalStatus?: ApprovalStatus
+    approvalReason?: string
+    recommendOptions?: Array<{
+      id: string
+      label: string
+      prompt: string
+      icon?: string
+    }>
+    selectedOptionId?: string
     tickets?: TicketRef[]
     progress?: number
     agentLogs?: AgentLogRef[]
-    estimatedCost?: number
   }
   createdAt: string
 }
@@ -63,14 +95,58 @@ export interface AgentTask {
   createdAt: string
 }
 
+export interface Workspace {
+  id: string
+  userId: string
+  name: string
+  settings?: Record<string, unknown>
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ChatVersion {
+  id: string
+  sessionId: string
+  versionNumber: number
+  title: string
+  description?: string
+  baseMessageId?: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CreateSessionInput {
   userId: string
+  workspaceId?: string
   projectId?: string
   title?: string
+  sessionType?: SessionType
 }
 
 export interface SendMessageInput {
   content: string
+  messageType?: MessageType
+  metadata?: Record<string, unknown>
+}
+
+export interface ApproveTaskInput {
+  action: 'approve' | 'decline'
+  reason?: string
+}
+
+export interface SelectRecommendInput {
+  optionId: string
+}
+
+export interface CreateVersionInput {
+  title: string
+  description?: string
+  baseMessageId?: string
+}
+
+export interface SwitchVersionInput {
+  versionId: string
 }
 
 export interface IntentClassificationResult {

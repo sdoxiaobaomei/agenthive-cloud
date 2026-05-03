@@ -5,6 +5,7 @@
  * - Classifies user intent using LLM
  * - Submits agent tasks to Redis Stream queue
  * - Tracks task progress via Redis
+ * - Task approve/decline, recommend select/dismiss, version management
  */
 
 import { pool } from '../config/database.js'
@@ -20,6 +21,9 @@ import type {
   ChatIntent,
   CreateSessionInput,
   IntentClassificationResult,
+  MessageType,
+  ChatVersion,
+  CreateVersionInput,
 } from './types.js'
 import type { LLMMessage } from '../services/llm.js'
 
@@ -42,29 +46,41 @@ function generateId(prefix = 'id'): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
 }
 
-
-
 export const chatService = {
   // ========== Session Management ==========
 
   async createSession(input: CreateSessionInput): Promise<ChatSession> {
     let projectId: string | null = input.projectId || null
-    // 如果传了 projectId，验证项目是否存在；不存在则降级为 null（避免 FK 错误）
+    // 校验 project 存在性
     if (projectId) {
       const projectCheck = await pool.query('SELECT id FROM projects WHERE id = $1', [projectId])
       if ((projectCheck.rowCount ?? 0) === 0) {
-        logger.warn('Project not found for chat session, falling back to null', { projectId, userId: input.userId })
+        logger.warn('Project not found for chat session', { projectId, userId: input.userId })
         projectId = null
       }
     }
+    // 校验 workspace
+    let workspaceId: string | null = input.workspaceId || null
+    if (workspaceId) {
+      const wsCheck = await pool.query('SELECT id FROM workspaces WHERE id = $1 AND user_id = $2', [workspaceId, input.userId])
+      if ((wsCheck.rowCount ?? 0) === 0) {
+        workspaceId = null
+      }
+    }
+    // 如果没传 workspaceId，尝试用 project 的 workspace
+    if (!workspaceId && projectId) {
+      const wsResult = await pool.query('SELECT workspace_id FROM projects WHERE id = $1', [projectId])
+      workspaceId = wsResult.rows[0]?.workspace_id || null
+    }
+
     const result = await pool.query(
-      `INSERT INTO chat_sessions (user_id, project_id, title, status)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO chat_sessions (user_id, workspace_id, project_id, title, status, session_type)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [input.userId, projectId, input.title || '新会话', 'active']
+      [input.userId, workspaceId, projectId, input.title || '新会话', 'active', input.sessionType || 'default']
     )
     const session = dbRowToSession(result.rows[0])
-    logger.info('Chat session created', { sessionId: session.id, userId: input.userId, projectId })
+    logger.info('Chat session created', { sessionId: session.id, userId: input.userId, projectId, workspaceId })
     return session
   },
 
@@ -91,21 +107,36 @@ export const chatService = {
 
   // ========== Message Management ==========
 
-  async addMessage(sessionId: string, role: ChatMessage['role'], content: string, metadata?: ChatMessage['metadata']): Promise<ChatMessage> {
+  async addMessage(
+    sessionId: string,
+    role: ChatMessage['role'],
+    content: string,
+    options: {
+      messageType?: MessageType
+      metadata?: ChatMessage['metadata']
+      versionId?: string
+      isVisibleInHistory?: boolean
+    } = {}
+  ): Promise<ChatMessage> {
+    const {
+      messageType = 'message',
+      metadata,
+      versionId,
+      isVisibleInHistory = true,
+    } = options
+
     const result = await pool.query(
-      `INSERT INTO chat_messages (session_id, role, content, metadata)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO chat_messages (session_id, role, message_type, content, metadata, version_id, is_visible_in_history)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
-      [sessionId, role, content, metadata ? JSON.stringify(metadata) : '{}']
+      [sessionId, role, messageType, content, metadata ? JSON.stringify(metadata) : '{}', versionId || null, isVisibleInHistory]
     )
 
-    // Update session updated_at
     await pool.query(
       'UPDATE chat_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = $1',
       [sessionId]
     )
 
-    // Cache recent messages in Redis
     const msgKey = key('chat:session', sessionId)
     await redis.lpush(msgKey, JSON.stringify(result.rows[0]))
     await redis.ltrim(msgKey, 0, 99)
@@ -114,23 +145,53 @@ export const chatService = {
     return dbRowToMessage(result.rows[0])
   },
 
-  async getSessionMessages(sessionId: string, page = 1, pageSize = 50): Promise<{ messages: ChatMessage[]; total: number }> {
+  async getSessionMessages(
+    sessionId: string,
+    page = 1,
+    pageSize = 50,
+    options: { versionId?: string; includeInvisible?: boolean } = {}
+  ): Promise<{ messages: ChatMessage[]; total: number }> {
+    const { versionId, includeInvisible = false } = options
+
+    const conditions = ['session_id = $1']
+    const params: any[] = [sessionId]
+    let paramIdx = 1
+
+    if (versionId) {
+      paramIdx++
+      conditions.push(`version_id = $${paramIdx}`)
+      params.push(versionId)
+    }
+
+    if (!includeInvisible) {
+      paramIdx++
+      conditions.push(`is_visible_in_history = $${paramIdx}`)
+      params.push(true)
+    }
+
+    const whereClause = conditions.join(' AND ')
+
     const countResult = await pool.query(
-      'SELECT COUNT(*) FROM chat_messages WHERE session_id = $1',
-      [sessionId]
+      `SELECT COUNT(*) FROM chat_messages WHERE ${whereClause}`,
+      params
     )
     const total = parseInt(countResult.rows[0].count)
 
+    paramIdx++
+    params.push(pageSize)
+    paramIdx++
+    params.push((page - 1) * pageSize)
+
     const result = await pool.query(
       `SELECT * FROM chat_messages
-       WHERE session_id = $1
-       ORDER BY created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [sessionId, pageSize, (page - 1) * pageSize]
+       WHERE ${whereClause}
+       ORDER BY created_at ASC
+       LIMIT $${paramIdx - 1} OFFSET $${paramIdx}`,
+      params
     )
 
     return {
-      messages: result.rows.reverse().map(dbRowToMessage),
+      messages: result.rows.map(dbRowToMessage),
       total,
     }
   },
@@ -170,14 +231,11 @@ export const chatService = {
     userId?: string,
     estimatedCost?: number
   ): Promise<AgentTask[]> {
-    // Create workspace for this session
     const workspacePath = getChatWorkspacePath(sessionId)
     await redis.setex(key('chat:workspace', sessionId), 86400, workspacePath)
 
-    // Create tickets based on intent
     const tickets = await createTicketsForIntent(sessionId, intent, content, workspacePath)
 
-    // Submit task to Redis Stream queue (async, returns immediately)
     const taskId = generateId('task')
     await enqueueTask({
       taskId,
@@ -191,10 +249,8 @@ export const chatService = {
       estimatedCost,
     })
 
-    // Store taskId → sessionId mapping for progress lookups
     await redis.setex(key('chat:task', sessionId), 86400, taskId)
 
-    // Store userId mapping for billing
     if (userId) {
       await redis.setex(key('chat:task:user', taskId), 86400, userId)
     }
@@ -230,7 +286,6 @@ export const chatService = {
   ): Promise<string> {
     const llmService = getLLMService()
 
-    // Build conversation context from recent messages
     const { messages } = await this.getSessionMessages(sessionId, 1, 20)
     const conversationMessages: LLMMessage[] = messages.map((m) => ({
       role: m.role === 'agent' ? 'assistant' : m.role,
@@ -253,9 +308,169 @@ export const chatService = {
       return result.content.trim()
     } catch (error) {
       logger.error('LLM reply generation failed', error instanceof Error ? error : undefined, { sessionId, intent })
-      // Fallback to static response
       return buildStaticResponse(intent, tasks)
     }
+  },
+
+  // ========== Task 交互 ==========
+
+  async approveTask(
+    messageId: string,
+    action: 'approve' | 'decline',
+    reason?: string
+  ): Promise<ChatMessage> {
+    const msgResult = await pool.query(
+      'SELECT * FROM chat_messages WHERE id = $1 AND message_type = $2',
+      [messageId, 'task']
+    )
+
+    if ((msgResult.rowCount ?? 0) === 0) {
+      throw new Error('Task message not found')
+    }
+
+    const message = dbRowToMessage(msgResult.rows[0])
+    const metadata = message.metadata || {}
+
+    metadata.approvalStatus = action === 'approve' ? 'approved' : 'declined'
+    if (reason) metadata.approvalReason = reason
+
+    const updateResult = await pool.query(
+      `UPDATE chat_messages SET metadata = $1 WHERE id = $2 RETURNING *`,
+      [JSON.stringify(metadata), messageId]
+    )
+
+    if (action === 'approve') {
+      await this.onTaskApproved(message)
+    }
+
+    return dbRowToMessage(updateResult.rows[0])
+  },
+
+  async onTaskApproved(message: ChatMessage): Promise<void> {
+    const payload = message.metadata?.taskPayload
+    if (!payload) return
+    logger.info('Task approved, triggering execution', { messageId: message.id, actions: payload.actions })
+    // TODO: 接入实际的任务执行管道
+  },
+
+  // ========== Recommend 交互 ==========
+
+  async selectRecommend(
+    messageId: string,
+    optionId: string
+  ): Promise<ChatMessage> {
+    const msgResult = await pool.query(
+      'SELECT * FROM chat_messages WHERE id = $1 AND message_type = $2',
+      [messageId, 'recommend']
+    )
+
+    if ((msgResult.rowCount ?? 0) === 0) {
+      throw new Error('Recommend message not found')
+    }
+
+    const message = dbRowToMessage(msgResult.rows[0])
+    const metadata = message.metadata || {}
+    const options = metadata.recommendOptions || []
+
+    const selected = options.find((o: any) => o.id === optionId)
+    if (!selected) {
+      throw new Error('Option not found')
+    }
+
+    metadata.selectedOptionId = optionId
+
+    const updateResult = await pool.query(
+      `UPDATE chat_messages SET metadata = $1 WHERE id = $2 RETURNING *`,
+      [JSON.stringify(metadata), messageId]
+    )
+
+    await this.onRecommendSelected(message, selected)
+
+    return dbRowToMessage(updateResult.rows[0])
+  },
+
+  async onRecommendSelected(
+    message: ChatMessage,
+    option: { id: string; label: string; prompt: string }
+  ): Promise<void> {
+    logger.info('Recommend option selected', { messageId: message.id, optionId: option.id, prompt: option.prompt })
+
+    await this.addMessage(message.sessionId, 'user', option.label, {
+      messageType: 'message',
+      metadata: { source: 'recommend', originalOptionId: option.id, prompt: option.prompt } as ChatMessage['metadata'],
+    })
+    // 这里可以触发 intent classification 和 agent task，复用现有逻辑
+  },
+
+  // ========== Version 管理 ==========
+
+  async createVersion(
+    sessionId: string,
+    input: CreateVersionInput,
+    userId: string
+  ): Promise<ChatVersion> {
+    const maxResult = await pool.query(
+      'SELECT COALESCE(MAX(version_number), 0) as max FROM chat_versions WHERE session_id = $1',
+      [sessionId]
+    )
+    const nextVersion = (maxResult.rows[0]?.max || 0) + 1
+
+    const result = await pool.query(
+      `INSERT INTO chat_versions (session_id, version_number, title, description, base_message_id, is_active, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [sessionId, nextVersion, input.title, input.description || null, input.baseMessageId || null, false, userId]
+    )
+
+    return dbRowToVersion(result.rows[0])
+  },
+
+  async switchVersion(
+    sessionId: string,
+    versionId: string
+  ): Promise<ChatVersion> {
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+
+      await client.query(
+        'UPDATE chat_versions SET is_active = FALSE WHERE session_id = $1 AND is_active = TRUE',
+        [sessionId]
+      )
+
+      const result = await client.query(
+        `UPDATE chat_versions SET is_active = TRUE, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND session_id = $2
+         RETURNING *`,
+        [versionId, sessionId]
+      )
+
+      if ((result.rowCount ?? 0) === 0) {
+        await client.query('ROLLBACK')
+        throw new Error('Version not found in session')
+      }
+
+      await client.query(
+        'UPDATE chat_sessions SET current_version_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+        [versionId, sessionId]
+      )
+
+      await client.query('COMMIT')
+      return dbRowToVersion(result.rows[0])
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
+  },
+
+  async listVersions(sessionId: string): Promise<ChatVersion[]> {
+    const result = await pool.query(
+      'SELECT * FROM chat_versions WHERE session_id = $1 ORDER BY version_number ASC',
+      [sessionId]
+    )
+    return result.rows.map(dbRowToVersion)
   },
 }
 
@@ -352,7 +567,7 @@ async function createTicketsForIntent(
         { ticketId: `T-${Date.now()}-QA`, workerRole: 'qa', task: `代码审查: ${content}` }
       )
       break
-    case 'fix_bug':
+       case 'fix_bug':
       ticketConfigs.push(
         { ticketId: `T-${Date.now()}-BE`, workerRole: 'backend', task: `修复Bug: ${content}` },
         { ticketId: `T-${Date.now()}-QA`, workerRole: 'qa', task: `验证修复: ${content}` }
@@ -374,11 +589,9 @@ async function createTicketsForIntent(
       )
       break
     default:
-      // chat/explain: no tickets
       return []
   }
 
-  // 获取 session 的 project_id
   const sessionResult = await pool.query(
     'SELECT project_id FROM chat_sessions WHERE id = $1',
     [sessionId]
@@ -403,21 +616,28 @@ function dbRowToSession(row: any): ChatSession {
   return {
     id: row.id,
     userId: row.user_id,
+    workspaceId: row.workspace_id,
     projectId: row.project_id,
     title: row.title,
     status: row.status,
+    sessionType: row.session_type || 'default',
+    currentVersionId: row.current_version_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
 }
 
 function dbRowToMessage(row: any): ChatMessage {
+  const metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata
   return {
     id: row.id,
     sessionId: row.session_id,
+    versionId: row.version_id,
     role: row.role,
+    messageType: row.message_type || 'message',
     content: row.content,
-    metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata,
+    isVisibleInHistory: row.is_visible_in_history ?? true,
+    metadata,
     createdAt: row.created_at,
   }
 }
@@ -434,5 +654,19 @@ function dbRowToAgentTask(row: any): AgentTask {
     startedAt: row.started_at,
     completedAt: row.completed_at,
     createdAt: row.created_at,
+  }
+}
+
+function dbRowToVersion(row: any): ChatVersion {
+  return {
+    id: row.id,
+    sessionId: row.session_id,
+    versionNumber: row.version_number,
+    title: row.title,
+    description: row.description,
+    baseMessageId: row.base_message_id,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }
 }
