@@ -1,33 +1,139 @@
-# ⚠️ DEPRECATED — 此工作流已废弃
-# 请使用 deploy-k3s.yml 进行 K3s 部署
-# 保留此文件作为回退方案（2 周后删除）
-#
-# 原功能：Docker Compose 部署到 ECS
-# 替代方案：.github/workflows/deploy-k3s.yml
-
-name: '[DEPRECATED] Deploy to ECS via Docker Compose'
+name: 🚀 Deploy
 
 on:
+  workflow_run:
+    workflows: ['🐳 Build & Push Images']
+    types: [completed]
+    branches: [master, main]
   workflow_dispatch:
     inputs:
-      rebuild:
-        description: '强制重新构建镜像 (no-cache)'
+      image_tag:
+        description: '镜像标签 (默认: git sha)'
+        required: false
+        default: ''
+      environment:
+        description: '部署环境'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      dry_run:
+        description: '仅渲染模板，不实际部署'
         required: false
         default: 'false'
+      namespace:
+        description: 'K8s 命名空间'
+        required: false
+        default: 'agenthive'
 
 env:
   REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
-  COMPOSE_FILE: docker-compose.prod.yml
-  ENV_FILE: .env.prod
+  NAMESPACE: namespace-alpha
+  CHART_PATH: chart/agenthive
+  K3S_HOST: 39.107.87.106
+  HELM_TIMEOUT: 10m
 
 jobs:
+  # ===========================================
+  # Deploy via Helm
+  # ===========================================
   deploy:
-    name: '[DEPRECATED] Deploy to ECS'
+    name: 🚀 Deploy to K3s
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: ${{ github.event.inputs.environment || 'staging' }}
+      url: https://agenthive.cloud
     steps:
-      - name: ⚠️ Deprecated
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🏷️ Determine image tag
+        id: tag
         run: |
-          echo "⚠️ 此工作流已废弃。请使用 deploy-k3s.yml 进行 K3s 部署。"
-          echo "如需回退到 Docker Compose，请手动在 ECS 上执行："
-          echo "  docker compose -f docker-compose.prod.yml up -d"
-          exit 1
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            TAG="${{ github.event.inputs.image_tag }}"
+          else
+            TAG="sha-$(git rev-parse --short HEAD)"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Using image tag: $TAG"
+
+      - name: 🔐 Setup kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.K3S_KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: 🚀 Helm Upgrade (Dry Run)
+        if: github.event.inputs.dry_run == 'true'
+        run: |
+          helm template agenthive ${{ env.CHART_PATH }} \
+            -f chart/agenthive/values.prod.yaml \
+            -n ${{ github.event.inputs.namespace || 'agenthive' }}
+
+      - name: 🚀 Helm Upgrade
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          TAG="${{ steps.tag.outputs.tag }}"
+          VALUES_FILE="chart/agenthive/values.prod.yaml"
+          
+          # Staging uses dev values for smaller resource footprint
+          if [ "${{ github.event.inputs.environment }}" = "staging" ]; then
+            VALUES_FILE="chart/agenthive/values.dev.yaml"
+          fi
+          
+          helm upgrade --install agenthive ${{ env.CHART_PATH }} \
+            -f $VALUES_FILE \
+            --set api.image.tag="$TAG" \
+            --set landing.image.tag="$TAG" \
+            --set javaServices.defaults.image.tag="$TAG" \
+            -n ${{ github.event.inputs.namespace || 'agenthive' }} \
+            --create-namespace \
+            --atomic \
+            --timeout ${{ env.HELM_TIMEOUT }} \
+            --wait \
+            --cleanup-on-fail
+
+      - name: ⏳ Wait for rollout
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          kubectl rollout status deployment/api -n ${{ github.event.inputs.namespace || 'agenthive' }} --timeout=5m
+          kubectl rollout status deployment/landing -n ${{ github.event.inputs.namespace || 'agenthive' }} --timeout=5m
+
+      - name: 🩺 Health Check
+        if: github.event.inputs.dry_run != 'true'
+        run: |
+          if [ -f scripts/deploy/verify-deployment.sh ]; then
+            bash scripts/deploy/verify-deployment.sh \
+              --namespace ${{ github.event.inputs.namespace || 'agenthive' }} \
+              --timeout 180
+          else
+            echo "⚠️ verify-deployment.sh not found, skipping health check"
+          fi
+
+      - name: 🧹 Rollback on failure
+        if: failure() && github.event.inputs.dry_run != 'true'
+        run: |
+          echo "⚠️ Deployment failed. Rolling back..."
+          if [ -f scripts/deploy/rollback-k3s.sh ]; then
+            bash scripts/deploy/rollback-k3s.sh \
+              --namespace ${{ github.event.inputs.namespace || 'agenthive' }} \
+              --revision -1
+          else
+            helm rollback agenthive -n ${{ github.event.inputs.namespace || 'agenthive' }}
+          fi
+
+      - name: 📊 Deploy Summary
+        if: always()
+        run: |
+          echo "## 🚀 Deploy Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | ${{ github.event.inputs.environment || 'staging' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Image Tag** | ${{ steps.tag.outputs.tag }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Namespace** | ${{ github.event.inputs.namespace || 'agenthive' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Status** | ${{ job.status }} |" >> $GITHUB_STEP_SUMMARY
