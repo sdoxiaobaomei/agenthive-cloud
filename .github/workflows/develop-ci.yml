@@ -88,7 +88,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
 
       # 3c. 设置 JDK 21（Java 服务需要）
       - name: Set up JDK 21
