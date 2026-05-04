@@ -116,15 +116,37 @@ javaServices:
         enabled: false
 
 # ----------------------------------------------------------------------------
-# Ingress — Dev (localhost only)
+# Ingress — Dev (localhost + agenthive.local)
 # ----------------------------------------------------------------------------
 ingress:
   className: nginx
   tls:
     enabled: false
   hosts:
+    - host: localhost
+      paths:
+        - path: /api/auth
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /api
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /socket.io
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /
+          pathType: Prefix
+          service: landing
+          port: 3000
     - host: agenthive.local
       paths:
+        - path: /api/auth
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
         - path: /api
           pathType: Prefix
           service: gateway-service

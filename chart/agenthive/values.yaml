@@ -632,7 +632,11 @@ ingress:
   enabled: true
   name: agenthive-ingress
   className: nginx
-  annotations: {}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
   tls:
     enabled: false
     secretName: ""
@@ -640,11 +644,19 @@ ingress:
   hosts:
     - host: agenthive.local
       paths:
+        - path: /api/auth
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
         - path: /api
           pathType: Prefix
           service: gateway-service
           port: 8080
         - path: /socket.io
+          pathType: Prefix
+          service: api
+          port: 3001
+        - path: /chat
           pathType: Prefix
           service: api
           port: 3001
