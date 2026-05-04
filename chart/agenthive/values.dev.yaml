@@ -25,7 +25,7 @@ api:
   image:
     registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/api
-    tag: "845fddb"
+    tag: "develop-latest"
   resources:
     requests:
       memory: 256Mi
@@ -46,7 +46,7 @@ landing:
   image:
     registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/landing
-    tag: "845fddb"
+    tag: "develop-latest"
   resources:
     requests:
       memory: 128Mi
@@ -67,7 +67,7 @@ javaServices:
     image:
       registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
       repositoryPrefix: namespace-alpha
-      tag: "845fddb"
+      tag: "develop-latest"
     replicas: 1
     resources:
       requests:
