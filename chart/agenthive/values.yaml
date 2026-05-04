@@ -381,7 +381,7 @@ javaServices:
   ingress:
     enabled: false
     name: agenthive-java-ingress
-    className: traefik
+    className: nginx
     annotations: {}
     tls:
       enabled: false
@@ -631,7 +631,7 @@ javaServices:
 ingress:
   enabled: true
   name: agenthive-ingress
-  className: traefik
+  className: nginx
   annotations: {}
   tls:
     enabled: false
