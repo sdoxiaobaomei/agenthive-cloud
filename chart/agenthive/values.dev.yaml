@@ -67,7 +67,7 @@ javaServices:
     image:
       registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
       repositoryPrefix: namespace-alpha
-      tag: "develop-latest"
+      tag: "845fddb"
     replicas: 1
     resources:
       requests:
@@ -143,8 +143,8 @@ ingress:
           port: 8080
         - path: /socket.io
           pathType: Prefix
-          service: gateway-service
-          port: 8080
+          service: api
+          port: 3001
         - path: /
           pathType: Prefix
           service: landing
@@ -161,8 +161,8 @@ ingress:
           port: 8080
         - path: /socket.io
           pathType: Prefix
-          service: gateway-service
-          port: 8080
+          service: api
+          port: 3001
         - path: /
           pathType: Prefix
           service: landing
