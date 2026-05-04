@@ -1,166 +1,196 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: agenthive
+# 开发环境命名空间
+namespace: agenthive-cloud
 
 resources:
-  - ../../base
-  - ../../components/data-layer
-  - nodeport-services.yaml
-  - localhost-ingress.yaml
+- ../../base
+- ../../components/data-layer
+- nodeport-services.yaml
+- localhost-ingress.yaml
 
-# 本地覆盖：使用本地镜像
+# ============================================================
+# 镜像策略：精确版本号 + 可回滚 + 直接 promote 到 prod
+# ============================================================
+# 说明：
+# - Dev 环境使用精确的 commit SHA 标签（如 d67252d），而非 latest
+# - 好处：
+#   1. 可精确回滚到任意历史版本
+#   2. develop 构建的镜像可直接 promote 到 prod（无需重新构建）
+#   3. prod 复用 dev 验证过的同一镜像，保证一致性
+# - CI/CD 流程：
+#   GitHub Actions 构建 → push ${SHA} 标签到 ACR → update kustomization.yaml
+#   → ArgoCD 同步 → 验证通过 → promote 到 prod（只改 tag，不改镜像）
+#
+# 注意：newTag 由 CI workflow 动态设置（kustomize edit set image），
+# 这里保留占位值，实际部署时会被覆盖。
+
+  # Node.js 前端/服务（占位，CI 会覆盖为实际 SHA）
+  # Java 微服务（占位，CI 会覆盖为实际 SHA）
+  # 基础设施（固定版本，不随业务代码更新）
 images:
-  - name: agenthive/api
-    newTag: latest
-  - name: agenthive/landing
-    newTag: latest
+- name: agenthive/api
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/api
+  newTag: develop-placeholder
+- name: agenthive/auth-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/auth-service
+  newTag: develop-placeholder
+- name: agenthive/cart-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/cart-service
+  newTag: develop-placeholder
+- name: agenthive/gateway-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/gateway-service
+  newTag: develop-placeholder
+- name: agenthive/landing
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/landing
+  newTag: develop-placeholder
+- name: agenthive/logistics-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/logistics-service
+  newTag: develop-placeholder
+- name: agenthive/order-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/order-service
+  newTag: develop-placeholder
+- name: agenthive/payment-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/payment-service
+  newTag: develop-placeholder
+- name: api
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/api
+  newTag: 9d3e5f5
+- name: auth-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/auth-service
+  newTag: 9d3e5f5
+- name: cart-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/cart-service
+  newTag: 9d3e5f5
+- name: gateway-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/gateway-service
+  newTag: 9d3e5f5
+- name: landing
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/landing
+  newTag: 9d3e5f5
+- name: logistics-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/logistics-service
+  newTag: 9d3e5f5
+- name: nacos/nacos-server
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/nacos-server
+  newTag: v2.3.0
+- name: order-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/order-service
+  newTag: 9d3e5f5
+- name: payment-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/payment-service
+  newTag: 9d3e5f5
 
-# 本地覆盖：使用本地镜像，不拉取远程
-# Dev 镜像策略：
-#   1. 开发者在本地构建镜像（scripts/build-local-k8s.sh）
-#   2. 测试通过后，运行 scripts/promote-images.sh --tag <version>
-#      将所有镜像统一 tag 并推送到生产 registry
-#   3. Prod 使用相同的 tag，确保 dev/prod 镜像一致性
+# ============================================================
+# 全局补丁：副本数统一为 1（开发环境资源限制）
+# ============================================================
+# 说明：
+# - 开发环境（PC Docker Desktop）资源有限，单副本即可。
+# - 如需测试多副本场景，可手动 kubectl scale 或临时修改。
+# - 生产环境（overlays/production）副本数由 HPA 控制。
+
+replicas:
+- count: 1
+  name: api
+- count: 1
+  name: landing
+- count: 1
+  name: auth-service
+- count: 1
+  name: cart-service
+- count: 1
+  name: gateway-service
+- count: 1
+  name: logistics-service
+- count: 1
+  name: order-service
+- count: 1
+  name: payment-service
+- count: 1
+  name: nacos
+- count: 1
+  name: redis
+- count: 1
+  name: rabbitmq
+
+# ============================================================
+# 补丁列表
+# ============================================================
+
+  # 1. Dev 环境禁用 OpenTelemetry（collector 未部署时避免日志噪音）
+
+  # 2. Gateway CORS: local 环境通配端口，零摩擦开发体验
+
+  # 4. Landing Service targetPort 修正（Dockerfile 暴露 80，base 写 3000）
+
+  # 5. Gateway Service 在 dev 环境使用 ClusterIP 而非 LoadBalancer
 patches:
-  - target:
-      kind: Deployment
-      name: api
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
-  - target:
-      kind: Deployment
-      name: landing
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
-
-# 本地资源限制调整
-  - target:
-      kind: Deployment
-      name: api
-    patch: |-
-      - op: replace
-        path: /spec/replicas
-        value: 1
-  - target:
-      kind: Deployment
-      name: landing
-    patch: |-
-      - op: replace
-        path: /spec/replicas
-        value: 1
-
-# Dev 环境禁用 OpenTelemetry（collector 未部署时避免日志噪音）
-  - target:
-      kind: ConfigMap
-      name: app-config
-    patch: |-
-      - op: replace
-        path: /data/OTEL_SDK_DISABLED
-        value: "true"
-      - op: replace
-        path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
-        value: ""
-
-# Java 服务同样使用本地镜像
-  - target:
-      kind: Deployment
-      name: gateway-service
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
-  - target:
-      kind: Deployment
-      name: auth-service
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
-  - target:
-      kind: Deployment
-      name: payment-service
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
-  - target:
-      kind: Deployment
-      name: order-service
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
-  - target:
-      kind: Deployment
-      name: cart-service
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
-  - target:
-      kind: Deployment
-      name: logistics-service
-    patch: |-
-      - op: replace
-        path: /spec/template/spec/containers/0/imagePullPolicy
-        value: Never
-
-  # Gateway CORS: local 环境通配端口，零摩擦开发体验
-  - target:
-      kind: ConfigMap
-      name: gateway-cors-config
-    patch: |-
-      - op: replace
-        path: /data
-        value:
-          application.yml: |
-            spring:
-              cloud:
-                gateway:
-                  globalcors:
-                    add-to-simple-url-handler-mapping: true
-                    cors-configurations:
-                      '[/**]':
-                        allowedOrigins:
-                          - "http://agenthive.local:8080"
-                          - "http://agenthive.local:3000"
-                          - "http://localhost:3000"
-                          - "http://localhost:5173"
-                        allowedMethods:
-                          - GET
-                          - POST
-                          - PUT
-                          - DELETE
-                          - PATCH
-                          - OPTIONS
-                        allowedHeaders:
-                          - Content-Type
-                          - Accept
-                          - Authorization
-                          - X-Query-Params
-                          - X-Requested-With
-                          - X-User-Id
-                          - X-User-Name
-                          - X-User-Role
-                        allowCredentials: true
-                        maxAge: 3600
-
-  # Gateway Service 在 dev 环境使用 ClusterIP 而非 LoadBalancer
-  - target:
-      kind: Service
-      name: gateway-service
-    patch: |-
-      - op: replace
-        path: /spec/type
-        value: ClusterIP
+- patch: |-
+    - op: replace
+      path: /data/OTEL_SDK_DISABLED
+      value: "true"
+    - op: replace
+      path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+      value: ""
+  target:
+    kind: ConfigMap
+    name: app-config
+- patch: |-
+    - op: replace
+      path: /data
+      value:
+        application.yml: |
+          spring:
+            cloud:
+              gateway:
+                globalcors:
+                  add-to-simple-url-handler-mapping: true
+                  cors-configurations:
+                    '[/**]':
+                      allowedOrigins:
+                        - "http://agenthive.local:8080"
+                        - "http://agenthive.local:3000"
+                        - "http://localhost:3000"
+                        - "http://localhost:5173"
+                        - "http://localhost:8080"
+                      allowedMethods:
+                        - GET
+                        - POST
+                        - PUT
+                        - DELETE
+                        - PATCH
+                        - OPTIONS
+                      allowedHeaders:
+                        - Content-Type
+                        - Accept
+                        - Authorization
+                        - X-Query-Params
+                        - X-Requested-With
+                        - X-User-Id
+                        - X-User-Name
+                        - X-User-Role
+                      allowCredentials: true
+                      maxAge: 3600
+  target:
+    kind: ConfigMap
+    name: gateway-cors-config
+- patch: |-
+    - op: replace
+      path: /spec/ports/0/targetPort
+      value: 80
+  target:
+    kind: Service
+    name: landing
+- patch: |-
+    - op: replace
+      path: /spec/type
+      value: ClusterIP
+  target:
+    kind: Service
+    name: gateway-service
 
 labels:
-  - pairs:
-      environment: local
-    includeSelectors: false
-    includeTemplates: true
+- includeTemplates: true
+  pairs:
+    environment: local

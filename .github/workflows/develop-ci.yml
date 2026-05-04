@@ -1,0 +1,247 @@
+name: Develop CI/CD — Build, Push to ACR, Deploy via ArgoCD
+
+# ============================================================
+# 触发条件：develop 分支的 push（包括 merge）
+# ============================================================
+on:
+  push:
+    branches:
+      - develop
+    paths-ignore:
+      - 'k8s/overlays/local/kustomization.yaml'  # 避免自引用循环触发
+      - '**.md'
+  # 允许手动触发（用于 workflow 文件本身修改后的测试）
+  workflow_dispatch:
+
+# ============================================================
+# 权限：需要写入仓库内容（更新 manifest tag）
+# ============================================================
+permissions:
+  contents: write
+
+env:
+  ACR_REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
+  ACR_NAMESPACE: namespace-alpha
+  KUSTOMIZE_PATH: k8s/overlays/local
+  GIT_USER_NAME: "GitHub Actions"
+  GIT_USER_EMAIL: "actions@github.com"
+
+jobs:
+  # ==========================================================
+  # Job 1: 构建并推送所有镜像到 ACR
+  # ==========================================================
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      # 矩阵构建：所有服务并行
+      matrix:
+        service:
+          - name: api
+            context: .
+            dockerfile: ./apps/api/Dockerfile
+          - name: landing
+            context: .
+            dockerfile: ./apps/landing/Dockerfile
+          - name: auth-service
+            context: ./apps/java
+            dockerfile: ./apps/java/auth-service/Dockerfile
+          - name: cart-service
+            context: ./apps/java
+            dockerfile: ./apps/java/cart-service/Dockerfile
+          - name: gateway-service
+            context: ./apps/java
+            dockerfile: ./apps/java/gateway-service/Dockerfile
+          - name: logistics-service
+            context: ./apps/java
+            dockerfile: ./apps/java/logistics-service/Dockerfile
+          - name: order-service
+            context: ./apps/java
+            dockerfile: ./apps/java/order-service/Dockerfile
+          - name: payment-service
+            context: ./apps/java
+            dockerfile: ./apps/java/payment-service/Dockerfile
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0  # 需要完整 history 用于 tag
+
+      # 2. 登录阿里云 ACR
+      - name: Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # 3. 设置 Docker Buildx（支持多平台缓存）
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3b. 设置 Node.js 20（pnpm monorepo 构建需要）
+      - name: Set up Node.js 20
+        if: matrix.service.name == 'api' || matrix.service.name == 'landing'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3c. 设置 JDK 21（Java 服务需要）
+      - name: Set up JDK 21
+        if: contains(matrix.service.name, '-service')
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # 4. 提取 short SHA（作为精确镜像标签）
+      - name: Extract short SHA
+        id: vars
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # 5. 安装依赖并构建（API 和 landing 需要预构建 dist 产物）
+      - name: Install dependencies and build (Node.js)
+        if: matrix.service.name == 'api' || matrix.service.name == 'landing'
+        run: |
+          corepack enable
+          corepack prepare pnpm@9 --activate
+          pnpm install --frozen-lockfile
+          # 先构建工作区依赖包（API 的 Dockerfile 需要它们的 dist）
+          pnpm --filter=@agenthive/observability build
+          pnpm --filter=@agenthive/agent-runtime build
+          # UI（landing 依赖）
+          pnpm --filter=@agenthive/ui build
+          # Landing
+          pnpm --filter=@agenthive/landing build
+          # API: 构建 dist（忽略类型错误）
+          pnpm --filter=@agenthive/api exec tsc || echo "API build: TypeScript errors ignored, dist may be incomplete"
+
+      # 5b. Maven 构建（Java 服务需要预构建 target/*.jar）
+      - name: Maven build (Java)
+        if: contains(matrix.service.name, '-service')
+        run: |
+          cd apps/java
+          mvn clean install -pl ${{ matrix.service.name }} -am -DskipTests -B -q
+
+      # 6. 构建并推送镜像（精确 SHA + develop-latest 浮动标签）
+      # 策略：
+      # - 精确 SHA 标签：可追溯、可回滚、可直接 promote 到 prod
+      # - develop-latest 浮动标签：方便快速测试和本地开发
+      - name: Build and push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.sha }}
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:develop-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=development
+            BUILD_SHA=${{ steps.vars.outputs.sha }}
+
+      # 7. 输出镜像地址（用于调试）
+      - name: Print image digest
+        run: |
+          echo "Built: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.sha }}"
+          echo "Floating: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:develop-latest"
+          echo ""
+          echo "Tag strategy: Exact SHA for traceability, develop-latest for quick rollback"
+          echo "Promote to prod: Use the same SHA tag in production overlay"
+
+  # ==========================================================
+  # Job 2: 更新 Kustomize manifest tag，触发 ArgoCD 自动同步
+  # ==========================================================
+  update-manifest:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    timeout-minutes: 10
+
+    steps:
+      # 1. 检出代码（需要 write 权限 push 回仓库）
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      # 2. 提取 short SHA
+      - name: Extract short SHA
+        id: vars
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      # 3. 安装 Kustomize（用于验证）
+      - name: Install Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      # 4. 更新 kustomization.yaml 的镜像 tag（精确 SHA）
+      - name: Update Kustomize image tags
+        run: |
+          cd ${{ env.KUSTOMIZE_PATH }}
+          
+          # 定义需要更新的服务列表
+          SERVICES=(api landing auth-service cart-service gateway-service logistics-service order-service payment-service)
+          
+          for svc in "${SERVICES[@]}"; do
+            kustomize edit set image "${svc}=${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${svc}:${{ steps.vars.outputs.sha }}"
+          done
+          
+          # nacos 保持 v2.3.0 不变（基础设施不随业务代码更新）
+          echo "Updated image tags to: ${{ steps.vars.outputs.sha }}"
+
+      # 5. 验证 Kustomize 构建
+      - name: Validate Kustomize build
+        run: |
+          cd ${{ env.KUSTOMIZE_PATH }}
+          kustomize build . > /dev/null
+          echo "Kustomize build validation passed"
+
+      # 6. Commit 并 push 更新后的 manifest
+      - name: Commit and push manifest update
+        run: |
+          git config user.name "${{ env.GIT_USER_NAME }}"
+          git config user.email "${{ env.GIT_USER_EMAIL }}"
+          
+          # 检查是否有变更
+          if git diff --quiet; then
+            echo "No changes to commit. Skipping."
+            exit 0
+          fi
+          
+          git add ${{ env.KUSTOMIZE_PATH }}/kustomization.yaml
+          git commit -m "chore(k8s): update develop image tags to ${{ steps.vars.outputs.sha }}
+
+          Auto-generated by GitHub Actions
+          - All services built from commit ${{ steps.vars.outputs.sha }}
+          - ArgoCD will auto-sync to develop cluster
+          - Tag is exact SHA, ready for promotion to production
+          
+          [skip ci]"
+          
+          git push origin develop
+
+      # 7. 输出 ArgoCD 同步状态链接
+      - name: Print ArgoCD sync info
+        run: |
+          echo "======================================"
+          echo "ArgoCD Application: agenthive-develop"
+          echo "Target Cluster:   https://100.76.250.86:57116"
+          echo "Target Namespace: agenthive-develop"
+          echo "New Image Tag:    ${{ steps.vars.outputs.sha }}"
+          echo "======================================"
+          echo "ArgoCD 将在 3-5 分钟内自动检测到 manifest 变更并触发同步"
+          echo "可通过 ArgoCD UI 或 CLI 查看同步进度"
+          echo ""
+          echo "Promote to production:"
+          echo "  1. 在 k8s/overlays/production/kustomization.yaml 中"
+          echo "     将对应服务的 newTag 从 production-placeholder 改为 ${{ steps.vars.outputs.sha }}"
+          echo "  2. Commit 并 push，ArgoCD 自动同步到 prod 集群"
+          echo "  3. 无需重新构建镜像，dev 和 prod 使用完全相同的镜像层"

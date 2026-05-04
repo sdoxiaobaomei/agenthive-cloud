@@ -90,8 +90,8 @@ describe('TaskExecution Service', () => {
       expect(result.status).toBe('completed')
       expect(result.progress).toBe(100)
       expect(result.completedAt).toBeDefined()
-      expect(result.result.success).toBe(true)
-      expect(result.result.output.content).toBe('Hello world')
+      expect(result.result.code).toBe(200)
+      expect(result.result.data.content).toBe('Hello world')
       expect(mockBroadcastTaskProgress).toHaveBeenCalledWith('task-001', 0, { status: 'running' })
       expect(mockBroadcastTaskProgress).toHaveBeenCalledWith('task-001', 100, expect.any(Object))
     })
@@ -163,8 +163,8 @@ describe('TaskExecution Service', () => {
       const result = await service.execute(task)
 
       expect(result.status).toBe('failed')
-      expect(result.result.success).toBe(false)
-      expect(result.result.error).toContain('LLM service unavailable')
+      expect(result.result.code).toBe(500)
+      expect(result.result.message).toContain('LLM service unavailable')
       expect(mockBroadcastTaskProgress).toHaveBeenCalledWith(
         'task-001',
         expect.any(Number),

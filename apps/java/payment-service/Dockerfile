@@ -3,12 +3,12 @@
 
 FROM eclipse-temurin:21-jre-alpine AS builder
 WORKDIR /app
-COPY target/payment-service-*.jar app.jar
+COPY payment-service/target/payment-service-*.jar app.jar
 RUN java -Djarmode=layertools -jar app.jar extract
 
 # Download OpenTelemetry Java Agent for unified observability (dev/prod parity)
 # The agent is enabled/disabled at runtime via OTEL_JAVAAGENT_ENABLED env var
-COPY opentelemetry-javaagent-2.6.0.jar /app/opentelemetry-javaagent.jar
+RUN wget -q https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.6.0/opentelemetry-javaagent.jar -O /app/opentelemetry-javaagent.jar
 
 FROM eclipse-temurin:21-jre-alpine
 
