@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Order Service - Optimized Spring Boot 3 Layered Build with Multi-stage Maven
 
-FROM eclipse-temurin:21-jdk-alpine AS maven-builder
+FROM maven:3.9-eclipse-temurin-21-alpine AS maven-builder
 WORKDIR /app
 
 # Install wget for downloading opentelemetry agent

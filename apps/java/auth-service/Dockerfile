@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Auth Service - Multi-stage Maven Build
 
-FROM eclipse-temurin:21-jdk-alpine AS maven-builder
+FROM maven:3.9-eclipse-temurin-21-alpine AS maven-builder
 WORKDIR /app
 RUN apk add --no-cache wget
 
