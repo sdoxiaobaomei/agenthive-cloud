@@ -10,7 +10,7 @@ RUN java -Djarmode=layertools -jar app.jar extract
 
 # Download OpenTelemetry Java Agent for unified observability (dev/prod parity)
 # The agent is enabled/disabled at runtime via OTEL_JAVAAGENT_ENABLED env var
-COPY opentelemetry-javaagent-2.6.0.jar /app/opentelemetry-javaagent.jar
+RUN wget -q https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.6.0/opentelemetry-javaagent.jar -O /app/opentelemetry-javaagent.jar
 
 # ============ 生产阶段 ============
 FROM eclipse-temurin:21-jre-alpine
