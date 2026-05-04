@@ -3,7 +3,7 @@
 
 FROM eclipse-temurin:21-jre-alpine AS builder
 WORKDIR /app
-COPY target/payment-service-*.jar app.jar
+COPY payment-service/target/payment-service-*.jar app.jar
 RUN java -Djarmode=layertools -jar app.jar extract
 
 # Download OpenTelemetry Java Agent for unified observability (dev/prod parity)
