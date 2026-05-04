@@ -7,7 +7,6 @@
 global:
   labels:
     environment: development
-  imageRegistry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
 
 # ----------------------------------------------------------------------------
 # Local PostgreSQL + Redis (dev only)
@@ -24,6 +23,7 @@ redis:
 api:
   replicas: 1
   image:
+    registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/api
     tag: "0cd6453"
   resources:
@@ -44,6 +44,7 @@ api:
 landing:
   replicas: 1
   image:
+    registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/landing
     tag: "0cd6453"
   resources:
@@ -64,6 +65,7 @@ landing:
 javaServices:
   defaults:
     image:
+      registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
       repositoryPrefix: namespace-alpha
       tag: "0cd6453"
     replicas: 1
