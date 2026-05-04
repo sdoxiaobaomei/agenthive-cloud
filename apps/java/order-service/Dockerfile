@@ -25,11 +25,11 @@ RUN addgroup -S appgroup -g 1001 && \
     adduser -S appuser -u 1001 -G appgroup && \
     chown -R appuser:appgroup /app
 
-COPY --from=maven-builder --chown=appuser:appgroup /app/dependencies/ ./
-COPY --from=maven-builder --chown=appuser:appgroup /app/spring-boot-loader/ ./
-COPY --from=maven-builder --chown=appuser:appgroup /app/snapshot-dependencies/ ./
-COPY --from=maven-builder --chown=appuser:appgroup /app/application/ ./
-COPY --from=maven-builder --chown=appuser:appgroup /app/opentelemetry-javaagent.jar ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/order-service/dependencies/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/order-service/spring-boot-loader/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/order-service/snapshot-dependencies/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/order-service/application/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/order-service/opentelemetry-javaagent.jar ./
 
 USER appuser
 
