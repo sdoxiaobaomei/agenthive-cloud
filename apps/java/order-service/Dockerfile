@@ -1,14 +1,18 @@
 # syntax=docker/dockerfile:1
-# Order Service - Optimized Spring Boot 3 Layered Build
+# Order Service - Optimized Spring Boot 3 Layered Build with Multi-stage Maven
 
-FROM eclipse-temurin:21-jre-alpine AS builder
+FROM eclipse-temurin:21-jdk-alpine AS maven-builder
 WORKDIR /app
-COPY target/order-service-*.jar app.jar
-RUN java -Djarmode=layertools -jar app.jar extract
 
-# Download OpenTelemetry Java Agent for unified observability (dev/prod parity)
-# The agent is enabled/disabled at runtime via OTEL_JAVAAGENT_ENABLED env var
-RUN wget -q https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.6.0/opentelemetry-javaagent.jar -O /app/opentelemetry-javaagent.jar
+# Install wget for downloading opentelemetry agent
+RUN apk add --no-cache wget
+
+# Copy entire java workspace and build
+COPY . .
+RUN mvn clean package -pl order-service -am -DskipTests -B -q && \
+    cd order-service && \
+    java -Djarmode=layertools -jar target/order-service-*.jar extract && \
+    wget -q https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.6.0/opentelemetry-javaagent.jar -O opentelemetry-javaagent.jar
 
 FROM eclipse-temurin:21-jre-alpine
 
@@ -21,11 +25,11 @@ RUN addgroup -S appgroup -g 1001 && \
     adduser -S appuser -u 1001 -G appgroup && \
     chown -R appuser:appgroup /app
 
-COPY --from=builder --chown=appuser:appgroup /app/dependencies/ ./
-COPY --from=builder --chown=appuser:appgroup /app/spring-boot-loader/ ./
-COPY --from=builder --chown=appuser:appgroup /app/snapshot-dependencies/ ./
-COPY --from=builder --chown=appuser:appgroup /app/application/ ./
-COPY --from=builder --chown=appuser:appgroup /app/opentelemetry-javaagent.jar ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/dependencies/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/spring-boot-loader/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/snapshot-dependencies/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/application/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/opentelemetry-javaagent.jar ./
 
 USER appuser
 
