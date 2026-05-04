@@ -44,22 +44,22 @@ jobs:
             context: .
             dockerfile: ./apps/landing/Dockerfile
           - name: auth-service
-            context: ./apps/java/auth-service
+            context: ./apps/java
             dockerfile: ./apps/java/auth-service/Dockerfile
           - name: cart-service
-            context: ./apps/java/cart-service
+            context: ./apps/java
             dockerfile: ./apps/java/cart-service/Dockerfile
           - name: gateway-service
-            context: ./apps/java/gateway-service
+            context: ./apps/java
             dockerfile: ./apps/java/gateway-service/Dockerfile
           - name: logistics-service
-            context: ./apps/java/logistics-service
+            context: ./apps/java
             dockerfile: ./apps/java/logistics-service/Dockerfile
           - name: order-service
-            context: ./apps/java/order-service
+            context: ./apps/java
             dockerfile: ./apps/java/order-service/Dockerfile
           - name: payment-service
-            context: ./apps/java/payment-service
+            context: ./apps/java
             dockerfile: ./apps/java/payment-service/Dockerfile
 
     steps:
@@ -99,8 +99,7 @@ jobs:
       - name: Maven build (Java)
         if: contains(matrix.service.name, '-service')
         run: |
-          cd ${{ matrix.service.context }}
-          mvn clean package -DskipTests -B -q
+          mvn clean install -pl ${{ matrix.service.name }} -am -DskipTests -B -q
 
       # 6. 构建并推送镜像（精确 SHA + develop-latest 浮动标签）
       # 策略：
