@@ -12,9 +12,11 @@ import path from 'path'
  * Override via WORKSPACE_BASE environment variable.
  * Default: /data/workspaces (Docker volume mount point)
  */
+export const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/data/workspaces'
+
 // Removed static WORKSPACE_BASE - use getWorkspaceBase() instead
 function getWorkspaceBase(): string {
-  return process.env.WORKSPACE_BASE || '/data/workspaces'
+  return WORKSPACE_BASE
 }
 
 /**
