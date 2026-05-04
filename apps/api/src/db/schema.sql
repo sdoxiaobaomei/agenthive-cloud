@@ -49,13 +49,38 @@ CREATE TABLE IF NOT EXISTS project_members (
     UNIQUE(project_id, user_id)
 );
 
+-- Workspaces 表
+CREATE TABLE IF NOT EXISTS workspaces (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    owner_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Chat 版本表
+CREATE TABLE IF NOT EXISTS chat_versions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Chat 会话表
 CREATE TABLE IF NOT EXISTS chat_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
     title VARCHAR(200),
     status VARCHAR(20) DEFAULT 'active',
+    session_type VARCHAR(50) DEFAULT 'chat',
+    current_version_id UUID REFERENCES chat_versions(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -66,6 +91,10 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
     role VARCHAR(20) NOT NULL,
     content TEXT NOT NULL,
+    message_type VARCHAR(50) DEFAULT 'message',
+    is_visible_in_history BOOLEAN DEFAULT TRUE,
+    version_id UUID REFERENCES chat_versions(id) ON DELETE SET NULL,
+    parent_message_id UUID REFERENCES chat_messages(id) ON DELETE SET NULL,
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -139,6 +168,16 @@ CREATE TABLE IF NOT EXISTS agent_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 为已部署环境添加 PR #14 新字段
+ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL;
+ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS session_type VARCHAR(50) DEFAULT 'chat';
+ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS current_version_id UUID REFERENCES chat_versions(id) ON DELETE SET NULL;
+
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS message_type VARCHAR(50) DEFAULT 'message';
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS is_visible_in_history BOOLEAN DEFAULT TRUE;
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS version_id UUID REFERENCES chat_versions(id) ON DELETE SET NULL;
+ALTER TABLE chat_messages ADD COLUMN IF NOT EXISTS parent_message_id UUID REFERENCES chat_messages(id) ON DELETE SET NULL;
+
 -- 创建索引
 CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -149,8 +188,13 @@ CREATE INDEX IF NOT EXISTS idx_project_members_project_id ON project_members(pro
 CREATE INDEX IF NOT EXISTS idx_project_members_user_id ON project_members(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_project_id ON chat_sessions(project_id);
+CREATE INDEX IF NOT EXISTS idx_chat_sessions_workspace_id ON chat_sessions(workspace_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_message_type ON chat_messages(message_type);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_version_id ON chat_messages(version_id);
+CREATE INDEX IF NOT EXISTS idx_chat_versions_session_id ON chat_versions(session_id);
+CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces(owner_id);
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_session_id ON agent_tasks(session_id);
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_project_id ON agent_tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_status ON agent_tasks(status);
@@ -210,6 +254,18 @@ CREATE TABLE IF NOT EXISTS project_deployments (
 
 CREATE INDEX IF NOT EXISTS idx_project_deployments_project_id ON project_deployments(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_deployments_status ON project_deployments(status);
+
+DROP TRIGGER IF EXISTS update_workspaces_updated_at ON workspaces;
+CREATE TRIGGER update_workspaces_updated_at
+    BEFORE UPDATE ON workspaces
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_chat_versions_updated_at ON chat_versions;
+CREATE TRIGGER update_chat_versions_updated_at
+    BEFORE UPDATE ON chat_versions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_project_deployments_updated_at ON project_deployments;
 CREATE TRIGGER update_project_deployments_updated_at
