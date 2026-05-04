@@ -8,7 +8,7 @@ on:
     branches:
       - develop
     paths-ignore:
-      - 'k8s/overlays/local/kustomization.yaml'  # 避免自引用循环触发
+      - 'chart/agenthive/values.dev.yaml'  # 避免自引用循环触发
       - '**.md'
   # 允许手动触发（用于 workflow 文件本身修改后的测试）
   workflow_dispatch:
@@ -28,10 +28,77 @@ env:
 
 jobs:
   # ==========================================================
+  # Job 0: 检测变更文件（供后续 job 条件判断）
+  # ==========================================================
+  detect-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      node-api: ${{ steps.changes.outputs.node-api }}
+      node-landing: ${{ steps.changes.outputs.node-landing }}
+      node-changed: ${{ steps.changes.outputs.node-changed }}
+      java-changed: ${{ steps.changes.outputs.java-changed }}
+      any-service: ${{ steps.changes.outputs.any-service }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Detect changed files
+        id: changes
+        uses: tj-actions/changed-files@v44
+        with:
+          files_yaml: |
+            node-api:
+              - apps/api/**
+              - packages/shared/**
+              - packages/observability/**
+              - packages/agent-runtime/**
+            node-landing:
+              - apps/landing/**
+              - packages/ui/**
+            java-all:
+              - apps/java/**
+            any-service:
+              - apps/**
+
+      - name: Set outputs
+        id: set-outputs
+        run: |
+          NODE_API="${{ steps.changes.outputs.node-api_any_changed }}"
+          NODE_LANDING="${{ steps.changes.outputs.node-landing_any_changed }}"
+          JAVA_CHANGED="${{ steps.changes.outputs.java-all_any_changed }}"
+          ANY_SERVICE="${{ steps.changes.outputs.any-service_any_changed }}"
+          
+          # Node services changed = api or landing
+          if [[ "$NODE_API" == "true" || "$NODE_LANDING" == "true" ]]; then
+            NODE_CHANGED="true"
+          else
+            NODE_CHANGED="false"
+          fi
+          
+          echo "node-api=$NODE_API" >> $GITHUB_OUTPUT
+          echo "node-landing=$NODE_LANDING" >> $GITHUB_OUTPUT
+          echo "node-changed=$NODE_CHANGED" >> $GITHUB_OUTPUT
+          echo "java-changed=$JAVA_CHANGED" >> $GITHUB_OUTPUT
+          echo "any-service=$ANY_SERVICE" >> $GITHUB_OUTPUT
+          
+          echo "Node API changed: $NODE_API"
+          echo "Node Landing changed: $NODE_LANDING"
+          echo "Node changed: $NODE_CHANGED"
+          echo "Java changed: $JAVA_CHANGED"
+          echo "Any service changed: $ANY_SERVICE"
+
+  # ==========================================================
   # Job 1: 构建并推送所有镜像到 ACR
   # ==========================================================
   build-and-push:
     runs-on: ubuntu-latest
+    needs: detect-changes
+    # 只有当任意服务代码变更时才构建
+    if: needs.detect-changes.outputs.any-service == 'true'
     timeout-minutes: 30
     strategy:
       # 矩阵构建：所有服务并行
@@ -97,10 +164,28 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      # 4. 提取 short SHA（作为精确镜像标签）
-      - name: Extract short SHA
+      # 4. 确定镜像标签（semver > commit-sha > none）
+      # 策略：
+      # - 优先使用 git tag（semver 格式 v*.*.* 或 v*.*.*-*）
+      # - 无 tag 时使用 commit short SHA
+      # - 始终同时推送 develop 浮动标签
+      - name: Determine image tag
         id: vars
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: |
+          # 检查 HEAD 是否有 semver tag
+          SEMVER_TAG=$(git describe --tags --exact-match --match 'v[0-9]*.[0-9]*.[0-9]*' HEAD 2>/dev/null || true)
+          
+          if [[ -n "$SEMVER_TAG" ]]; then
+            TAG="$SEMVER_TAG"
+            echo "Using semver tag: $TAG"
+          else
+            # 回退到 commit short SHA
+            TAG="sha-$(git rev-parse --short HEAD)"
+            echo "No semver tag found, using commit SHA: $TAG"
+          fi
+          
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
       # 5. 安装依赖并构建（API 和 landing 需要预构建 dist 产物）
       - name: Install dependencies and build (Node.js)
@@ -126,10 +211,10 @@ jobs:
           cd apps/java
           mvn clean install -pl ${{ matrix.service.name }} -am -DskipTests -B -q
 
-      # 6. 构建并推送镜像（精确 SHA + develop-latest 浮动标签）
-      # 策略：
-      # - 精确 SHA 标签：可追溯、可回滚、可直接 promote 到 prod
-      # - develop-latest 浮动标签：方便快速测试和本地开发
+      # 6. 构建并推送镜像
+      # 标签策略：
+      # - semver / commit-sha：可追溯、可回滚
+      # - develop：浮动标签，方便快速 pull 最新 dev 镜像
       - name: Build and push ${{ matrix.service.name }}
         uses: docker/build-push-action@v5
         with:
@@ -137,29 +222,32 @@ jobs:
           file: ${{ matrix.service.dockerfile }}
           push: true
           tags: |
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.sha }}
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:develop-latest
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.tag }}
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:develop
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=development
             BUILD_SHA=${{ steps.vars.outputs.sha }}
+            BUILD_TAG=${{ steps.vars.outputs.tag }}
 
       # 7. 输出镜像地址（用于调试）
       - name: Print image digest
         run: |
-          echo "Built: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.sha }}"
-          echo "Floating: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:develop-latest"
+          echo "Built: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.tag }}"
+          echo "Floating: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:develop"
           echo ""
-          echo "Tag strategy: Exact SHA for traceability, develop-latest for quick rollback"
-          echo "Promote to prod: Use the same SHA tag in production overlay"
+          echo "Tag strategy: semver > commit-sha > none"
+          echo "Promote to prod: Use the same semver/SHA tag in production overlay"
 
   # ==========================================================
-  # Job 2: 更新 Helm values 镜像 tag，触发 ArgoCD 自动同步
+  # Job 2: 更新 Helm values 镜像 tag（仅 Node 服务变更时）
   # ==========================================================
   update-manifest:
     runs-on: ubuntu-latest
-    needs: build-and-push
+    needs: [detect-changes, build-and-push]
+    # 只有当 Node 服务代码变更时才更新 values.dev.yaml
+    if: needs.detect-changes.outputs.node-changed == 'true'
     timeout-minutes: 10
 
     steps:
@@ -171,23 +259,43 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      # 2. 提取 short SHA
-      - name: Extract short SHA
+      # 2. 确定镜像标签
+      - name: Determine image tag
         id: vars
-        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+        run: |
+          SEMVER_TAG=$(git describe --tags --exact-match --match 'v[0-9]*.[0-9]*.[0-9]*' HEAD 2>/dev/null || true)
+          
+          if [[ -n "$SEMVER_TAG" ]]; then
+            TAG="$SEMVER_TAG"
+            echo "Using semver tag: $TAG"
+          else
+            TAG="sha-$(git rev-parse --short HEAD)"
+            echo "No semver tag found, using commit SHA: $TAG"
+          fi
+          
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      # 3. 更新 Helm values 镜像 tag（使用 develop-latest 浮动标签）
-      # 不再自动绑定 commit SHA，避免每次 push 都修改 git 文件
-      - name: Update Helm values image tags
+      # 3. 更新 Helm values 镜像 tag（仅 Node 服务）
+      - name: Update Node.js image tags in values.dev.yaml
         run: |
           HELM_VALUES="chart/agenthive/values.dev.yaml"
-          TAG="develop-latest"
+          TAG="${{ steps.vars.outputs.tag }}"
+          SHA="${{ steps.vars.outputs.sha }}"
           
-          # 将 tag 统一替换为 develop-latest 浮动标签
-          sed -i 's/tag: "[^"]*"/tag: "'${TAG}'"/g' "${HELM_VALUES}"
+          # 更新 api tag
+          if grep -q 'api:' "$HELM_VALUES"; then
+            yq eval -i '.api.image.tag = "'"$TAG"'"' "$HELM_VALUES"
+            echo "Updated api image tag -> $TAG"
+          fi
           
-          echo "Updated image tags in ${HELM_VALUES} to: ${TAG}"
-          git diff --stat "${HELM_VALUES}" || true
+          # 更新 landing tag
+          if grep -q 'landing:' "$HELM_VALUES"; then
+            yq eval -i '.landing.image.tag = "'"$TAG"'"' "$HELM_VALUES"
+            echo "Updated landing image tag -> $TAG"
+          fi
+          
+          git diff --stat "$HELM_VALUES" || true
 
       # 4. Commit 并 push 更新后的 values
       - name: Commit and push values update
@@ -204,12 +312,13 @@ jobs:
           fi
           
           git add "${HELM_VALUES}"
-          git commit -m "chore(helm): pin dev image tags to develop-latest
+          git commit -m "chore(helm): update dev image tags to ${{ steps.vars.outputs.tag }}
 
 Auto-generated by GitHub Actions
-- Using develop-latest floating tag instead of commit SHA
-- No longer modifying git history on every push
-- ArgoCD will detect new images via imagePullPolicy: Always"
+- Node services changed: api=${{ needs.detect-changes.outputs.node-api }}, landing=${{ needs.detect-changes.outputs.node-landing }}
+- Tag strategy: semver > commit-sha
+- Exact tag for traceability and rollback
+- ArgoCD will auto-sync to develop cluster"
           
           git push origin develop
 
@@ -220,14 +329,16 @@ Auto-generated by GitHub Actions
           echo "ArgoCD Application: agenthive-dev"
           echo "Target Cluster:   https://100.76.250.86:57116"
           echo "Target Namespace: agenthive"
-          echo "New Image Tag:    ${{ steps.vars.outputs.sha }}"
+          echo "New Image Tag:    ${{ steps.vars.outputs.tag }}"
           echo "Values File:      chart/agenthive/values.dev.yaml"
           echo "======================================"
           echo "ArgoCD 将在 3-5 分钟内自动检测到 manifest 变更并触发同步"
-          echo "（前提是 ArgoCD Application 的 targetRevision 与 push 分支一致）"
+          echo ""
+          echo "Tag strategy:"
+          echo "  1. semver: push git tag vX.Y.Z 触发，用于发布"
+          echo "  2. commit-sha: 普通 push 触发，可追溯可回滚"
+          echo "  3. develop: 浮动标签，始终指向最新 dev 镜像"
           echo ""
           echo "Promote to production:"
-          echo "  1. 在 chart/agenthive/values.prod.yaml 中"
-          echo "     将对应服务的 tag 从 production-placeholder 改为 ${{ steps.vars.outputs.sha }}"
-          echo "  2. Commit 并 push，ArgoCD 自动同步到 prod 集群"
-          echo "  3. 无需重新构建镜像，dev 和 prod 使用完全相同的镜像层"
+          echo "  在 chart/agenthive/values.prod.yaml 中"
+          echo "  将对应服务的 tag 改为 ${{ steps.vars.outputs.tag }}"
