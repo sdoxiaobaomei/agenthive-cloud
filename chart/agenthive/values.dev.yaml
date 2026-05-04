@@ -84,12 +84,6 @@ javaServices:
         enabled: false
       pdb:
         enabled: false
-    user:
-      enabled: true
-      hpa:
-        enabled: false
-      pdb:
-        enabled: false
     payment:
       enabled: false
       hpa:
