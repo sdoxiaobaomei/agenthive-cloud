@@ -38,6 +38,7 @@ serviceAccount:
   create: true
   name: ""
   automountServiceAccountToken: false
+  imagePullSecrets: []
 
 # ----------------------------------------------------------------------------
 # Namespace
