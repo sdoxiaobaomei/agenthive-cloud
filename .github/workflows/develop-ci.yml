@@ -82,6 +82,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # 3b. 设置 JDK 21（Java 服务需要）
+      - name: Set up JDK 21
+        if: contains(matrix.service.name, '-service')
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
       # 4. 提取 short SHA（作为精确镜像标签）
       - name: Extract short SHA
         id: vars
