@@ -8,7 +8,9 @@ on:
     branches:
       - develop
     paths-ignore:
-      - 'chart/agenthive/values.dev.yaml'  # 避免自引用循环触发
+      - 'chart/**'  # Helm 配置变更不触发镜像构建
+      - 'k8s/**'    # Kustomize 配置不触发
+      - 'docs/**'
       - '**.md'
   # 允许手动触发（用于 workflow 文件本身修改后的测试）
   workflow_dispatch:
@@ -164,28 +166,16 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      # 4. 确定镜像标签（semver > commit-sha > none）
+      # 4. 镜像标签：develop 浮动标签
       # 策略：
-      # - 优先使用 git tag（semver 格式 v*.*.* 或 v*.*.*-*）
-      # - 无 tag 时使用 commit short SHA
-      # - 始终同时推送 develop 浮动标签
+      # - develop 分支使用浮动 develop 标签
+      # - 配置变更（chart/**）不触发构建
       - name: Determine image tag
         id: vars
         run: |
-          # 检查 HEAD 是否有 semver tag
-          SEMVER_TAG=$(git describe --tags --exact-match --match 'v[0-9]*.[0-9]*.[0-9]*' HEAD 2>/dev/null || true)
-          
-          if [[ -n "$SEMVER_TAG" ]]; then
-            TAG="$SEMVER_TAG"
-            echo "Using semver tag: $TAG"
-          else
-            # 回退到 commit short SHA
-            TAG="sha-$(git rev-parse --short HEAD)"
-            echo "No semver tag found, using commit SHA: $TAG"
-          fi
-          
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "tag=develop" >> $GITHUB_OUTPUT
           echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "Using develop floating tag"
 
       # 5. 安装依赖并构建（API 和 landing 需要预构建 dist 产物）
       - name: Install dependencies and build (Node.js)
@@ -212,9 +202,7 @@ jobs:
           mvn clean install -pl ${{ matrix.service.name }} -am -DskipTests -B -q
 
       # 6. 构建并推送镜像
-      # 标签策略：
-      # - semver / commit-sha：可追溯、可回滚
-      # - develop：浮动标签，方便快速 pull 最新 dev 镜像
+      # 标签策略：develop 浮动标签
       - name: Build and push ${{ matrix.service.name }}
         uses: docker/build-push-action@v5
         with:
@@ -222,14 +210,13 @@ jobs:
           file: ${{ matrix.service.dockerfile }}
           push: true
           tags: |
-            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.tag }}
             ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:develop
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=development
             BUILD_SHA=${{ steps.vars.outputs.sha }}
-            BUILD_TAG=${{ steps.vars.outputs.tag }}
+            BUILD_TAG=develop
 
       # 7. 输出镜像地址（用于调试）
       - name: Print image digest
@@ -237,8 +224,8 @@ jobs:
           echo "Built: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.tag }}"
           echo "Floating: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:develop"
           echo ""
-          echo "Tag strategy: semver > commit-sha > none"
-          echo "Promote to prod: Use the same semver/SHA tag in production overlay"
+          echo "Tag strategy: develop floating tag (code changes trigger builds, config changes do not)"
+          echo "Promote to prod: Use specific version tag in production overlay"
 
   # ==========================================================
   # Job 2: 更新 Helm values 镜像 tag（仅 Node 服务变更时）
@@ -259,39 +246,30 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      # 2. 确定镜像标签
+      # 2. 确定镜像标签：develop 浮动标签
       - name: Determine image tag
         id: vars
         run: |
-          SEMVER_TAG=$(git describe --tags --exact-match --match 'v[0-9]*.[0-9]*.[0-9]*' HEAD 2>/dev/null || true)
-          
-          if [[ -n "$SEMVER_TAG" ]]; then
-            TAG="$SEMVER_TAG"
-            echo "Using semver tag: $TAG"
-          else
-            TAG="sha-$(git rev-parse --short HEAD)"
-            echo "No semver tag found, using commit SHA: $TAG"
-          fi
-          
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "tag=develop" >> $GITHUB_OUTPUT
           echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "Using develop floating tag"
 
       # 3. 更新 Helm values 镜像 tag（仅 Node 服务）
+      # 使用 develop 浮动标签，代码变更时更新
       - name: Update Node.js image tags in values.dev.yaml
         run: |
           HELM_VALUES="chart/agenthive/values.dev.yaml"
-          TAG="${{ steps.vars.outputs.tag }}"
-          SHA="${{ steps.vars.outputs.sha }}"
+          TAG="develop"
           
           # 更新 api tag
           if grep -q 'api:' "$HELM_VALUES"; then
-            yq eval -i '.api.image.tag = "'"$TAG"'"' "$HELM_VALUES"
+            yq eval -i '.api.image.tag = "'$TAG'"' "$HELM_VALUES"
             echo "Updated api image tag -> $TAG"
           fi
           
           # 更新 landing tag
           if grep -q 'landing:' "$HELM_VALUES"; then
-            yq eval -i '.landing.image.tag = "'"$TAG"'"' "$HELM_VALUES"
+            yq eval -i '.landing.image.tag = "'$TAG'"' "$HELM_VALUES"
             echo "Updated landing image tag -> $TAG"
           fi
           
@@ -312,12 +290,11 @@ jobs:
           fi
           
           git add "${HELM_VALUES}"
-          git commit -m "chore(helm): update dev image tags to ${{ steps.vars.outputs.tag }}
+          git commit -m "chore(helm): update dev Node.js image tags to develop
 
 Auto-generated by GitHub Actions
 - Node services changed: api=${{ needs.detect-changes.outputs.node-api }}, landing=${{ needs.detect-changes.outputs.node-landing }}
-- Tag strategy: semver > commit-sha
-- Exact tag for traceability and rollback
+- Tag strategy: develop floating tag (code changes trigger builds, config changes do not)
 - ArgoCD will auto-sync to develop cluster"
           
           git push origin develop
@@ -329,16 +306,15 @@ Auto-generated by GitHub Actions
           echo "ArgoCD Application: agenthive-dev"
           echo "Target Cluster:   https://100.76.250.86:57116"
           echo "Target Namespace: agenthive"
-          echo "New Image Tag:    ${{ steps.vars.outputs.tag }}"
+          echo "New Image Tag:    develop (floating)"
           echo "Values File:      chart/agenthive/values.dev.yaml"
           echo "======================================"
           echo "ArgoCD 将在 3-5 分钟内自动检测到 manifest 变更并触发同步"
           echo ""
           echo "Tag strategy:"
-          echo "  1. semver: push git tag vX.Y.Z 触发，用于发布"
-          echo "  2. commit-sha: 普通 push 触发，可追溯可回滚"
-          echo "  3. develop: 浮动标签，始终指向最新 dev 镜像"
+          echo "  - develop: 浮动标签，代码变更时更新"
+          echo "  - 配置变更（chart/**）不触发构建和 tag 更新"
           echo ""
           echo "Promote to production:"
           echo "  在 chart/agenthive/values.prod.yaml 中"
-          echo "  将对应服务的 tag 改为 ${{ steps.vars.outputs.tag }}"
+          echo "  将对应服务的 tag 改为特定版本"
