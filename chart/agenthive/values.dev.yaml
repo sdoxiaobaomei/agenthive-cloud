@@ -202,7 +202,7 @@ secret:
   data:
     DB_USER: "agenthive"
     DB_PASSWORD: "agenthive-dev-password-2026"
-    JWT_SECRET: "agenthive-cloud-dev-jwt-secret-key-2026"
+    JWT_SECRET: "2GqEvWmxu1fk2Hz3uunqZ-L0uvK_yXlrIaUl67SiPjU"
     LLM_API_KEY: "REPLACE_ME"
     REDIS_PASSWORD: "agenthive"
     RABBITMQ_PASSWORD: "agenthive"
