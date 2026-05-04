@@ -646,8 +646,8 @@ ingress:
           port: 8080
         - path: /socket.io
           pathType: Prefix
-          service: gateway-service
-          port: 8080
+          service: api
+          port: 3001
         - path: /
           pathType: Prefix
           service: landing
@@ -733,7 +733,7 @@ configmap:
     REQUEST_TIMEOUT: "30000"
     CACHE_TTL: "3600"
     UV_THREADPOOL_SIZE: "4"
-    CORS_ORIGIN: "http://localhost,https://localhost"
+    CORS_ORIGIN: "http://agenthive.local,http://agenthive.local:8080,http://localhost,http://localhost:3000,http://localhost:8080,http://localhost:5173,https://localhost"
     JAVA_PAYMENT_URL: "http://payment-service:8083"
     NITRO_PORT: "3000"
     LLM_BASE_URL: "https://api.kimi.com/coding/v1"
