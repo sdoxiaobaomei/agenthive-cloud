@@ -10,7 +10,8 @@ on:
     paths-ignore:
       - 'k8s/overlays/local/kustomization.yaml'  # 避免自引用循环触发
       - '**.md'
-      - '.github/workflows/**'
+  # 允许手动触发（用于 workflow 文件本身修改后的测试）
+  workflow_dispatch:
 
 # ============================================================
 # 权限：需要写入仓库内容（更新 manifest tag）
