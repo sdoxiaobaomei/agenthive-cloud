@@ -7,6 +7,7 @@
 global:
   labels:
     environment: development
+  imageRegistry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
 
 # ----------------------------------------------------------------------------
 # Local PostgreSQL + Redis (dev only)
@@ -23,6 +24,7 @@ redis:
 api:
   replicas: 1
   image:
+    repository: namespace-alpha/api
     tag: "0cd6453"
   resources:
     requests:
@@ -42,6 +44,7 @@ api:
 landing:
   replicas: 1
   image:
+    repository: namespace-alpha/landing
     tag: "0cd6453"
   resources:
     requests:
@@ -61,6 +64,7 @@ landing:
 javaServices:
   defaults:
     image:
+      repositoryPrefix: namespace-alpha
       tag: "0cd6453"
     replicas: 1
     resources:
@@ -190,7 +194,7 @@ configmap:
 # Secret — Dev (fallback placeholder, replace with real values)
 # ----------------------------------------------------------------------------
 secret:
-  enabled: false
+  enabled: true
   externalSecret:
     enabled: false
 
