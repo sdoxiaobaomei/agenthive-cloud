@@ -37,10 +37,10 @@ jobs:
       matrix:
         service:
           - name: api
-            context: ./apps/api
+            context: .
             dockerfile: ./apps/api/Dockerfile
           - name: landing
-            context: ./apps/landing
+            context: .
             dockerfile: ./apps/landing/Dockerfile
           - name: auth-service
             context: ./apps/java/auth-service
@@ -86,7 +86,15 @@ jobs:
         id: vars
         run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
-      # 5. 构建并推送镜像（精确 SHA + develop-latest 浮动标签）
+      # 5. 安装依赖并构建（API 和 landing 需要预构建 dist 产物）
+      - name: Install dependencies and build
+        if: matrix.service.name == 'api' || matrix.service.name == 'landing'
+        run: |
+          npm install -g pnpm@9
+          pnpm install --frozen-lockfile
+          pnpm -r build
+
+      # 6. 构建并推送镜像（精确 SHA + develop-latest 浮动标签）
       # 策略：
       # - 精确 SHA 标签：可追溯、可回滚、可直接 promote 到 prod
       # - develop-latest 浮动标签：方便快速测试和本地开发
@@ -105,7 +113,7 @@ jobs:
             NODE_ENV=development
             BUILD_SHA=${{ steps.vars.outputs.sha }}
 
-      # 6. 输出镜像地址（用于调试）
+      # 7. 输出镜像地址（用于调试）
       - name: Print image digest
         run: |
           echo "Built: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.sha }}"
