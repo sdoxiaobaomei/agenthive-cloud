@@ -2,7 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # 开发环境命名空间
-namespace: agenthive
+namespace: agenthive-cloud
 
 resources:
   - ../../base
@@ -11,43 +11,49 @@ resources:
   - localhost-ingress.yaml
 
 # ============================================================
-# 镜像策略：统一使用阿里云 ACR（企业最佳实践）
+# 镜像策略：精确版本号 + 可回滚 + 直接 promote 到 prod
 # ============================================================
 # 说明：
-# - Dev 环境不再使用本地镜像（imagePullPolicy: Never），
-#   改为从 ACR 拉取，与 Prod 保持镜像一致性。
-# - CI/CD 流程：GitHub Actions 构建 → push 到 ACR →
-#   ArgoCD 自动检测到 manifest 更新 → 同步到集群。
-# - ACR registry 地址需与生产环境保持一致。
+# - Dev 环境使用精确的 commit SHA 标签（如 d67252d），而非 latest
+# - 好处：
+#   1. 可精确回滚到任意历史版本
+#   2. develop 构建的镜像可直接 promote 到 prod（无需重新构建）
+#   3. prod 复用 dev 验证过的同一镜像，保证一致性
+# - CI/CD 流程：
+#   GitHub Actions 构建 → push ${SHA} 标签到 ACR → update kustomization.yaml
+#   → ArgoCD 同步 → 验证通过 → promote 到 prod（只改 tag，不改镜像）
+#
+# 注意：newTag 由 CI workflow 动态设置（kustomize edit set image），
+# 这里保留占位值，实际部署时会被覆盖。
 
 images:
-  # Node.js 前端/服务
+  # Node.js 前端/服务（占位，CI 会覆盖为实际 SHA）
   - name: agenthive/api
     newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/api
-    newTag: develop-latest
+    newTag: develop-placeholder
   - name: agenthive/landing
     newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/landing
-    newTag: develop-latest
-  # Java 微服务
+    newTag: develop-placeholder
+  # Java 微服务（占位，CI 会覆盖为实际 SHA）
   - name: agenthive/auth-service
     newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/auth-service
-    newTag: develop-latest
+    newTag: develop-placeholder
   - name: agenthive/cart-service
     newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/cart-service
-    newTag: develop-latest
+    newTag: develop-placeholder
   - name: agenthive/gateway-service
     newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/gateway-service
-    newTag: develop-latest
+    newTag: develop-placeholder
   - name: agenthive/logistics-service
     newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/logistics-service
-    newTag: develop-latest
+    newTag: develop-placeholder
   - name: agenthive/order-service
     newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/order-service
-    newTag: develop-latest
+    newTag: develop-placeholder
   - name: agenthive/payment-service
     newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/payment-service
-    newTag: develop-latest
-  # 基础设施（从 Docker Hub 镜像到 ACR 镜像）
+    newTag: develop-placeholder
+  # 基础设施（固定版本，不随业务代码更新）
   - name: nacos/nacos-server
     newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/nacos-server
     newTag: v2.3.0
@@ -142,7 +148,16 @@ patches:
                         allowCredentials: true
                         maxAge: 3600
 
-  # 3. Gateway Service 在 dev 环境使用 ClusterIP 而非 LoadBalancer
+  # 4. Landing Service targetPort 修正（Dockerfile 暴露 80，base 写 3000）
+  - target:
+      kind: Service
+      name: landing
+    patch: |-
+      - op: replace
+        path: /spec/ports/0/targetPort
+        value: 80
+
+  # 5. Gateway Service 在 dev 环境使用 ClusterIP 而非 LoadBalancer
   - target:
       kind: Service
       name: gateway-service
