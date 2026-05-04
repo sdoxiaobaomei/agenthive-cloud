@@ -96,7 +96,6 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: 'maven'
 
       # 4. 提取 short SHA（作为精确镜像标签）
       - name: Extract short SHA
