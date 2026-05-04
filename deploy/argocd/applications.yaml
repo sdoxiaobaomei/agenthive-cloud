@@ -9,7 +9,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/sdoxiaobaomei/agenthive-cloud.git
-    targetRevision: master
+    targetRevision: develop
     path: chart/agenthive
     helm:
       valueFiles:
