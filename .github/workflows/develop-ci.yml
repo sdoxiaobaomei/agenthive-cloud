@@ -82,7 +82,15 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 3b. 设置 JDK 21（Java 服务需要）
+      # 3b. 设置 Node.js 20（pnpm monorepo 构建需要）
+      - name: Set up Node.js 20
+        if: matrix.service.name == 'api' || matrix.service.name == 'landing'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      # 3c. 设置 JDK 21（Java 服务需要）
       - name: Set up JDK 21
         if: contains(matrix.service.name, '-service')
         uses: actions/setup-java@v4
@@ -100,7 +108,8 @@ jobs:
       - name: Install dependencies and build (Node.js)
         if: matrix.service.name == 'api' || matrix.service.name == 'landing'
         run: |
-          npm install -g pnpm@9
+          corepack enable
+          corepack prepare pnpm@9 --activate
           pnpm install --frozen-lockfile
           pnpm -r build
 
