@@ -109,11 +109,15 @@ jobs:
           corepack enable
           corepack prepare pnpm@9 --activate
           pnpm install --frozen-lockfile
-          # API: 构建 dist（忽略类型错误，exit code 2 不中断）
-          pnpm --filter=@agenthive/api exec tsc || echo "API build: TypeScript errors ignored, dist may be incomplete"
-          # Landing + UI: 正常构建
+          # 先构建工作区依赖包（API 的 Dockerfile 需要它们的 dist）
+          pnpm --filter=@agenthive/observability build
+          pnpm --filter=@agenthive/agent-runtime build
+          # UI（landing 依赖）
           pnpm --filter=@agenthive/ui build
+          # Landing
           pnpm --filter=@agenthive/landing build
+          # API: 构建 dist（忽略类型错误）
+          pnpm --filter=@agenthive/api exec tsc || echo "API build: TypeScript errors ignored, dist may be incomplete"
 
       # 5b. Maven 构建（Java 服务需要预构建 target/*.jar）
       - name: Maven build (Java)
