@@ -18,7 +18,8 @@
     "pinia": "^2.1.7",
     "@vueuse/core": "^10.9.0",
     "@element-plus/icons-vue": "^2.3.1",
-    "element-plus": "^2.9.7"
+    "element-plus": "^2.9.7",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
