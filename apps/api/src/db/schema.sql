@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     phone VARCHAR(20) UNIQUE,
     password_hash VARCHAR(255),
     role VARCHAR(20) DEFAULT 'user',
+    status VARCHAR(20) DEFAULT 'active',
     avatar TEXT,
     external_user_id VARCHAR(36),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
