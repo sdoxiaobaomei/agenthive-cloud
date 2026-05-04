@@ -774,6 +774,7 @@ secret:
   name: app-secrets
   externalSecret:
     enabled: false
+  data: {}
 
 # ----------------------------------------------------------------------------
 # NetworkPolicy

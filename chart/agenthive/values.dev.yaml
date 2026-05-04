@@ -199,6 +199,15 @@ secret:
   enabled: true
   externalSecret:
     enabled: false
+  data:
+    DB_USER: "agenthive"
+    DB_PASSWORD: "agenthive-dev-password-2026"
+    JWT_SECRET: "agenthive-cloud-dev-jwt-secret-key-2026"
+    LLM_API_KEY: "REPLACE_ME"
+    REDIS_PASSWORD: "agenthive"
+    RABBITMQ_PASSWORD: "agenthive"
+    NACOS_PASSWORD: "nacos"
+    GRAFANA_ADMIN_PASSWORD: "REPLACE_ME"
 
 # ----------------------------------------------------------------------------
 # NetworkPolicy — Dev
