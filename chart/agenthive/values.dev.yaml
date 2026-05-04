@@ -23,7 +23,7 @@ redis:
 api:
   replicas: 1
   image:
-    tag: "dev"
+    tag: "0cd6453"
   resources:
     requests:
       memory: 256Mi
@@ -42,7 +42,7 @@ api:
 landing:
   replicas: 1
   image:
-    tag: "dev"
+    tag: "0cd6453"
   resources:
     requests:
       memory: 128Mi
@@ -61,7 +61,7 @@ landing:
 javaServices:
   defaults:
     image:
-      tag: "dev"
+      tag: "0cd6453"
     replicas: 1
     resources:
       requests:
