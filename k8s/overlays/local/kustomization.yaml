@@ -5,10 +5,10 @@ kind: Kustomization
 namespace: agenthive-cloud
 
 resources:
-  - ../../base
-  - ../../components/data-layer
-  - nodeport-services.yaml
-  - localhost-ingress.yaml
+- ../../base
+- ../../components/data-layer
+- nodeport-services.yaml
+- localhost-ingress.yaml
 
 # ============================================================
 # 镜像策略：精确版本号 + 可回滚 + 直接 promote 到 prod
@@ -26,37 +26,61 @@ resources:
 # 注意：newTag 由 CI workflow 动态设置（kustomize edit set image），
 # 这里保留占位值，实际部署时会被覆盖。
 
-images:
   # Node.js 前端/服务（占位，CI 会覆盖为实际 SHA）
-  - name: agenthive/api
-    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/api
-    newTag: develop-placeholder
-  - name: agenthive/landing
-    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/landing
-    newTag: develop-placeholder
   # Java 微服务（占位，CI 会覆盖为实际 SHA）
-  - name: agenthive/auth-service
-    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/auth-service
-    newTag: develop-placeholder
-  - name: agenthive/cart-service
-    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/cart-service
-    newTag: develop-placeholder
-  - name: agenthive/gateway-service
-    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/gateway-service
-    newTag: develop-placeholder
-  - name: agenthive/logistics-service
-    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/logistics-service
-    newTag: develop-placeholder
-  - name: agenthive/order-service
-    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/order-service
-    newTag: develop-placeholder
-  - name: agenthive/payment-service
-    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/payment-service
-    newTag: develop-placeholder
   # 基础设施（固定版本，不随业务代码更新）
-  - name: nacos/nacos-server
-    newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/nacos-server
-    newTag: v2.3.0
+images:
+- name: agenthive/api
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/api
+  newTag: develop-placeholder
+- name: agenthive/auth-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/auth-service
+  newTag: develop-placeholder
+- name: agenthive/cart-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/cart-service
+  newTag: develop-placeholder
+- name: agenthive/gateway-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/gateway-service
+  newTag: develop-placeholder
+- name: agenthive/landing
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/landing
+  newTag: develop-placeholder
+- name: agenthive/logistics-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/logistics-service
+  newTag: develop-placeholder
+- name: agenthive/order-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/order-service
+  newTag: develop-placeholder
+- name: agenthive/payment-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/payment-service
+  newTag: develop-placeholder
+- name: api
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/api
+  newTag: 9d3e5f5
+- name: auth-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/auth-service
+  newTag: 9d3e5f5
+- name: cart-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/cart-service
+  newTag: 9d3e5f5
+- name: gateway-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/gateway-service
+  newTag: 9d3e5f5
+- name: landing
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/landing
+  newTag: 9d3e5f5
+- name: logistics-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/logistics-service
+  newTag: 9d3e5f5
+- name: nacos/nacos-server
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/nacos-server
+  newTag: v2.3.0
+- name: order-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/order-service
+  newTag: 9d3e5f5
+- name: payment-service
+  newName: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com/namespace-alpha/payment-service
+  newTag: 9d3e5f5
 
 # ============================================================
 # 全局补丁：副本数统一为 1（开发环境资源限制）
@@ -67,107 +91,106 @@ images:
 # - 生产环境（overlays/production）副本数由 HPA 控制。
 
 replicas:
-  - name: api
-    count: 1
-  - name: landing
-    count: 1
-  - name: auth-service
-    count: 1
-  - name: cart-service
-    count: 1
-  - name: gateway-service
-    count: 1
-  - name: logistics-service
-    count: 1
-  - name: order-service
-    count: 1
-  - name: payment-service
-    count: 1
-  - name: nacos
-    count: 1
-  - name: redis
-    count: 1
-  - name: rabbitmq
-    count: 1
+- count: 1
+  name: api
+- count: 1
+  name: landing
+- count: 1
+  name: auth-service
+- count: 1
+  name: cart-service
+- count: 1
+  name: gateway-service
+- count: 1
+  name: logistics-service
+- count: 1
+  name: order-service
+- count: 1
+  name: payment-service
+- count: 1
+  name: nacos
+- count: 1
+  name: redis
+- count: 1
+  name: rabbitmq
 
 # ============================================================
 # 补丁列表
 # ============================================================
 
-patches:
   # 1. Dev 环境禁用 OpenTelemetry（collector 未部署时避免日志噪音）
-  - target:
-      kind: ConfigMap
-      name: app-config
-    patch: |-
-      - op: replace
-        path: /data/OTEL_SDK_DISABLED
-        value: "true"
-      - op: replace
-        path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
-        value: ""
 
   # 2. Gateway CORS: local 环境通配端口，零摩擦开发体验
-  - target:
-      kind: ConfigMap
-      name: gateway-cors-config
-    patch: |-
-      - op: replace
-        path: /data
-        value:
-          application.yml: |
-            spring:
-              cloud:
-                gateway:
-                  globalcors:
-                    add-to-simple-url-handler-mapping: true
-                    cors-configurations:
-                      '[/**]':
-                        allowedOrigins:
-                          - "http://agenthive.local:8080"
-                          - "http://agenthive.local:3000"
-                          - "http://localhost:3000"
-                          - "http://localhost:5173"
-                          - "http://localhost:8080"
-                        allowedMethods:
-                          - GET
-                          - POST
-                          - PUT
-                          - DELETE
-                          - PATCH
-                          - OPTIONS
-                        allowedHeaders:
-                          - Content-Type
-                          - Accept
-                          - Authorization
-                          - X-Query-Params
-                          - X-Requested-With
-                          - X-User-Id
-                          - X-User-Name
-                          - X-User-Role
-                        allowCredentials: true
-                        maxAge: 3600
 
   # 4. Landing Service targetPort 修正（Dockerfile 暴露 80，base 写 3000）
-  - target:
-      kind: Service
-      name: landing
-    patch: |-
-      - op: replace
-        path: /spec/ports/0/targetPort
-        value: 80
 
   # 5. Gateway Service 在 dev 环境使用 ClusterIP 而非 LoadBalancer
-  - target:
-      kind: Service
-      name: gateway-service
-    patch: |-
-      - op: replace
-        path: /spec/type
-        value: ClusterIP
+patches:
+- patch: |-
+    - op: replace
+      path: /data/OTEL_SDK_DISABLED
+      value: "true"
+    - op: replace
+      path: /data/OTEL_EXPORTER_OTLP_ENDPOINT
+      value: ""
+  target:
+    kind: ConfigMap
+    name: app-config
+- patch: |-
+    - op: replace
+      path: /data
+      value:
+        application.yml: |
+          spring:
+            cloud:
+              gateway:
+                globalcors:
+                  add-to-simple-url-handler-mapping: true
+                  cors-configurations:
+                    '[/**]':
+                      allowedOrigins:
+                        - "http://agenthive.local:8080"
+                        - "http://agenthive.local:3000"
+                        - "http://localhost:3000"
+                        - "http://localhost:5173"
+                        - "http://localhost:8080"
+                      allowedMethods:
+                        - GET
+                        - POST
+                        - PUT
+                        - DELETE
+                        - PATCH
+                        - OPTIONS
+                      allowedHeaders:
+                        - Content-Type
+                        - Accept
+                        - Authorization
+                        - X-Query-Params
+                        - X-Requested-With
+                        - X-User-Id
+                        - X-User-Name
+                        - X-User-Role
+                      allowCredentials: true
+                      maxAge: 3600
+  target:
+    kind: ConfigMap
+    name: gateway-cors-config
+- patch: |-
+    - op: replace
+      path: /spec/ports/0/targetPort
+      value: 80
+  target:
+    kind: Service
+    name: landing
+- patch: |-
+    - op: replace
+      path: /spec/type
+      value: ClusterIP
+  target:
+    kind: Service
+    name: gateway-service
 
 labels:
-  - pairs:
-      environment: local
-    includeSelectors: false
-    includeTemplates: true
+- includeTemplates: true
+  pairs:
+    environment: local
