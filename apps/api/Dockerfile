@@ -29,8 +29,9 @@ COPY packages/observability/dist ./packages/observability/dist
 COPY apps/agent-runtime/dist ./apps/agent-runtime/dist
 COPY apps/api/dist ./apps/api/dist
 
-# Copy database migrations (needed for runtime schema updates)
+# Copy database migrations and config (needed for runtime schema updates)
 COPY apps/api/src/db/migrations ./apps/api/src/db/migrations
+COPY apps/api/.node-pg-migrate.js ./apps/api/.node-pg-migrate.js
 
 # Deploy production bundle (extracts only prod deps + workspace dist)
 RUN pnpm --filter=@agenthive/api deploy --prod /prod/api
