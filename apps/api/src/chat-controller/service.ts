@@ -73,6 +73,19 @@ export const chatService = {
       workspaceId = wsResult.rows[0]?.workspace_id || null
     }
 
+    // 如果指定了 projectId，先查找是否已有活跃的 session（1 project 1 session 约束）
+    if (projectId) {
+      const existing = await pool.query(
+        `SELECT * FROM chat_sessions WHERE project_id = $1 AND status = 'active' LIMIT 1`,
+        [projectId]
+      )
+      if (existing.rowCount && existing.rowCount > 0) {
+        const session = dbRowToSession(existing.rows[0])
+        logger.info('Reusing existing chat session for project', { sessionId: session.id, userId: input.userId, projectId })
+        return session
+      }
+    }
+
     const result = await pool.query(
       `INSERT INTO chat_sessions (user_id, workspace_id, project_id, title, status, session_type)
        VALUES ($1, $2, $3, $4, $5, $6)
