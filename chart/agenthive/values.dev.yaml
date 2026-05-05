@@ -255,8 +255,11 @@ registry:
   enabled: true
   name: acr-regcred
   server: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
-  username: "18829355062"
-  password: "weiya135"
+  # ACR credentials are injected via local environment or CI/CD secrets.
+  # For local k3d dev: create secret manually or configure node-level registry auth.
+  # For CI/CD: use GitHub Secrets (ACR_USERNAME / ACR_PASSWORD).
+  username: ""
+  password: ""
   email: ""
 # ----------------------------------------------------------------------------
 # ServiceAccount — Dev (ACR image pull authentication)
