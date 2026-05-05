@@ -290,10 +290,6 @@ ingress:
     nginx.ingress.kubernetes.io/hsts: "true"
     nginx.ingress.kubernetes.io/hsts-max-age: "31536000"
     nginx.ingress.kubernetes.io/hsts-include-subdomains: "true"
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      add_header X-Frame-Options "SAMEORIGIN" always;
-      add_header X-Content-Type-Options "nosniff" always;
-      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
   tls:
     enabled: true
     secretName: production-tls-secret
