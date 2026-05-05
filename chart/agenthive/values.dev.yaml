@@ -22,7 +22,7 @@ api:
   image:
     registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/api
-    tag: "v0.1.0-dev.1-55-gc183b4c"
+    tag: "sha-d2571dc"
   resources:
     requests:
       memory: 256Mi
@@ -42,7 +42,7 @@ landing:
   image:
     registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/landing
-    tag: "v0.1.0-dev.1-57-g9840356"
+    tag: "sha-d2571dc"
   resources:
     requests:
       memory: 128Mi
@@ -62,7 +62,7 @@ javaServices:
     image:
       registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
       repositoryPrefix: namespace-alpha
-      tag: "845fddb"
+      tag: "sha-d2571dc"
     replicas: 1
     resources:
       requests:
