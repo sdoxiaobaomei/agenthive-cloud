@@ -22,7 +22,7 @@ api:
   image:
     registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/api
-    tag: "sha-ab1b150"
+    tag: "sha-387cd18"
   resources:
     requests:
       memory: 256Mi
@@ -42,7 +42,7 @@ landing:
   image:
     registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/landing
-    tag: "sha-ab1b150"
+    tag: "sha-387cd18"
   resources:
     requests:
       memory: 128Mi
@@ -62,7 +62,7 @@ javaServices:
     image:
       registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
       repositoryPrefix: namespace-alpha
-      tag: "sha-ab1b150"
+      tag: "sha-387cd18"
     replicas: 1
     resources:
       requests:
