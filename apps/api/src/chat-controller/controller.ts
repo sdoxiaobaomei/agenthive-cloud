@@ -148,13 +148,14 @@ export const sendMessage = async (req: Request, res: Response) => {
 
     const { intent } = await chatService.classifyIntent(content)
 
-    const thinkMsg = await chatService.addMessage(id, 'assistant', `思考中... 意图识别: ${intent}`, {
+    // Step 1: Create a placeholder think message (will be enriched after LLM reply)
+    const thinkMsg = await chatService.addMessage(id, 'assistant', '分析中...', {
       messageType: 'think',
-      metadata: { intent, thinkSummary: `检测到意图: ${intent}` },
+      metadata: { intent, thinkSummary: '正在分析您的需求...' },
       versionId: currentVersionId,
     })
 
-    await chatService.addMessage(id, 'system', `检测到意图: ${intent}`, {
+    await chatService.addMessage(id, 'system', `意图识别完成: ${intent}`, {
       messageType: 'system_event',
       versionId: currentVersionId,
     })
@@ -176,8 +177,22 @@ export const sendMessage = async (req: Request, res: Response) => {
       tasks = await chatService.executeAgentTask(id, intent, content, userId, estimatedCost)
     }
 
-    const responseContent = await chatService.generateReply(id, intent, content, tasks)
-    const assistantMsg = await chatService.addMessage(id, 'assistant', responseContent, {
+    // Step 2: Generate structured reply from LLM
+    const structuredReply = await chatService.generateReply(id, intent, content, tasks)
+
+    // Step 3: Enrich think message with actual LLM thinking
+    const enrichedThinkMsg = await chatService.updateMessage(thinkMsg.id, {
+      content: structuredReply.thinkSummary || '分析完成',
+      metadata: {
+        ...thinkMsg.metadata,
+        intent,
+        thinkSummary: structuredReply.thinkSummary,
+        thinkContent: structuredReply.thinkContent,
+      },
+    })
+
+    // Step 4: Save assistant response
+    const assistantMsg = await chatService.addMessage(id, 'assistant', structuredReply.content, {
       messageType: 'message',
       metadata: { intent, estimatedCost, tickets: tasks.map((t) => ({ id: t.ticketId, role: t.workerRole, task: t.ticketId, status: t.status })) },
       versionId: currentVersionId,
@@ -205,7 +220,7 @@ export const sendMessage = async (req: Request, res: Response) => {
       code: 200, message: 'success',
       data: {
         message: assistantMsg,
-        thinkMessage: thinkMsg,
+        thinkMessage: enrichedThinkMsg,
         intent,
         tasks,
         estimatedCost,

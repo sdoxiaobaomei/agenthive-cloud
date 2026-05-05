@@ -27,8 +27,10 @@ import type {
 } from './types.js'
 import type { LLMMessage } from '../services/llm.js'
 
-// Prompt template for intent classification (from docs/architecture/chat-controller.md)
+// Prompt template for intent classification with few-shot examples
 const INTENT_CLASSIFICATION_PROMPT = `分析用户输入的意图，从以下选项中选择最匹配的一个：
+
+可选意图：
 - create_project: 用户想要创建一个新的软件项目或功能
 - modify_code: 用户想要修改、添加或删除代码
 - code_review: 用户想要审查代码质量
@@ -38,9 +40,17 @@ const INTENT_CLASSIFICATION_PROMPT = `分析用户输入的意图，从以下选
 - explain: 用户想要理解某段代码或概念
 - chat: 普通聊天，不涉及具体开发任务
 
+示例：
+用户: "帮我做个登录页面" → create_project
+用户: "这个函数好像有bug，返回不对" → fix_bug
+用户: "帮我看看这段代码写得怎么样" → code_review
+用户: "你好，今天天气怎么样" → chat
+用户: "我想给订单列表加个搜索功能" → modify_code
+用户: "为什么这里要用递归" → explain
+
 用户输入: {userInput}
 
-请只返回意图标识符，不要解释。`
+请只返回意图标识符，不要解释。如果难以判断，默认返回 chat。`
 
 function generateId(prefix = 'id'): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`
@@ -154,6 +164,53 @@ export const chatService = {
     await redis.lpush(msgKey, JSON.stringify(result.rows[0]))
     await redis.ltrim(msgKey, 0, 99)
     await redis.expire(msgKey, 86400)
+
+    return dbRowToMessage(result.rows[0])
+  },
+
+  async updateMessage(
+    messageId: string,
+    updates: {
+      content?: string
+      metadata?: ChatMessage['metadata']
+      isVisibleInHistory?: boolean
+    }
+  ): Promise<ChatMessage> {
+    const sets: string[] = []
+    const values: any[] = []
+    let paramIdx = 0
+
+    if (updates.content !== undefined) {
+      paramIdx++
+      sets.push(`content = $${paramIdx}`)
+      values.push(updates.content)
+    }
+    if (updates.metadata !== undefined) {
+      paramIdx++
+      sets.push(`metadata = $${paramIdx}`)
+      values.push(JSON.stringify(updates.metadata))
+    }
+    if (updates.isVisibleInHistory !== undefined) {
+      paramIdx++
+      sets.push(`is_visible_in_history = $${paramIdx}`)
+      values.push(updates.isVisibleInHistory)
+    }
+
+    if (sets.length === 0) {
+      throw new Error('No fields to update')
+    }
+
+    paramIdx++
+    values.push(messageId)
+
+    const result = await pool.query(
+      `UPDATE chat_messages SET ${sets.join(', ')} WHERE id = $${paramIdx} RETURNING *`,
+      values
+    )
+
+    if ((result.rowCount ?? 0) === 0) {
+      throw new Error('Message not found')
+    }
 
     return dbRowToMessage(result.rows[0])
   },
@@ -296,7 +353,7 @@ export const chatService = {
     intent: ChatIntent,
     content: string,
     tasks: AgentTask[]
-  ): Promise<string> {
+  ): Promise<{ content: string; thinkSummary: string; thinkContent: string }> {
     const llmService = getLLMService()
 
     const { messages } = await this.getSessionMessages(sessionId, 1, 20)
@@ -318,10 +375,17 @@ export const chatService = {
         temperature: 0.7,
         maxTokens: 2048,
       })
-      return result.content.trim()
+      const parsed = parseStructuredReply(result.content.trim())
+      logger.info('LLM structured reply parsed', { sessionId, intent, hasThinkSummary: !!parsed.thinkSummary })
+      return parsed
     } catch (error) {
       logger.error('LLM reply generation failed', error instanceof Error ? error : undefined, { sessionId, intent })
-      return buildStaticResponse(intent, tasks)
+      const fallback = buildStaticResponse(intent, tasks)
+      return {
+        content: fallback,
+        thinkSummary: '使用预设回复',
+        thinkContent: 'LLM 调用失败，回退到静态响应模板。',
+      }
     }
   },
 
@@ -563,6 +627,36 @@ export const chatService = {
 
 // ========== Helpers ==========
 
+/**
+ * Parse structured LLM reply with XML-style tags.
+ * Expected format:
+ * <thinking_summary>...</thinking_summary>
+ * <thinking_detail>...</thinking_detail>
+ * <response>...</response>
+ *
+ * Falls back to treating entire text as content if parsing fails.
+ */
+function parseStructuredReply(raw: string): { content: string; thinkSummary: string; thinkContent: string } {
+  const thinkSummaryMatch = raw.match(/<thinking_summary>([\s\S]*?)<\/thinking_summary>/i)
+  const thinkDetailMatch = raw.match(/<thinking_detail>([\s\S]*?)<\/thinking_detail>/i)
+  const responseMatch = raw.match(/<response>([\s\S]*?)<\/response>/i)
+
+  if (responseMatch) {
+    return {
+      content: responseMatch[1].trim(),
+      thinkSummary: thinkSummaryMatch ? thinkSummaryMatch[1].trim().slice(0, 100) : '分析完成',
+      thinkContent: thinkDetailMatch ? thinkDetailMatch[1].trim() : '',
+    }
+  }
+
+  // Fallback: no XML tags found — treat as plain content
+  return {
+    content: raw.trim(),
+    thinkSummary: '直接回复',
+    thinkContent: '',
+  }
+}
+
 function buildReplySystemPrompt(intent: ChatIntent, tasks: AgentTask[]): string {
   const roleNames: Record<string, string> = {
     frontend: '小花 (前端开发)',
@@ -574,33 +668,59 @@ function buildReplySystemPrompt(intent: ChatIntent, tasks: AgentTask[]): string 
     ? tasks.map((t) => `- ${roleNames[t.workerRole] || t.workerRole}: ${t.ticketId}`).join('\n')
     : '无'
 
-  return `你是 AgentHive AI 助手，一个多 Agent 协作的 AI 蜂群协作平台的智能助手。
+  return `你是 AgentHive 的 AI Tech Lead，一个拥有 10 年全栈开发经验的资深技术负责人。你领导着一支精锐的 Multi-Agent 团队：
+- 阿铁 (后端开发): Node.js/Java、数据库、API 设计
+- 小花 (前端开发): Vue 3、Nuxt 3、TypeScript、UI/UX
+- 阿镜 (QA 工程师): 代码审查、测试策略、质量把控
 
-你的职责：
-- 理解用户的软件开发需求
-- 调用 Multi-Agent 团队（阿铁-后端、小花-前端、阿镜-QA）并行执行任务
-- 用简洁、专业、友好的中文回复用户
+你的沟通风格：
+- 专业、简洁、结构化 —— 像一位经验丰富的 Tech Lead 在 Slack 里回复消息
+- 用 bullet points 或编号步骤组织内容
+- 关键决策用 **粗体** 标出
+- 代码相关的回答要精准，不泛泛而谈
+- 最后给出一个清晰的 next step 或反问
 
-当前意图：${intent}
+当前用户意图：${intent}
 已创建任务：
 ${taskList}
 
-回复要求：
-- 如果用户只是闲聊，自然友好地回应
-- 如果涉及开发任务，确认收到请求并简要说明后续步骤
-- 如有任务已创建，列出任务清单和负责人
-- 语气专业但亲切，像一位经验丰富的 Tech Lead`
+=== 输出格式要求（必须严格遵守）===
+你的回复必须包含三个部分，用 XML 标签包裹：
+
+<thinking_summary>一句话思考摘要，30字以内，描述你正在分析什么</thinking_summary>
+
+<thinking_detail>
+你的详细思考过程，可以包含：
+1. 对用户需求的理解
+2. 意图分类的判断依据
+3. 涉及的技术方案考量
+4. 为什么分配某些任务给特定 Agent
+</thinking_detail>
+
+<response>
+给用户的最终回复，要求：
+- 开头一句简短的确认/回应
+- 主体用 bullet points 或编号步骤
+- 关键信息 **粗体强调**
+- 结尾给出明确的 next step 或需要用户确认的问题
+- 总长度控制在 200 字以内（代码示例除外）
+</response>
+
+注意：
+- 不要在 <response> 之外输出任何内容给用户的部分
+- 思考过程要诚实、具体，不要泛泛而谈"我会认真分析"
+- 如果任务已创建，在 response 中列出任务清单和负责人`
 }
 
 function buildStaticResponse(intent: ChatIntent, tasks: AgentTask[]): string {
   if (tasks.length === 0) {
     switch (intent) {
       case 'explain':
-        return '我来为您解释这个问题...'
+        return '我来为您详细解释这个问题。'
       case 'chat':
-        return '好的，请继续说。'
+        return '好的，我在听。有什么可以帮您的吗？'
       default:
-        return '已收到您的请求，正在处理中...'
+        return '已收到您的请求，正在协调 Agent 团队处理中...'
     }
   }
 
@@ -610,9 +730,9 @@ function buildStaticResponse(intent: ChatIntent, tasks: AgentTask[]): string {
     qa: '阿镜 (QA 工程师)',
   }
 
-  const taskList = tasks.map((t) => `- ${roleNames[t.workerRole] || t.workerRole}: ${t.ticketId}`).join('\n')
+  const taskList = tasks.map((t) => `- **${roleNames[t.workerRole] || t.workerRole}**: ${t.ticketId}`).join('\n')
 
-  return `已为您创建以下任务:\n${taskList}\n\nAgent 团队正在并行执行，您可以通过 WebSocket 实时查看进度。`
+  return `收到！已为您协调团队创建以下任务：\n\n${taskList}\n\nAgent 团队正在并行执行，您可以通过下方进度面板实时查看状态，也可以随时提出调整建议。`
 }
 
 function parseIntent(raw: string): ChatIntent {

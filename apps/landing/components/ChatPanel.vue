@@ -93,6 +93,7 @@
                 :is-loading="msg.isLoading"
               />
               <ThinkBlock v-else-if="msg.type === 'think'" :message="msg" />
+              <SystemEventBlock v-else-if="msg.type === 'system_event'" :message="msg" />
               <TaskBlock
                 v-else-if="msg.type === 'task'"
                 :message="msg"
@@ -195,6 +196,7 @@ import {
 import { ElMessage } from 'element-plus'
 import { io, Socket } from 'socket.io-client'
 import type { ChatMessage, ChatVersion } from '~/stores/chat'
+import SystemEventBlock from './chat/SystemEventBlock.vue'
 
 import type { Project } from '~/stores/project'
 
@@ -442,79 +444,32 @@ const sendMessage = async () => {
     if (!sessionId.value) return
   }
 
+  // Set current conversation in store
+  chatStore.setCurrentConversation(sessionId.value)
+
   // v2: 用户直接输入时，自动关闭当前活跃的 recommend
   await chatStore.dismissRecommend()
 
-  // Add user message to store
-  const userMsg: ChatMessage = {
-    id: `msg-${Date.now()}`,
-    role: 'user',
-    type: 'message',
-    content: text,
-    timestamp: new Date().toISOString(),
-    conversationId: sessionId.value,
-    metadata: {},
-  }
-  chatStore.messages.push(userMsg)
   inputText.value = ''
   if (inputRef.value) inputRef.value.style.height = 'auto'
-  nextTick(() => scrollToBottom())
 
-  // Add loading message to store
-  const loadingMsg: ChatMessage = {
-    id: `msg-${Date.now() + 1}`,
-    role: 'assistant',
-    type: 'message',
-    content: '',
-    timestamp: new Date().toISOString(),
-    conversationId: sessionId.value,
-    metadata: {},
-  }
-  chatStore.messages.push(loadingMsg)
   isLoading.value = true
   nextTick(() => scrollToBottom())
 
   try {
-    const res = await chatApi.sendMessage(sessionId.value, { content: text, type: 'message' })
+    // Use store action which handles multi-message response
+    await chatStore.sendMessageWithResponse(text)
 
-    // Remove loading message from store
-    chatStore.messages = chatStore.messages.filter((m) => m.id !== loadingMsg.id)
-
-    if (res.success && res.data) {
-      const assistantMsg: ChatMessage = {
-        id: res.data.message?.id || `msg-${Date.now() + 2}`,
-        role: 'assistant',
-        type: 'message',
-        content: res.data.message?.content || 'Processing your request...',
-        timestamp: res.data.message?.timestamp || new Date().toISOString(),
-        conversationId: sessionId.value,
-        metadata: {
-          intent: res.data.intent,
-          tasks: res.data.tasks as any,
-        },
-      }
-      chatStore.messages.push(assistantMsg)
-
-      // If tasks were created, start polling progress
-      if (res.data.tasks?.length) {
-        agentStatus.value = 'running'
-        pollProgress(sessionId.value)
-      }
-    } else {
-      chatStore.messages.push({
-        id: `msg-${Date.now() + 2}`,
-        role: 'assistant',
-        type: 'message',
-        content: 'Sorry, something went wrong. Please try again.',
-        timestamp: new Date().toISOString(),
-        conversationId: sessionId.value,
-        metadata: {},
-      })
+    // Check if tasks were created and start polling
+    const lastMsgs = chatStore.currentMessages.slice(-3)
+    const hasTask = lastMsgs.some(m => m.type === 'task')
+    if (hasTask) {
+      agentStatus.value = 'running'
+      pollProgress(sessionId.value)
     }
   } catch (error: any) {
-    chatStore.messages = chatStore.messages.filter((m) => m.id !== loadingMsg.id)
     chatStore.messages.push({
-      id: `msg-${Date.now() + 2}`,
+      id: `msg-${Date.now()}`,
       role: 'assistant',
       type: 'message',
       content: `Error: ${error.message || 'Failed to get response'}`,
@@ -593,15 +548,15 @@ const loadSessionMessages = async (sid: string) => {
       const loaded: ChatMessage[] = res.data.messages.map((msg: any) => ({
         id: msg.id || `msg-${Date.now()}`,
         role: msg.role as 'user' | 'assistant' | 'system',
-        type: msg.type || 'message',
+        type: (msg.messageType || msg.type || 'message') as ChatMessage['type'],
         content: msg.content,
-        timestamp: msg.timestamp || msg.createdAt,
+        timestamp: msg.createdAt || msg.timestamp,
         conversationId: sid,
         versionId: msg.versionId,
         tasks: msg.tasks,
         options: msg.options,
-        thinkContent: msg.thinkContent,
-        thinkSummary: msg.thinkSummary,
+        thinkContent: msg.thinkContent || msg.metadata?.thinkContent,
+        thinkSummary: msg.thinkSummary || msg.metadata?.thinkSummary,
         metadata: msg.metadata || {},
       }))
       // v2: merge into store, avoid duplicates
@@ -1184,4 +1139,27 @@ onUnmounted(() => {
   font-size: 12px;
   line-height: 1.5;
 }
+
+/* Message entry animation */
+.message-wrapper {
+  animation: messageSlideIn 0.3s ease-out both;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sequential stagger for recent messages */
+.message-list .message-wrapper:nth-last-child(1) { animation-delay: 0ms; }
+.message-list .message-wrapper:nth-last-child(2) { animation-delay: 40ms; }
+.message-list .message-wrapper:nth-last-child(3) { animation-delay: 80ms; }
+.message-list .message-wrapper:nth-last-child(4) { animation-delay: 120ms; }
+.message-list .message-wrapper:nth-last-child(5) { animation-delay: 160ms; }
 </style>
