@@ -125,7 +125,7 @@ javaServices:
   defaults:
     image:
       repositoryPrefix: "namespace-alpha"
-      tag: "v1.2.0"
+      tag: "v1.1.0-g6d872b4"
     replicas: 3
     resources:
       requests:
