@@ -35,7 +35,8 @@ spec:
         {{- include "agenthive.labels" . | nindent 8 }}
     spec:
       restartPolicy: Never
-      serviceAccountName: {{ include "agenthive.apiName" . }}
+      # Use 'default' SA because pre-install hook runs before the API SA is created
+      serviceAccountName: default
       securityContext:
         {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
       {{- if .Values.postgres.enabled }}
