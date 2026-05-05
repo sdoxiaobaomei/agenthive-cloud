@@ -334,20 +334,8 @@ export const useChatStore = defineStore('chat', {
         this.currentConversation = conversation
         return conversation
       } catch (err: any) {
-        // 离线模式：创建本地会话
-        const conversation: Conversation = {
-          id: `conv-${Date.now()}`,
-          title,
-          projectId,
-          agentId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          messageCount: 0,
-          isPinned: false,
-        }
-        this.conversations.unshift(conversation)
-        this.currentConversation = conversation
-        return conversation
+        this.error = err.message || '创建会话失败'
+        throw err
       }
     },
 
@@ -409,11 +397,15 @@ export const useChatStore = defineStore('chat', {
           throw new Error(result.message || '发送消息失败')
         }
 
+        if (!result.data?.message?.id) {
+          throw new Error('服务器返回数据缺少消息 ID')
+        }
+
         const assistantMessage: ChatMessage = {
-          id: result.data?.message?.id || `msg-${Date.now()}-ai`,
+          id: result.data.message.id,
           role: 'assistant',
-          content: result.data?.message?.content || '处理完成',
-          timestamp: result.data?.message?.timestamp || new Date().toISOString(),
+          content: result.data.message.content || '处理完成',
+          timestamp: result.data.message.timestamp || new Date().toISOString(),
           conversationId,
           metadata: {
             model: 'agenthive-ai',
@@ -426,14 +418,6 @@ export const useChatStore = defineStore('chat', {
 
       } catch (err: any) {
         this.error = err.message || '获取回复失败'
-        // 添加错误提示消息
-        this.messages.push({
-          id: `msg-${Date.now()}-error`,
-          role: 'system',
-          content: `错误: ${this.error}`,
-          timestamp: new Date().toISOString(),
-          conversationId: this.currentConversation!.id,
-        })
       } finally {
         this.isLoading = false
       }
@@ -472,11 +456,8 @@ export const useChatStore = defineStore('chat', {
         return this.conversations
       } catch (err: any) {
         this.error = err.message || '加载会话列表失败'
-        // 使用本地数据
-        if (this.conversations.length === 0) {
-          this.conversations = []
-        }
-        return this.conversations
+        this.conversations = []
+        throw err
       } finally {
         this.isLoading = false
       }
@@ -582,13 +563,6 @@ export const useChatStore = defineStore('chat', {
         return this.fileTree
       } catch (err: any) {
         this.error = err.message || '加载文件树失败'
-        // API 失败时使用默认演示数据
-        if (!path && this.fileTree.length === 0) {
-          this.fileTree = defaultFileTree
-          if (import.meta.dev) {
-            console.warn('[ChatStore] API 不可用，使用默认演示数据')
-          }
-        }
         throw err
       } finally {
         this.isLoading = false
@@ -947,7 +921,7 @@ export const useChatStore = defineStore('chat', {
           // 后端返回 messages，直接使用
           if (result.data.messages && result.data.messages.length > 0) {
             const loaded: ChatMessage[] = result.data.messages.map((msg: any) => ({
-              id: msg.id || `msg-${Date.now()}`,
+              id: msg.id,
               role: msg.role as 'user' | 'assistant' | 'system',
               type: msg.type || 'message',
               content: msg.content,
