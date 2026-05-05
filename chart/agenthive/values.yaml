@@ -133,7 +133,7 @@ api:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 25%
-      maxUnavailable: 0
+      maxUnavailable: 1
 
   probes:
     liveness:
@@ -321,7 +321,7 @@ landing:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 25%
-      maxUnavailable: 0
+      maxUnavailable: 1
 
   probes:
     liveness:
@@ -419,7 +419,7 @@ javaServices:
       type: RollingUpdate
       rollingUpdate:
         maxSurge: 25%
-        maxUnavailable: 0
+        maxUnavailable: 1
     jvmOptions: ""
 
     hpa:
@@ -797,6 +797,7 @@ secret:
   name: app-secrets
   externalSecret:
     enabled: false
+  createEmpty: false
   data: {}
 
 # ----------------------------------------------------------------------------
@@ -852,6 +853,12 @@ nacos:
     token: "qDM03geLxo1dEcRLDi1R+ZYe3Tg9zsVsl5o95oSWo3A="
     identityKey: "agenthive"
     identityValue: "agenthive-secret-2024"
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
 
   securityContext:
     allowPrivilegeEscalation: false

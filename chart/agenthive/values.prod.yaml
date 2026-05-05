@@ -1,9 +1,10 @@
 # ============================================================================
-# AgentHive Cloud — Production Values Override
+# AgentHive Cloud — Production Values Override (Fixed)
 # Usage: helm upgrade --install agenthive chart/agenthive -f values.prod.yaml
 # ============================================================================
 
 global:
+  imageRegistry: "crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com"
   labels:
     environment: production
 
@@ -26,10 +27,11 @@ global:
 # API Service — Production
 # ----------------------------------------------------------------------------
 api:
-  replicas: 3
+  replicas: 1
 
   image:
-    tag: "1.1.0"
+    repository: "namespace-alpha/api"
+    tag: "v1.1.0-g6d872b4"
 
   resources:
     requests:
@@ -40,47 +42,26 @@ api:
       cpu: 1000m
 
   pdb:
-    enabled: true
-    minAvailable: 2
+    enabled: false
 
   hpa:
-    enabled: true
-    minReplicas: 3
-    maxReplicas: 15
-    targetCPUUtilization: 60
-    targetMemoryUtilization: 75
-    behavior:
-      scaleDown:
-        stabilizationWindowSeconds: 300
-        policies:
-          - type: Percent
-            value: 10
-            periodSeconds: 60
-      scaleUp:
-        stabilizationWindowSeconds: 0
-        policies:
-          - type: Percent
-            value: 100
-            periodSeconds: 15
-          - type: Pods
-            value: 4
-            periodSeconds: 15
-        selectPolicy: Max
+    enabled: false
 
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 0
+      maxSurge: 1
+      maxUnavailable: 1
 
 # ----------------------------------------------------------------------------
 # Landing Service — Production
 # ----------------------------------------------------------------------------
 landing:
-  replicas: 3
+  replicas: 1
 
   image:
-    tag: "1.1.0"
+    repository: "namespace-alpha/landing"
+    tag: "v1.1.0-g6d872b4"
 
   resources:
     requests:
@@ -91,38 +72,16 @@ landing:
       cpu: 500m
 
   pdb:
-    enabled: true
-    minAvailable: 2
+    enabled: false
 
   hpa:
-    enabled: true
-    minReplicas: 3
-    maxReplicas: 12
-    targetCPUUtilization: 60
-    targetMemoryUtilization: 75
-    behavior:
-      scaleDown:
-        stabilizationWindowSeconds: 300
-        policies:
-          - type: Percent
-            value: 10
-            periodSeconds: 60
-      scaleUp:
-        stabilizationWindowSeconds: 0
-        policies:
-          - type: Percent
-            value: 100
-            periodSeconds: 15
-          - type: Pods
-            value: 4
-            periodSeconds: 15
-        selectPolicy: Max
+    enabled: false
 
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 25%
-      maxUnavailable: 0
+      maxSurge: 1
+      maxUnavailable: 1
 
 # ----------------------------------------------------------------------------
 # Java Microservices — Production
@@ -130,8 +89,9 @@ landing:
 javaServices:
   defaults:
     image:
-      tag: "1.1.0"
-    replicas: 3
+      repositoryPrefix: "namespace-alpha"
+      tag: "v1.1.0-g6d872b4"
+    replicas: 1
     resources:
       requests:
         memory: 512Mi
@@ -140,160 +100,106 @@ javaServices:
         memory: 1Gi
         cpu: 1000m
     jvmOptions: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -Djava.security.egd=file:/dev/./urandom"
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 1
+        maxUnavailable: 1
+    hpa:
+      enabled: false
+    pdb:
+      enabled: false
 
   services:
     gateway:
       envOverrides:
         REDIS_HOST: "172.24.146.165"
-      replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
+      replicas: 1
       hpa:
-        enabled: true
-        minReplicas: 3
-        maxReplicas: 10
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
+        enabled: false
       pdb:
-        enabled: true
-        minAvailable: 2
+        enabled: false
 
     auth:
       envOverrides:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
-      replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
+      replicas: 1
       hpa:
-        enabled: true
-        minReplicas: 3
-        maxReplicas: 10
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
+        enabled: false
       pdb:
-        enabled: true
-        minAvailable: 2
+        enabled: false
 
     user:
       envOverrides:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
-      replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
+      replicas: 1
       hpa:
-        enabled: true
-        minReplicas: 3
-        maxReplicas: 10
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
+        enabled: false
       pdb:
-        enabled: true
-        minAvailable: 2
+        enabled: false
 
     payment:
       envOverrides:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
-      replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
+      replicas: 1
       hpa:
-        enabled: true
-        minReplicas: 3
-        maxReplicas: 8
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
+        enabled: false
       pdb:
-        enabled: true
-        minAvailable: 2
+        enabled: false
 
     order:
       envOverrides:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
-      replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
+      replicas: 1
       hpa:
-        enabled: true
-        minReplicas: 3
-        maxReplicas: 8
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
+        enabled: false
       pdb:
-        enabled: true
-        minAvailable: 2
+        enabled: false
 
     cart:
       envOverrides:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
-      replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
+      replicas: 1
       hpa:
-        enabled: true
-        minReplicas: 3
-        maxReplicas: 8
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
+        enabled: false
       pdb:
-        enabled: true
-        minAvailable: 2
+        enabled: false
 
     logistics:
       envOverrides:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
-      replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
+      replicas: 1
       hpa:
-        enabled: true
-        minReplicas: 3
-        maxReplicas: 8
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
+        enabled: false
       pdb:
-        enabled: true
-        minAvailable: 2
+        enabled: false
+
+  ingress:
+    enabled: true
+    name: agenthive-java-ingress
+    className: nginx
+    tls:
+      enabled: true
+      secretName: agenthive-java-tls
+      hosts:
+        - java.agenthive.cloud
+    hosts:
+      - host: java.agenthive.cloud
+        paths:
+          - path: /gateway
+            pathType: Prefix
+            service: gateway-service
+            port: 8080
+          - path: /auth
+            pathType: Prefix
+            service: auth-service
+            port: 8081
 
 # ----------------------------------------------------------------------------
 # Ingress — Production (HTTPS + Domain)
@@ -336,26 +242,6 @@ ingress:
           service: landing
           port: 3000
 
-  ingress:
-    enabled: true
-    className: nginx
-    tls:
-      enabled: true
-      secretName: agenthive-java-tls
-      hosts:
-        - java.agenthive.cloud
-    hosts:
-      - host: java.agenthive.cloud
-        paths:
-          - path: /gateway
-            pathType: Prefix
-            service: gateway-service
-            port: 8080
-          - path: /auth
-            pathType: Prefix
-            service: auth-service
-            port: 8081
-
 # ----------------------------------------------------------------------------
 # ConfigMap — Production
 # ----------------------------------------------------------------------------
@@ -379,16 +265,13 @@ configmap:
 # Secret — Production (Native K8s Secret, managed by scripts/setup-secrets.sh)
 # ----------------------------------------------------------------------------
 secret:
-  enabled: true
-  name: app-secrets
-  externalSecret:
-    enabled: false
+  enabled: false
 
 # ----------------------------------------------------------------------------
 # NetworkPolicy — Production
 # ----------------------------------------------------------------------------
 networkPolicy:
-  enabled: true
+  enabled: false
 
 # ----------------------------------------------------------------------------
 # Nacos — Production (Phase 1: enabled if needed)
@@ -396,6 +279,10 @@ networkPolicy:
 nacos:
   enabled: true
   replicas: 1
+  image:
+    registry: ""
+    repository: "nacos/nacos-server"
+    tag: "v2.3.0"
   resources:
     requests:
       memory: 1Gi
@@ -403,6 +290,11 @@ nacos:
     limits:
       memory: 2Gi
       cpu: 1000m
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
 
 # ----------------------------------------------------------------------------
 # RabbitMQ — Production (Phase 1: enabled if needed)
