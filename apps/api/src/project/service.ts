@@ -11,6 +11,24 @@ import { spawn } from 'child_process'
 import { randomUUID } from 'crypto'
 import { WORKSPACE_BASE, getWorkspacePath } from '../config/workspace.js'
 
+/**
+ * Normalize tech_stack to valid JSONB for PostgreSQL.
+ * - null/undefined/empty string → null (PG uses DEFAULT '[]')
+ * - string → JSON array ["value"]
+ * - array → JSON array
+ * - otherwise → null
+ */
+function normalizeTechStack(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'string') {
+    // Try parse as JSON first (e.g. already '["react"]')
+    try { JSON.parse(value); return value } catch { /* not valid JSON */ }
+    return JSON.stringify([value])
+  }
+  if (Array.isArray(value)) return JSON.stringify(value)
+  return null
+}
+
 export const projectService = {
   async findAll(userId?: string): Promise<Project[]> {
     let query = 'SELECT * FROM projects WHERE status != $1'
@@ -47,7 +65,7 @@ export const projectService = {
         data.owner_id,
         'active',
         data.type || 'blank',
-        data.tech_stack || null,
+        normalizeTechStack(data.tech_stack),
         data.git_url || null,
         data.git_branch || 'main',
         data.is_template ?? false,
@@ -80,7 +98,7 @@ export const projectService = {
         data.repo_url,
         data.status,
         data.type,
-        data.tech_stack,
+        normalizeTechStack(data.tech_stack),
         data.git_url,
         data.git_branch,
         data.workspace_path,
