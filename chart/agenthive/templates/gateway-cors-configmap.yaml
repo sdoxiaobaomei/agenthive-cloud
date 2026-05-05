@@ -21,9 +21,20 @@ data:
             add-to-simple-url-handler-mapping: true
             cors-configurations:
               '[/**]':
-                allowedOrigins:
-                {{- range $gatewayCors.allowedOrigins | default (list "https://agenthive.cloud" "https://www.agenthive.cloud") }}
+                {{- if $gatewayCors.allowedOriginPatterns }}
+                allowedOriginPatterns:
+                {{- range $gatewayCors.allowedOriginPatterns }}
                   - "{{ . }}"
+                {{- end }}
+                {{- else if $gatewayCors.allowedOrigins }}
+                allowedOrigins:
+                {{- range $gatewayCors.allowedOrigins }}
+                  - "{{ . }}"
+                {{- end }}
+                {{- else }}
+                allowedOrigins:
+                  - "https://agenthive.cloud"
+                  - "https://www.agenthive.cloud"
                 {{- end }}
                 allowedMethods:
                   - GET
