@@ -1,10 +1,8 @@
-# API Service - Production Optimized (pnpm monorepo)
-# Uses pnpm deploy for minimal production bundle.
-# Pre-requisite: run `pnpm -r build` (or `cd apps/api && pnpm build`) from repo root.
+# API Service - Production Optimized (esbuild bundle + minimal runtime)
 # Build command (from repo root):
 #   docker build -f apps/api/Dockerfile -t agenthive/api:<tag> .
 #
-# Expected image size: ~180-250 MB (vs 1GB+ before)
+# Expected image size: ~80-120 MB (vs 323MB before)
 
 # ============ 构建阶段 ============
 FROM node:20-alpine AS builder
@@ -20,22 +18,27 @@ COPY pnpm-lock.yaml ./
 COPY packages ./packages
 COPY apps ./apps
 
-# Install all dependencies (needed for deploy to resolve workspace links)
+# Install all dependencies (needed for cross-workspace builds)
 RUN pnpm install --frozen-lockfile
 
 # Build all workspace projects
 RUN pnpm -r build
 
+# Bundle API with esbuild: tree-shake + minify all JS dependencies into single file
+# pg is external because it has optional native bindings (libpq)
+RUN cd apps/api && npx esbuild dist/index.js \
+  --bundle \
+  --platform=node \
+  --target=node20 \
+  --outfile=dist/bundle.js \
+  --external:pg \
+  --minify
+
 # Copy database migrations (needed for runtime schema updates)
 COPY apps/api/src/db/migrations ./apps/api/src/db/migrations
 
-# Deploy production bundle (extracts only prod deps + workspace dist)
-RUN pnpm --filter=@agenthive/api deploy --prod /prod/api
-
 # ============ 生产阶段 ============
 FROM node:20-alpine AS production
-
-WORKDIR /app
 
 # Install dumb-init for proper PID 1 signal handling
 RUN apk add --no-cache dumb-init
@@ -50,25 +53,29 @@ RUN mkdir -p /data/workspaces && chown -R appuser:nodejs /data
 # Declare workspace as a volume for persistence
 VOLUME /data/workspaces
 
-# Copy the deployed production bundle (already contains dist + prod node_modules)
-COPY --from=builder --chown=appuser:nodejs /prod/api .
+WORKDIR /app
+
+# Copy the bundled single-file application (~3-5MB)
+COPY --from=builder --chown=appuser:nodejs /app/apps/api/dist/bundle.js ./dist/bundle.js
 
 # Copy templates directory for blank project initialization
-COPY --chown=appuser:nodejs apps/api/templates ./apps/api/templates
+COPY --chown=appuser:nodejs apps/api/templates ./templates
 
-# Copy database migrations and node-pg-migrate config (required for runtime schema updates)
+# Copy database migrations (node-pg-migrate reads these at runtime)
 COPY --from=builder --chown=appuser:nodejs /app/apps/api/src/db/migrations ./src/db/migrations
+
+# Install ONLY runtime-native modules (pg is external from bundle, node-pg-migrate is CLI-only)
+# Everything else (express, socket.io, zod, ioredis, etc.) is tree-shaken into bundle.js
+RUN npm install pg@8.11.3 node-pg-migrate@8.0.4 dotenv@16.4.0 --production
 
 # Switch to non-root user
 USER appuser
 
-ENV NODE_ENV=production
-ENV PORT=3001
-ENV WORKSPACE_BASE=/data/workspaces
+ENV NODE_ENV=production PORT=3001 WORKSPACE_BASE=/data/workspaces
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["npm", "start"]
+CMD ["node", "--require", "dotenv/config", "dist/bundle.js"]

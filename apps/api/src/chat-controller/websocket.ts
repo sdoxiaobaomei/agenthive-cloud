@@ -6,8 +6,6 @@
  */
 
 import type { Server as SocketIOServer, Socket } from 'socket.io'
-import { trace, SpanStatusCode } from '@opentelemetry/api'
-import { AI_ATTRIBUTES, AI_SPAN_NAMES } from '@agenthive/observability'
 import { redis, redisPub, redisSub, key } from '../config/redis.js'
 import logger from '../utils/logger.js'
 
@@ -35,14 +33,6 @@ export function initChatNamespace(io: SocketIOServer): void {
 
     // Join session room
     socket.on('session:join', async (sessionId: string) => {
-      const tracer = trace.getTracer('agenthive-api-chat')
-      const span = tracer.startSpan(AI_SPAN_NAMES.WS_HEARTBEAT, {
-        attributes: {
-          [AI_ATTRIBUTES.WS_CONNECTION_ID]: socket.id,
-          'chat.session_id': sessionId,
-        },
-      })
-
       try {
         socket.join(`session:${sessionId}`)
         socket.data.sessionId = sessionId
@@ -56,13 +46,9 @@ export function initChatNamespace(io: SocketIOServer): void {
           status: progress || 'idle',
           logs: logs.reverse(),
         })
-
-        span.setStatus({ code: SpanStatusCode.OK })
+        logger.info('[Chat] Session joined', { sessionId, socketId: socket.id })
       } catch (error) {
-        span.recordException(error as Error)
-        span.setStatus({ code: SpanStatusCode.ERROR })
-      } finally {
-        span.end()
+        logger.error('[Chat] Session join failed', error as Error, { sessionId, socketId: socket.id })
       }
     })
 

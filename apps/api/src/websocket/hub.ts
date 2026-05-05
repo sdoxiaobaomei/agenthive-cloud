@@ -3,8 +3,7 @@ import { Server as SocketIOServer, Socket } from 'socket.io'
 import { createAdapter } from '@socket.io/redis-adapter'
 import { Redis } from 'ioredis'
 import { Server as HttpServer } from 'http'
-import { trace, SpanStatusCode } from '@opentelemetry/api'
-import { AI_ATTRIBUTES, AI_SPAN_NAMES, extractTraceContextFromPayload } from '@agenthive/observability'
+import { extractTraceContextFromPayload } from '@agenthive/observability'
 import { redisCache } from '../services/redis-cache.js'
 import { resolveLocalUser } from '../services/userMapping.js'
 import { initChatNamespace } from '../chat-controller/websocket.js'
@@ -178,20 +177,11 @@ function setupAgentHandlers(socket: Socket) {
   // Agent 心跳（由 Agent 服务发送）
   socket.on('agent:heartbeat', async (data: { agentId: string; status: string; metadata?: Record<string, unknown> }) => {
     const { agentId, status, metadata } = data
-    const tracer = trace.getTracer('agenthive-api-websocket')
-    const span = tracer.startSpan(AI_SPAN_NAMES.WS_HEARTBEAT, {
-      attributes: {
-        [AI_ATTRIBUTES.AGENT_ID]: agentId,
-        [AI_ATTRIBUTES.AGENT_STATUS]: status,
-        [AI_ATTRIBUTES.WS_CONNECTION_ID]: socket.id,
-      },
-    })
-
     try {
       // 更新 Redis 中的状态
       await redisCache.setAgentStatus(agentId, status, metadata)
       await redisCache.updateAgentHeartbeat(agentId)
-      
+
       // 广播给所有订阅者
       io?.to(`agent:${agentId}`).emit('agent:status', {
         agentId,
@@ -199,12 +189,9 @@ function setupAgentHandlers(socket: Socket) {
         metadata,
         timestamp: Date.now(),
       })
-      span.setStatus({ code: SpanStatusCode.OK })
+      logger.info('[WebSocket] Agent heartbeat processed', { agentId, status, socketId: socket.id })
     } catch (error) {
-      span.recordException(error as Error)
-      span.setStatus({ code: SpanStatusCode.ERROR })
-    } finally {
-      span.end()
+      logger.error('[WebSocket] Agent heartbeat failed', error as Error, { agentId, status, socketId: socket.id })
     }
   })
   
