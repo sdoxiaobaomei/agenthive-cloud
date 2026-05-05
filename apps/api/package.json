@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "npm run migrate:up && tsx watch src/index.ts",
-        "build": "tsc && npx esbuild dist/index.js --bundle --platform=node --target=node20 --outfile=dist/bundle.js --external:pg --minify",
+        "build": "tsc && npx esbuild dist/index.js --bundle --platform=node --target=node20 --outfile=dist/bundle.cjs --external:pg --minify",
         "start": "npm run migrate:up && node --require dotenv/config dist/bundle.js",
         "test": "vitest run",
         "test:watch": "vitest",

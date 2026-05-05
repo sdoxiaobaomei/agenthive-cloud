@@ -17,8 +17,12 @@ import { BillingRetryWorker } from './services/billingRetry.js'
 import logger from './utils/logger.js'
 import { WORKSPACE_BASE } from './config/workspace.js'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const API_ROOT = resolve(__dirname, '..') // 确保 cwd 指向 apps/api
+// Bundle-safe: CJS bundle has __dirname; ESM dev uses import.meta.url
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _dirname = typeof (globalThis as any).__dirname !== 'undefined'
+  ? (globalThis as any).__dirname
+  : dirname(fileURLToPath(import.meta.url))
+const API_ROOT = process.env.API_ROOT || resolve(_dirname, '..')
 
 const PORT = process.env.PORT || 3001
 
@@ -30,7 +34,8 @@ const PORT = process.env.PORT || 3001
 async function runMigrations(): Promise<void> {
   try {
     logger.info('[Database] Running pending migrations (Helm Hook compatible)...')
-    execSync('npm run migrate:up', {
+    const migrationsDir = process.env.MIGRATIONS_DIR || 'src/db/migrations'
+    execSync(`npx node-pg-migrate up --migrations-dir ${migrationsDir} --migrations-table _migrations`, {
       cwd: API_ROOT,
       stdio: 'inherit',
       env: process.env,

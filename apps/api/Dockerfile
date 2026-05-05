@@ -4,7 +4,7 @@
 #
 # Expected image size: ~80-120 MB (vs 323MB before)
 
-# ============ 构建阶段 ============
+# ============ Builder Stage ============
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -26,18 +26,20 @@ RUN pnpm -r build
 
 # Bundle API with esbuild: tree-shake + minify all JS dependencies into single file
 # pg is external because it has optional native bindings (libpq)
+# node-pg-migrate is external because it reads SQL files at runtime
 RUN cd apps/api && npx esbuild dist/index.js \
   --bundle \
   --platform=node \
   --target=node20 \
-  --outfile=dist/bundle.js \
+  --outfile=dist/bundle.cjs \
   --external:pg \
+  --external:node-pg-migrate \
   --minify
 
 # Copy database migrations (needed for runtime schema updates)
 COPY apps/api/src/db/migrations ./apps/api/src/db/migrations
 
-# ============ 生产阶段 ============
+# ============ Production Stage ============
 FROM node:20-alpine AS production
 
 # Install dumb-init for proper PID 1 signal handling
@@ -56,26 +58,26 @@ VOLUME /data/workspaces
 WORKDIR /app
 
 # Copy the bundled single-file application (~3-5MB)
-COPY --from=builder --chown=appuser:nodejs /app/apps/api/dist/bundle.js ./dist/bundle.js
+COPY --from=builder --chown=appuser:nodejs /app/apps/api/dist/bundle.cjs ./bundle.cjs
 
 # Copy templates directory for blank project initialization
 COPY --chown=appuser:nodejs apps/api/templates ./templates
 
 # Copy database migrations (node-pg-migrate reads these at runtime)
-COPY --from=builder --chown=appuser:nodejs /app/apps/api/src/db/migrations ./src/db/migrations
+COPY --from=builder --chown=appuser:nodejs /app/apps/api/src/db/migrations ./migrations
 
 # Install ONLY runtime-native modules (pg is external from bundle, node-pg-migrate is CLI-only)
-# Everything else (express, socket.io, zod, ioredis, etc.) is tree-shaken into bundle.js
+# Everything else (express, socket.io, zod, ioredis, etc.) is tree-shaken into bundle.cjs
 RUN npm install pg@8.11.3 node-pg-migrate@8.0.4 dotenv@16.4.0 --production
 
 # Switch to non-root user
 USER appuser
 
-ENV NODE_ENV=production PORT=3001 WORKSPACE_BASE=/data/workspaces
+ENV NODE_ENV=production PORT=3001 WORKSPACE_BASE=/data/workspaces API_ROOT=/app MIGRATIONS_DIR=migrations
 EXPOSE 3001
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "--require", "dotenv/config", "dist/bundle.js"]
+CMD ["node", "bundle.cjs"]
