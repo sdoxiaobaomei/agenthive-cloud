@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { chatService } from './service.js'
 import { checkBalance } from '../services/credits.js'
 import logger from '../utils/logger.js'
+import { isValidUuid } from '../utils/validators.js'
 
 const createSessionSchema = z.object({
   projectId: z.string().uuid().optional(),
@@ -83,6 +84,9 @@ export const listSessions = async (req: Request, res: Response) => {
 export const getSession = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
+    if (!isValidUuid(id)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${id}" 不是有效的 UUID`, data: null })
+    }
     const session = await chatService.getSession(id)
     if (!session) {
       return res.status(404).json({ code: 404, message: '会话不存在' , data: null })
@@ -97,6 +101,9 @@ export const getSession = async (req: Request, res: Response) => {
 export const sendMessage = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
+    if (!isValidUuid(id)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${id}" 不是有效的 UUID`, data: null })
+    }
     const parseResult = sendMessageSchema.safeParse(req.body)
     if (!parseResult.success) {
       return res.status(400).json({ code: 400, message: '参数校验失败',
@@ -213,6 +220,9 @@ export const sendMessage = async (req: Request, res: Response) => {
 export const getMessages = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
+    if (!isValidUuid(id)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${id}" 不是有效的 UUID`, data: null })
+    }
     const page = Math.max(1, parseInt(req.query.page as string) || 1)
     const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 50))
     const versionId = req.query.versionId as string | undefined
@@ -239,6 +249,9 @@ export const getMessages = async (req: Request, res: Response) => {
 export const executeTask = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
+    if (!isValidUuid(id)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${id}" 不是有效的 UUID`, data: null })
+    }
     const parseResult = sendMessageSchema.safeParse(req.body)
     if (!parseResult.success) {
       return res.status(400).json({ code: 400, message: '参数校验失败',
@@ -281,6 +294,9 @@ export const executeTask = async (req: Request, res: Response) => {
 export const getTasks = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
+    if (!isValidUuid(id)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${id}" 不是有效的 UUID`, data: null })
+    }
     const session = await chatService.getSession(id)
     if (!session) {
       return res.status(404).json({ code: 404, message: '会话不存在' , data: null })
@@ -297,6 +313,9 @@ export const getTasks = async (req: Request, res: Response) => {
 export const getProgress = async (req: Request, res: Response) => {
   try {
     const { id } = req.params
+    if (!isValidUuid(id)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${id}" 不是有效的 UUID`, data: null })
+    }
     const progress = await chatService.getTaskProgress(id)
     res.json({ code: 200, message: 'success', data: progress })
   } catch (error) {
@@ -308,6 +327,9 @@ export const getProgress = async (req: Request, res: Response) => {
 export const approveTask = async (req: Request, res: Response) => {
   try {
     const { id: sessionId, messageId } = req.params
+    if (!isValidUuid(sessionId)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${sessionId}" 不是有效的 UUID`, data: null })
+    }
     const parseResult = approveTaskSchema.safeParse(req.body)
     if (!parseResult.success) {
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
@@ -333,6 +355,9 @@ export const approveTask = async (req: Request, res: Response) => {
 export const selectRecommend = async (req: Request, res: Response) => {
   try {
     const { id: sessionId, messageId } = req.params
+    if (!isValidUuid(sessionId)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${sessionId}" 不是有效的 UUID`, data: null })
+    }
     const parseResult = selectRecommendSchema.safeParse(req.body)
     if (!parseResult.success) {
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
@@ -358,6 +383,9 @@ export const selectRecommend = async (req: Request, res: Response) => {
 export const dismissRecommend = async (req: Request, res: Response) => {
   try {
     const { id: sessionId, messageId } = req.params
+    if (!isValidUuid(sessionId)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${sessionId}" 不是有效的 UUID`, data: null })
+    }
     const userId = (req as any).userId as string | undefined
     if (!userId) return res.status(401).json({ code: 401, message: '未授权', data: null })
 
@@ -378,6 +406,9 @@ export const dismissRecommend = async (req: Request, res: Response) => {
 export const listVersions = async (req: Request, res: Response) => {
   try {
     const { id: sessionId } = req.params
+    if (!isValidUuid(sessionId)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${sessionId}" 不是有效的 UUID`, data: null })
+    }
     const versions = await chatService.listVersions(sessionId)
     res.json({ code: 200, message: 'success', data: { versions, total: versions.length } })
   } catch (error) {
@@ -389,6 +420,9 @@ export const listVersions = async (req: Request, res: Response) => {
 export const createVersion = async (req: Request, res: Response) => {
   try {
     const { id: sessionId } = req.params
+    if (!isValidUuid(sessionId)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${sessionId}" 不是有效的 UUID`, data: null })
+    }
     const parseResult = createVersionSchema.safeParse(req.body)
     if (!parseResult.success) {
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
@@ -408,6 +442,9 @@ export const createVersion = async (req: Request, res: Response) => {
 export const switchVersion = async (req: Request, res: Response) => {
   try {
     const { id: sessionId, versionId } = req.params
+    if (!isValidUuid(sessionId)) {
+      return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${sessionId}" 不是有效的 UUID`, data: null })
+    }
     const { version, messages } = await chatService.switchVersion(sessionId, versionId)
     res.json({ code: 200, message: 'success', data: { version, messages } })
   } catch (error: any) {
