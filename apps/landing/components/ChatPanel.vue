@@ -196,7 +196,11 @@ import {
 import { ElMessage } from 'element-plus'
 import { io, Socket } from 'socket.io-client'
 import type { ChatMessage, ChatVersion } from '~/stores/chat'
+import MessageBlock from './chat/MessageBlock.vue'
+import ThinkBlock from './chat/ThinkBlock.vue'
 import SystemEventBlock from './chat/SystemEventBlock.vue'
+import TaskBlock from './chat/TaskBlock.vue'
+import RecommendBlock from './chat/RecommendBlock.vue'
 
 import type { Project } from '~/stores/project'
 
@@ -534,7 +538,7 @@ onMounted(() => {
 
   // 如果提供了 chatId，立即设置 session 并连接 WebSocket
   if (props.chatId) {
-    setSessionId(props.chatId)
+    sessionId.value = props.chatId
     connectWebSocket(props.chatId)
     // 加载该会话的消息历史
     loadSessionMessages(props.chatId)
