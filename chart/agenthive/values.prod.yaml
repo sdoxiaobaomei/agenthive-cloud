@@ -339,7 +339,7 @@ secret:
 # NetworkPolicy — Production
 # ----------------------------------------------------------------------------
 networkPolicy:
-  enabled: true
+  enabled: false
 
 # ----------------------------------------------------------------------------
 # Nacos — Production
