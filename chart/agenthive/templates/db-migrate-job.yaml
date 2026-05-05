@@ -21,7 +21,9 @@ metadata:
     app.kubernetes.io/component: db-migrate
     {{- include "agenthive.labels" . | nindent 4 }}
   annotations:
-    helm.sh/hook: pre-install,pre-upgrade
+    # post-install: runs AFTER PostgreSQL is created (first install)
+    # pre-upgrade: runs BEFORE app update (subsequent upgrades)
+    helm.sh/hook: post-install,pre-upgrade
     helm.sh/hook-weight: "-5"
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
@@ -78,7 +80,7 @@ spec:
                   name: {{ $.Values.secret.name }}
                   key: {{ .key }}
             {{- end }}
-            # DATABASE_URL for node-pg-migrate (supports both old and new .node-pg-migrate.js)
+            # DATABASE_URL for node-pg-migrate (supports both old and new .node-pg-migrate.cjs)
             - name: DATABASE_URL
               value: "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
           securityContext:

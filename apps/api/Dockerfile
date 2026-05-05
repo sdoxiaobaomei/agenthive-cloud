@@ -31,7 +31,7 @@ COPY apps/api/dist ./apps/api/dist
 
 # Copy database migrations and config (needed for runtime schema updates)
 COPY apps/api/src/db/migrations ./apps/api/src/db/migrations
-COPY apps/api/.node-pg-migrate.js ./apps/api/.node-pg-migrate.js
+COPY apps/api/.node-pg-migrate.cjs ./apps/api/.node-pg-migrate.cjs
 
 # Deploy production bundle (extracts only prod deps + workspace dist)
 RUN pnpm --filter=@agenthive/api deploy --prod /prod/api
@@ -62,7 +62,7 @@ COPY --chown=appuser:nodejs apps/api/templates ./apps/api/templates
 
 # Copy database migrations and node-pg-migrate config (required for runtime schema updates)
 COPY --from=builder --chown=appuser:nodejs /app/apps/api/src/db/migrations ./src/db/migrations
-COPY --from=builder --chown=appuser:nodejs /app/apps/api/.node-pg-migrate.js ./.node-pg-migrate.js
+COPY --from=builder --chown=appuser:nodejs /app/apps/api/.node-pg-migrate.cjs ./.node-pg-migrate.cjs
 
 # Switch to non-root user
 USER appuser
