@@ -42,7 +42,7 @@ landing:
   image:
     registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/landing
-    tag: "develop-latest"
+    tag: "v0.1.0-dev.1-43-g9764cff"
   resources:
     requests:
       memory: 128Mi
