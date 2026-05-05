@@ -30,7 +30,7 @@ const PORT = process.env.PORT || 3001
  */
 async function runMigrations(): Promise<void> {
   try {
-    logger.info('[Database] Running pending migrations...')
+    logger.info('[Database] Running pending migrations (Helm Hook compatible)...')
     execSync('npm run migrate:up', {
       cwd: API_ROOT,
       stdio: 'inherit',

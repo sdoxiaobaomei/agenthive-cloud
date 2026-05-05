@@ -36,11 +36,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      node-api: ${{ steps.changes.outputs.node-api }}
-      node-landing: ${{ steps.changes.outputs.node-landing }}
-      node-changed: ${{ steps.changes.outputs.node-changed }}
-      java-changed: ${{ steps.changes.outputs.java-changed }}
-      any-service: ${{ steps.changes.outputs.any-service }}
+      node-api: ${{ steps.set-outputs.outputs.node-api }}
+      node-landing: ${{ steps.set-outputs.outputs.node-landing }}
+      node-changed: ${{ steps.set-outputs.outputs.node-changed }}
+      java-changed: ${{ steps.set-outputs.outputs.java-changed }}
+      any-service: ${{ steps.set-outputs.outputs.any-service }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
