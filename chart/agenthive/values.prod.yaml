@@ -429,5 +429,4 @@ rabbitmq:
 # Redis — Production
 # ----------------------------------------------------------------------------
 redis:
-  enabled: true
-  replicas: 1
+  enabled: false
