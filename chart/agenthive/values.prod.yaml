@@ -9,10 +9,15 @@ global:
     environment: production
 
 # ----------------------------------------------------------------------------
-# Registry — Production (disable Helm-managed; use node-level imagePullSecret)
+# Registry — Production (use K8s imagePullSecret)
 # ----------------------------------------------------------------------------
 registry:
   enabled: false
+
+# ServiceAccount imagePullSecrets for ACR
+serviceAccount:
+  imagePullSecrets:
+    - name: acr-regcred
 
 # ----------------------------------------------------------------------------
 # API Service — Production
@@ -22,7 +27,7 @@ api:
 
   image:
     repository: "namespace-alpha/api"
-    tag: "sha-387cd18"
+    tag: "latest"
 
   resources:
     requests:
