@@ -9,8 +9,16 @@
 
 module.exports = {
   // 数据库连接配置
-  // 优先使用环境变量 DATABASE_URL，否则使用本地默认配置
-  databaseUrl: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/agenthive',
+  // 优先级：DATABASE_URL > DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD > 本地默认
+  databaseUrl: (() => {
+    if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || '5432';
+    const db   = process.env.DB_NAME || 'agenthive';
+    const user = process.env.DB_USER || 'agenthive';
+    const pass = process.env.DB_PASSWORD || 'dev';
+    return `postgresql://${user}:${pass}@${host}:${port}/${db}`;
+  })(),
   
   // 迁移文件目录
   migrationsDir: 'src/db/migrations',

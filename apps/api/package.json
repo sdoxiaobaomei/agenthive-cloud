@@ -4,9 +4,9 @@
     "description": "AgentHive Cloud API Server",
     "type": "module",
     "scripts": {
-        "dev": "tsx watch src/index.ts",
+        "dev": "npm run migrate:up && tsx watch src/index.ts",
         "build": "tsc",
-        "start": "node --require dotenv/config dist/index.js",
+        "start": "npm run migrate:up && node --require dotenv/config dist/index.js",
         "test": "vitest run",
         "test:watch": "vitest",
         "test:coverage": "vitest run --coverage",

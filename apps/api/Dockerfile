@@ -59,6 +59,10 @@ COPY --from=builder --chown=appuser:nodejs /prod/api .
 # Copy templates directory for blank project initialization
 COPY --chown=appuser:nodejs apps/api/templates ./apps/api/templates
 
+# Copy database migrations and node-pg-migrate config (required for runtime schema updates)
+COPY --from=builder --chown=appuser:nodejs /app/apps/api/src/db/migrations ./src/db/migrations
+COPY --from=builder --chown=appuser:nodejs /app/apps/api/.node-pg-migrate.js ./.node-pg-migrate.js
+
 # Switch to non-root user
 USER appuser
 
@@ -71,4 +75,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3001/api/health', (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
 
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+CMD ["npm", "start"]

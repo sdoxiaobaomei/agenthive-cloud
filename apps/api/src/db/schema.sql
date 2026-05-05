@@ -1,4 +1,17 @@
+-- ============================================================================
 -- AgentHive Cloud 数据库表结构
+-- ============================================================================
+-- ⚠️  AUTO-GENERATED — DO NOT EDIT MANUALLY
+--
+-- 本文件是数据库 schema 的静态快照，仅用于文档和 IDE 补全。
+-- 数据库schema的唯一真相源是 src/db/migrations/ 目录下的 migration 文件。
+--
+-- 如需修改表结构：
+--   1. 创建新 migration: npm run migrate:create -- your_description
+--   2. 在生成的 migration 文件中编写 up/down SQL
+--   3. 运行迁移: npm run migrate:up
+--   4. 重新生成本文件: pg_dump --schema-only ... > src/db/schema.sql
+-- ============================================================================
 
 -- 使用 gen_random_uuid() (PostgreSQL 13+ 内置，无需扩展)
 

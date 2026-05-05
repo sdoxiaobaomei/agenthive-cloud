@@ -1,0 +1,88 @@
+{{- if .Values.api.enabled }}
+{{- /*
+  Database Migration Job — Helm Hook
+  ==================================
+  Runs before every Helm install/upgrade via helm.sh/hook.
+  ArgoCD maps Helm pre-install/pre-upgrade hooks to PreSync phase.
+
+  This ensures schema migrations complete BEFORE API pods start serving traffic,
+  eliminating the race condition between code deployment and schema readiness.
+
+  Works with both in-cluster PostgreSQL (postgres.enabled=true)
+  and external PostgreSQL (postgres.enabled=false, e.g. RDS/Cloud SQL).
+*/ -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "agenthive.fullname" . }}-db-migrate-{{ .Release.Revision }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.fullname" . }}
+    app.kubernetes.io/component: db-migrate
+    {{- include "agenthive.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-5"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "agenthive.fullname" . }}
+        app.kubernetes.io/component: db-migrate
+        {{- include "agenthive.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "agenthive.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
+      {{- if .Values.postgres.enabled }}
+      initContainers:
+        - name: wait-for-db
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z {{ include "agenthive.prefixedName" (list . .Values.postgres.name) }} {{ .Values.postgres.service.port }}; do echo waiting for db; sleep 2; done;']
+          resources:
+            requests:
+              memory: 16Mi
+              cpu: 10m
+            limits:
+              memory: 32Mi
+              cpu: 50m
+          securityContext:
+            {{- toYaml .Values.global.containerSecurityContext | nindent 12 }}
+      {{- end }}
+      containers:
+        - name: db-migrate
+          {{- include "agenthive.containerImage" (list . .Values.api.image) | nindent 10 }}
+          command: ["npm", "run", "migrate:up"]
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3001"
+            {{- range .Values.api.envFromConfigMap }}
+            - name: {{ .name }}
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ $.Values.configmap.name }}
+                  key: {{ .key }}
+            {{- end }}
+            {{- range .Values.api.envFromSecret }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.secret.name }}
+                  key: {{ .key }}
+            {{- end }}
+          securityContext:
+            {{- toYaml .Values.global.containerSecurityContext | nindent 12 }}
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 250m
+{{- end }}

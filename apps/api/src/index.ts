@@ -4,12 +4,12 @@ dotenv.config({ path: '.env' })
 import './telemetry.js' // OpenTelemetry 必须在其他 import 之前初始化
 import { createServer } from 'http'
 import { mkdir } from 'fs/promises'
-import app from './app.js'
-import { testConnection, pool } from './config/database.js'
-import { testRedisConnection } from './config/redis.js'
-import { readFileSync } from 'fs'
+import { execSync } from 'child_process'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
+import app from './app.js'
+import { testConnection } from './config/database.js'
+import { testRedisConnection } from './config/redis.js'
 import { initWebSocket, getStats } from './websocket/hub.js'
 import { initLLM } from './services/llm.js'
 import { initializeTaskExecution } from './services/taskExecution.js'
@@ -18,38 +18,30 @@ import { BillingRetryWorker } from './services/billingRetry.js'
 import logger from './utils/logger.js'
 import { WORKSPACE_BASE } from './config/workspace.js'
 
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const API_ROOT = resolve(__dirname, '..') // 确保 cwd 指向 apps/api
+
 const PORT = process.env.PORT || 3001
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-
-// 自动初始化数据库表（如果表不存在）
-async function initDatabaseSchema(): Promise<void> {
+/**
+ * 运行数据库 migration（Migration-Only 策略）
+ * - 开发环境：启动时自动执行 pending migration
+ * - 生产环境：应在 CI/CD 中显式执行，此处仅做兜底
+ */
+async function runMigrations(): Promise<void> {
   try {
-    await pool.query('SELECT 1 FROM projects LIMIT 1')
-  } catch (err: any) {
-    if (err.code === '42P01') {
-      logger.info('[Database] Tables not found, running schema initialization...')
-      try {
-        const schemaPath = resolve(__dirname, './db/schema.sql')
-        const schema = readFileSync(schemaPath, 'utf-8')
-        const statements = schema
-          .split(';')
-          .map(s => s.trim())
-          .filter(s => s.length > 0 && !s.startsWith('--'))
-
-        for (const stmt of statements) {
-          try {
-            await pool.query(stmt)
-          } catch (e: any) {
-            if (e.code !== '42P07' && !e.message?.includes('already exists')) {
-              logger.warn('[Database] Schema init warning', { message: e.message })
-            }
-          }
-        }
-        logger.info('[Database] Schema initialization complete.')
-      } catch (readErr) {
-        logger.error('[Database] Failed to read schema file', readErr as Error)
-      }
+    logger.info('[Database] Running pending migrations...')
+    execSync('npm run migrate:up', {
+      cwd: API_ROOT,
+      stdio: 'inherit',
+      env: process.env,
+    })
+    logger.info('[Database] Migrations applied successfully')
+  } catch (err) {
+    logger.error('[Database] Migration failed', err as Error)
+    // 生产环境 migration 失败应终止启动；开发环境允许继续排查
+    if (process.env.NODE_ENV === 'production') {
+      throw err
     }
   }
 }
@@ -61,8 +53,8 @@ const startServer = async () => {
   if (!dbConnected) {
     logger.error('[Server] Failed to connect to database. Starting with limited functionality...')
   } else {
-    // 自动初始化数据库表（如果不存在）
-    await initDatabaseSchema()
+    // 自动运行数据库 migration（替代旧 initDatabaseSchema）
+    await runMigrations()
   }
 
   // 测试 Redis 连接
