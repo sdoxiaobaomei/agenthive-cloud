@@ -2,10 +2,10 @@
 -- Created: 2026-05-04
 -- Description: 新增 message_type、is_visible_in_history、version_id、parent_message_id
 
--- ${node-pg-migrate}-up
+-- up migration
 
 -- ============================================================================
--- Chat Messages 核心改造
+-- Chat Messages 核心改�?
 -- ============================================================================
 
 -- Step 1: 添加 message_type
@@ -26,10 +26,10 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_message_type ON chat_messages(messa
 CREATE INDEX IF NOT EXISTS idx_chat_messages_version_id ON chat_messages(version_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_visible ON chat_messages(session_id, is_visible_in_history, created_at);
 
--- Step 6: 为已有数据设置默认值（role=system 的设为 system_event）
+-- Step 6: 为已有数据设置默认值（role=system 的设�?system_event�?
 UPDATE chat_messages SET message_type = 'system_event' WHERE role = 'system' AND message_type = 'message';
 
--- ${node-pg-migrate}-down
+-- down migration
 DROP INDEX IF EXISTS idx_chat_messages_visible;
 DROP INDEX IF EXISTS idx_chat_messages_version_id;
 DROP INDEX IF EXISTS idx_chat_messages_message_type;

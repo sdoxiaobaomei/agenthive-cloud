@@ -8,6 +8,7 @@ export interface User {
   phone?: string
   password_hash?: string
   role: string
+  status?: string
   avatar?: string
   external_user_id?: string
   externalUserId?: string
@@ -43,6 +44,8 @@ export interface Agent {
   status: AgentStatus
   avatar?: string
   description?: string
+  owner_id?: string
+  project_id?: string
   pod_ip?: string
   podIp?: string
   current_task_id?: string
@@ -85,6 +88,10 @@ export interface Task {
   progress: number
   assigned_to?: string
   assignedTo?: string
+  user_id?: string
+  userId?: string
+  project_id?: string
+  projectId?: string
   parent_id?: string
   parentId?: string
   subtasks?: Task[]

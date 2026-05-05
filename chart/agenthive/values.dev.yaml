@@ -22,7 +22,7 @@ api:
   image:
     registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/api
-    tag: "v0.1.0-dev.1-21-g8bf8ba8"
+    tag: "v0.1.0-dev.1-23-gfix-types"
   resources:
     requests:
       memory: 256Mi
@@ -246,6 +246,16 @@ nacos:
 # ----------------------------------------------------------------------------
 rabbitmq:
   enabled: true
+# ----------------------------------------------------------------------------
+# Registry Secret — Dev (ACR image pull authentication)
+# ----------------------------------------------------------------------------
+registry:
+  enabled: true
+  name: acr-regcred
+  server: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
+  username: "18829355062"
+  password: "weiya135"
+  email: ""
 # ----------------------------------------------------------------------------
 # ServiceAccount — Dev (ACR image pull authentication)
 # ----------------------------------------------------------------------------

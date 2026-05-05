@@ -1,4 +1,4 @@
--- Migration: schema alignment â€” fix drift between migration history and code expectations
+-- Migration: schema alignment â€?fix drift between migration history and code expectations
 -- Created: 2026-05-05
 -- Author: backend-team
 -- Ticket: SCHEMA-ALIGN-001
@@ -7,10 +7,10 @@
 --   2. Add users.avatar required by project dashboard / findMembers
 --   3. Remove stale agent_tasks columns (agent_id, task_id) no longer referenced by code
 
--- ${node-pg-migrate}-up
+-- up migration
 
 -- ============================================================================
--- 1. agent_tasks â€” align with code layer (project/service.ts)
+-- 1. agent_tasks â€?align with code layer (project/service.ts)
 -- ============================================================================
 
 -- Remove stale columns (no longer referenced by any code path)
@@ -30,7 +30,7 @@ ALTER TABLE agent_tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIM
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_project_id ON agent_tasks(project_id);
 
 -- ============================================================================
--- 2. users â€” add avatar required by JOIN queries in project dashboard
+-- 2. users â€?add avatar required by JOIN queries in project dashboard
 -- ============================================================================
 ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
 
@@ -39,7 +39,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;
 -- ============================================================================
 DROP INDEX IF EXISTS idx_agent_tasks_agent_id;
 
--- ${node-pg-migrate}-down
+-- down migration
 
 -- ============================================================================
 -- Revert agent_tasks to migration-init shape (agent_id, task_id)

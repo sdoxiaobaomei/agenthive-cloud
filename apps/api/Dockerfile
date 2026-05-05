@@ -17,21 +17,17 @@ RUN npm install -g pnpm@9
 # Copy workspace manifests
 COPY pnpm-workspace.yaml package.json ./
 COPY pnpm-lock.yaml ./
-COPY packages/observability/package.json ./packages/observability/
-COPY apps/agent-runtime/package.json ./apps/agent-runtime/
-COPY apps/api/package.json ./apps/api/
+COPY packages ./packages
+COPY apps ./apps
 
 # Install all dependencies (needed for deploy to resolve workspace links)
 RUN pnpm install --frozen-lockfile
 
-# Copy pre-built dist artifacts (assumes `pnpm -r build` was run on host)
-COPY packages/observability/dist ./packages/observability/dist
-COPY apps/agent-runtime/dist ./apps/agent-runtime/dist
-COPY apps/api/dist ./apps/api/dist
+# Build all workspace projects
+RUN pnpm -r build
 
-# Copy database migrations and config (needed for runtime schema updates)
+# Copy database migrations (needed for runtime schema updates)
 COPY apps/api/src/db/migrations ./apps/api/src/db/migrations
-COPY apps/api/.node-pg-migrate.cjs ./apps/api/.node-pg-migrate.cjs
 
 # Deploy production bundle (extracts only prod deps + workspace dist)
 RUN pnpm --filter=@agenthive/api deploy --prod /prod/api
