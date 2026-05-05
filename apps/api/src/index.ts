@@ -18,9 +18,9 @@ import logger from './utils/logger.js'
 import { WORKSPACE_BASE } from './config/workspace.js'
 
 // Bundle-safe: CJS bundle has __dirname; ESM dev uses import.meta.url
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const _dirname = typeof (globalThis as any).__dirname !== 'undefined'
-  ? (globalThis as any).__dirname
+declare const __dirname: string | undefined
+const _dirname = typeof __dirname !== 'undefined'
+  ? __dirname
   : dirname(fileURLToPath(import.meta.url))
 const API_ROOT = process.env.API_ROOT || resolve(_dirname, '..')
 
