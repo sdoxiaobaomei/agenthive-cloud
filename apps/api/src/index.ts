@@ -48,6 +48,7 @@ async function runMigrations(): Promise<void> {
 
 // 测试数据库和 Redis 连接并启动服务器
 const startServer = async () => {
+  logger.info(`[Server] Starting AgentHive API v${process.env.npm_package_version || 'dev'} in ${process.env.NODE_ENV || 'development'} mode`)
   // 测试数据库连接
   const dbConnected = await testConnection()
   if (!dbConnected) {

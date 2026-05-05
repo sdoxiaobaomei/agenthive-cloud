@@ -35,7 +35,7 @@ spec:
         {{- include "agenthive.labels" . | nindent 8 }}
     spec:
       restartPolicy: Never
-      serviceAccountName: {{ include "agenthive.serviceAccountName" . }}
+      serviceAccountName: {{ include "agenthive.apiName" . }}
       securityContext:
         {{- toYaml .Values.global.podSecurityContext | nindent 8 }}
       {{- if .Values.postgres.enabled }}
@@ -56,7 +56,8 @@ spec:
       containers:
         - name: db-migrate
           {{- include "agenthive.containerImage" (list . .Values.api.image) | nindent 10 }}
-          command: ["npm", "run", "migrate:up"]
+          # node_modules/.bin/node-pg-migrate 是 shell 脚本，不能用 node 直接执行
+          command: ["sh", "-c", "node_modules/.bin/node-pg-migrate up --migrations-dir src/db/migrations --migrations-table _migrations"]
           env:
             - name: NODE_ENV
               value: "production"
@@ -76,6 +77,9 @@ spec:
                   name: {{ $.Values.secret.name }}
                   key: {{ .key }}
             {{- end }}
+            # DATABASE_URL for node-pg-migrate (supports both old and new .node-pg-migrate.js)
+            - name: DATABASE_URL
+              value: "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
           securityContext:
             {{- toYaml .Values.global.containerSecurityContext | nindent 12 }}
           resources:
