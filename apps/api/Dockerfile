@@ -62,7 +62,6 @@ COPY --chown=appuser:nodejs apps/api/templates ./apps/api/templates
 
 # Copy database migrations and node-pg-migrate config (required for runtime schema updates)
 COPY --from=builder --chown=appuser:nodejs /app/apps/api/src/db/migrations ./src/db/migrations
-COPY --from=builder --chown=appuser:nodejs /app/apps/api/.node-pg-migrate.cjs ./.node-pg-migrate.cjs
 
 # Switch to non-root user
 USER appuser

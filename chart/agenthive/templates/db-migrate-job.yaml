@@ -60,7 +60,7 @@ spec:
         - name: db-migrate
           {{- include "agenthive.containerImage" (list . .Values.api.image) | nindent 10 }}
           # node_modules/.bin/node-pg-migrate 是 shell 脚本，不能用 node 直接执行
-          command: ["sh", "-c", "node_modules/.bin/node-pg-migrate up --migrations-dir src/db/migrations --migrations-table _migrations"]
+          command: ["sh", "-c", "DATABASE_URL=postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME) node_modules/.bin/node-pg-migrate up --migrations-dir src/db/migrations --migrations-table _migrations"]
           env:
             - name: NODE_ENV
               value: "production"
