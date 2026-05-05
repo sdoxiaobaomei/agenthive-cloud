@@ -10,7 +10,7 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
--- 用户�?
+-- 用户�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -28,7 +28,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 
 -- ============================================================================
--- 项目�?
+-- 项目�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -47,11 +47,12 @@ CREATE TABLE IF NOT EXISTS projects (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_projects_owner_id ON projects(owner_id);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 
 -- ============================================================================
--- 项目成员�?
+-- 项目成员�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS project_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -66,7 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_project_members_project_id ON project_members(pro
 CREATE INDEX IF NOT EXISTS idx_project_members_user_id ON project_members(user_id);
 
 -- ============================================================================
--- Agent �?
+-- Agent �?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS agents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -81,12 +82,14 @@ CREATE TABLE IF NOT EXISTS agents (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE agents ADD COLUMN IF NOT EXISTS project_id UUID REFERENCES projects(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_agents_owner_id ON agents(owner_id);
 CREATE INDEX IF NOT EXISTS idx_agents_project_id ON agents(project_id);
 CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
 
 -- ============================================================================
--- Agent 成员表（协作�?
+-- Agent 成员表（协作�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS agent_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -102,7 +105,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_members_agent_id ON agent_members(agent_id)
 CREATE INDEX IF NOT EXISTS idx_agent_members_user_id ON agent_members(user_id);
 
 -- ============================================================================
--- Task �?
+-- Task �?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -128,7 +131,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks(status);
 
 -- ============================================================================
--- Chat 会话�?
+-- Chat 会话�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS chat_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -143,7 +146,7 @@ CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_id ON chat_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_chat_sessions_project_id ON chat_sessions(project_id);
 
 -- ============================================================================
--- Chat 消息�?
+-- Chat 消息�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS chat_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -158,7 +161,7 @@ CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
 
 -- ============================================================================
--- Agent 任务�?
+-- Agent 任务�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS agent_tasks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -174,7 +177,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_tasks_session_id ON agent_tasks(session_id)
 CREATE INDEX IF NOT EXISTS idx_agent_tasks_agent_id ON agent_tasks(agent_id);
 
 -- ============================================================================
--- Agent 日志�?
+-- Agent 日志�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS agent_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -189,7 +192,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_logs_agent_id ON agent_logs(agent_id);
 CREATE INDEX IF NOT EXISTS idx_agent_logs_created_at ON agent_logs(created_at);
 
 -- ============================================================================
--- 代码文件�?
+-- 代码文件�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS code_files (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -206,7 +209,7 @@ CREATE TABLE IF NOT EXISTS code_files (
 CREATE INDEX IF NOT EXISTS idx_code_files_project_id ON code_files(project_id);
 
 -- ============================================================================
--- 项目部署�?
+-- 项目部署�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS project_deployments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -221,7 +224,7 @@ CREATE TABLE IF NOT EXISTS project_deployments (
 CREATE INDEX IF NOT EXISTS idx_project_deployments_project_id ON project_deployments(project_id);
 
 -- ============================================================================
--- 审计日志�?
+-- 审计日志�?
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS audit_logs (
     id BIGSERIAL PRIMARY KEY,
@@ -281,7 +284,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================================
--- 更新时间触发�?
+-- 更新时间触发�?
 -- ============================================================================
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -304,7 +307,7 @@ END $$;
 
 -- down migration
 
--- 完整回滚（按依赖逆序�?
+-- 完整回滚（按依赖逆序�?
 DROP TRIGGER IF EXISTS update_agent_members_updated_at ON agent_members;
 DROP TRIGGER IF EXISTS update_agent_tasks_updated_at ON agent_tasks;
 DROP TRIGGER IF EXISTS update_chat_sessions_updated_at ON chat_sessions;
