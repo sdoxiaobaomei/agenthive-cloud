@@ -868,6 +868,70 @@ nacos:
         - ALL
 
 # ----------------------------------------------------------------------------
+# Agent Runtime
+# ----------------------------------------------------------------------------
+agentRuntime:
+  enabled: false
+  name: agent-runtime
+  replicas: 1
+  image:
+    registry: ""
+    repository: agenthive/agent-runtime
+    tag: "dev"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  serviceAccount:
+    create: true
+    automountServiceAccountToken: false
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 1
+  agent:
+    name: "K8s Agent"
+    role: "custom"
+    capabilities:
+      - shell
+      - code_generation
+      - code_review
+      - test
+      - build
+    maxConcurrentTasks: 1
+    heartbeatInterval: 30000
+  supervisor:
+    url: "ws://api:3001"
+  workspace:
+    path: "/workspace"
+  envFromSecret:
+    - name: LLM_API_KEY
+      key: LLM_API_KEY
+
+# ----------------------------------------------------------------------------
+# OTel Collector
+# ----------------------------------------------------------------------------
+otelCollector:
+  enabled: false
+  namespace: monitoring
+  image: otel/opentelemetry-collector-contrib:0.96.0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ----------------------------------------------------------------------------
 # RabbitMQ (inline for Phase 1)
 # ----------------------------------------------------------------------------
 rabbitmq:

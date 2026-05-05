@@ -22,7 +22,7 @@ api:
 
   image:
     repository: "namespace-alpha/api"
-    tag: "v1.1.0"
+    tag: "v1.2.0"
 
   resources:
     requests:
@@ -74,7 +74,7 @@ landing:
 
   image:
     repository: "namespace-alpha/landing"
-    tag: "v1.1.0"
+    tag: "v1.2.0"
 
   resources:
     requests:
@@ -125,7 +125,7 @@ javaServices:
   defaults:
     image:
       repositoryPrefix: "namespace-alpha"
-      tag: "v1.1.0"
+      tag: "v1.2.0"
     replicas: 3
     resources:
       requests:
@@ -324,6 +324,7 @@ configmap:
     NODE_ENV: "production"
     CORS_ORIGIN: "https://agenthive.cloud,https://www.agenthive.cloud,https://api.agenthive.cloud"
     LOG_LEVEL: "warn"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-gateway.monitoring:4317"
     OTEL_SDK_DISABLED: "false"
     OTEL_TRACES_SAMPLER_ARG: "0.1"
 
@@ -365,8 +366,62 @@ nacos:
 # ----------------------------------------------------------------------------
 # RabbitMQ — Production (Phase 1: enabled if needed)
 # ----------------------------------------------------------------------------
-rabbitmq:
+# Agent Runtime — Production
+agentRuntime:
   enabled: true
+  replicas: 2
+  image:
+    repository: "namespace-alpha/agent-runtime"
+    tag: "v1.2.0"
+  service:
+    port: 8080
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  agent:
+    name: "Prod Agent"
+    role: "custom"
+    capabilities:
+      - shell
+      - code_generation
+      - code_review
+      - test
+      - build
+    maxConcurrentTasks: 2
+    heartbeatInterval: 30000
+  supervisor:
+    url: "ws://api:3001"
+  workspace:
+    path: "/workspace"
+  envFromSecret:
+    - name: LLM_API_KEY
+      key: LLM_API_KEY
+
+# OTel Collector — Production
+otelCollector:
+  enabled: true
+  namespace: monitoring
+  image: otel/opentelemetry-collector-contrib:0.96.0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# RabbitMQ — Production (disabled until develop issue resolved)
+rabbitmq:
+  enabled: false
   replicas: 1
 
 # ----------------------------------------------------------------------------
