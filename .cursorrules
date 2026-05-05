@@ -1,0 +1,61 @@
+# AgentHive Cloud — Agent 协作规范 (Cursor 版)
+
+> 完整规范见项目根目录 `AGENT_COLLABORATION_SPEC.md`
+> 本文件为 Cursor 专用摘要，确保任何 Cursor Agent 都能读取到核心约束。
+
+## 不可违背的架构决策
+
+1. **认证在 Gateway 层唯一收口** — 下游服务只认 `X-User-Id` header
+2. **Node.js = AI 控制平面 + BFF** — 不做事务性业务
+3. **Java = 企业级核心领域** — 承载所有事务性、高并发业务
+4. **Agent 任务必须异步化** — Redis Streams 队列
+5. **可观测性原生** — 所有服务必须接入 OTel
+6. **统一 ID 策略 UUIDv7** — 新系统全部使用 UUIDv7
+
+## 角色权限 (HARD GATES)
+
+- **Frontend Agent**: 只能写 `apps/landing/`, `apps/web/`, `packages/ui/`
+- **Backend Agent**: 只能写 `apps/api/`, `apps/agent-runtime/`, `packages/types/`
+- **Platform Agent**: 只能写 `chart/`, `k8s/`, `iac/`, `monitoring/`
+- **Lead Agent**: 只能写 `.kimi/`, `docs/`, 不能写业务代码
+
+## 编码铁律
+
+1. **前端**: Vue 3 Composition API + `<script setup>` + Pinia 组合式
+2. **后端**: Express + TypeScript ESM + 参数化查询
+3. **数据库**: PG 16 不支持 `ADD CONSTRAINT IF NOT EXISTS` → 用 `DO $$` 块
+4. **数据类型**: 前端传字符串 → 后端存 JSONB 时必须 `JSON.stringify([value])`
+5. **验证**: `tsc --noEmit` 必须通过才能声称完成
+
+## 已知陷阱
+
+1. **Helm**: `maxUnavailable: 0` 在单节点 k3d 上导致死锁 → 用 `1`
+2. **Secret**: 必须保留三种模式 (ExternalSecret / empty / Helm-managed)
+3. **Migration**: 手动 ALTER TABLE 后必须同步 `_migrations` 表
+4. **Mock**: 前端 catch 块禁止生成 mock fallback ID
+5. **UUID**: 禁止前端生成 `conv-${Date.now()}`，必须用后端返回的 UUID
+
+## 验证铁律
+
+```
+NO COMPLETION CLAIMS WITHOUT FRESH VERIFICATION EVIDENCE
+```
+
+任何完成声明必须附带：
+1. 执行的完整命令
+2. 完整的输出结果
+3. exit code 确认
+
+## 快速参考
+
+```bash
+# 诊断
+kubectl get pods -n agenthive
+kubectl logs -l app.kubernetes.io/name=api -n agenthive --tail=50
+
+# 类型检查
+cd apps/api && npx tsc --noEmit
+
+# 本地测试
+kubectl port-forward deployment/api 3001:3001 -n agenthive
+```

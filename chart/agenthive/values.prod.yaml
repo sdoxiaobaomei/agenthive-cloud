@@ -4,23 +4,15 @@
 # ============================================================================
 
 global:
+  imageRegistry: "crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com"
   labels:
     environment: production
 
-  podSecurityContext:
-    runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
-    fsGroup: 1000
-    seccompProfile:
-      type: RuntimeDefault
-
-  containerSecurityContext:
-    allowPrivilegeEscalation: false
-    readOnlyRootFilesystem: true
-    capabilities:
-      drop:
-        - ALL
+# ----------------------------------------------------------------------------
+# Registry — Production (disable Helm-managed; use node-level imagePullSecret)
+# ----------------------------------------------------------------------------
+registry:
+  enabled: false
 
 # ----------------------------------------------------------------------------
 # API Service — Production
@@ -29,7 +21,8 @@ api:
   replicas: 3
 
   image:
-    tag: "1.1.0"
+    repository: "namespace-alpha/api"
+    tag: "v1.2.0"
 
   resources:
     requests:
@@ -71,7 +64,7 @@ api:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 25%
-      maxUnavailable: 0
+      maxUnavailable: 1
 
 # ----------------------------------------------------------------------------
 # Landing Service — Production
@@ -80,12 +73,13 @@ landing:
   replicas: 3
 
   image:
-    tag: "1.1.0"
+    repository: "namespace-alpha/landing"
+    tag: "v1.2.0"
 
   resources:
     requests:
       memory: 256Mi
-      cpu: 200m
+      cpu: 250m
     limits:
       memory: 512Mi
       cpu: 500m
@@ -122,7 +116,7 @@ landing:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 25%
-      maxUnavailable: 0
+      maxUnavailable: 1
 
 # ----------------------------------------------------------------------------
 # Java Microservices — Production
@@ -130,7 +124,8 @@ landing:
 javaServices:
   defaults:
     image:
-      tag: "1.1.0"
+      repositoryPrefix: "namespace-alpha"
+      tag: "v1.2.0"
     replicas: 3
     resources:
       requests:
@@ -140,25 +135,30 @@ javaServices:
         memory: 1Gi
         cpu: 1000m
     jvmOptions: "-XX:+UseG1GC -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0 -Djava.security.egd=file:/dev/./urandom"
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 1
+    hpa:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 10
+      targetCPUUtilization: 60
+      targetMemoryUtilization: 75
+    pdb:
+      enabled: true
+      minAvailable: 2
 
   services:
     gateway:
       envOverrides:
         REDIS_HOST: "172.24.146.165"
       replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
       hpa:
         enabled: true
         minReplicas: 3
         maxReplicas: 10
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
       pdb:
         enabled: true
         minAvailable: 2
@@ -168,19 +168,10 @@ javaServices:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
       replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
       hpa:
         enabled: true
         minReplicas: 3
         maxReplicas: 10
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
       pdb:
         enabled: true
         minAvailable: 2
@@ -190,19 +181,10 @@ javaServices:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
       replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
       hpa:
         enabled: true
         minReplicas: 3
         maxReplicas: 10
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
       pdb:
         enabled: true
         minAvailable: 2
@@ -212,19 +194,10 @@ javaServices:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
       replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
       hpa:
         enabled: true
         minReplicas: 3
         maxReplicas: 8
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
       pdb:
         enabled: true
         minAvailable: 2
@@ -234,19 +207,10 @@ javaServices:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
       replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
       hpa:
         enabled: true
         minReplicas: 3
         maxReplicas: 8
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
       pdb:
         enabled: true
         minAvailable: 2
@@ -256,19 +220,10 @@ javaServices:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
       replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
       hpa:
         enabled: true
         minReplicas: 3
         maxReplicas: 8
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
       pdb:
         enabled: true
         minAvailable: 2
@@ -278,66 +233,22 @@ javaServices:
         DB_HOST: "172.24.146.165"
         REDIS_HOST: "172.24.146.165"
       replicas: 3
-      resources:
-        requests:
-          memory: 512Mi
-          cpu: 500m
-        limits:
-          memory: 1Gi
-          cpu: 1000m
       hpa:
         enabled: true
         minReplicas: 3
         maxReplicas: 8
-        targetCPUUtilization: 60
-        targetMemoryUtilization: 75
       pdb:
         enabled: true
         minAvailable: 2
 
-# ----------------------------------------------------------------------------
-# Ingress — Production (HTTPS + Domain)
-# ----------------------------------------------------------------------------
-ingress:
-  className: nginx
-  tls:
+  gatewayCors:
     enabled: true
-    secretName: agenthive-tls
-    hosts:
-      - api.agenthive.cloud
-      - agenthive.cloud
-      - www.agenthive.cloud
-
-  hosts:
-    - host: api.agenthive.cloud
-      paths:
-        - path: /
-          pathType: Prefix
-          service: gateway-service
-          port: 8080
-    - host: agenthive.cloud
-      paths:
-        - path: /api
-          pathType: Prefix
-          service: gateway-service
-          port: 8080
-        - path: /socket.io
-          pathType: Prefix
-          service: gateway-service
-          port: 8080
-        - path: /
-          pathType: Prefix
-          service: landing
-          port: 3000
-    - host: www.agenthive.cloud
-      paths:
-        - path: /
-          pathType: Prefix
-          service: landing
-          port: 3000
+    allowedOriginPatterns:
+      - "https://*.xiaochaitian.asia"
 
   ingress:
     enabled: true
+    name: agenthive-java-ingress
     className: nginx
     tls:
       enabled: true
@@ -357,32 +268,71 @@ ingress:
             port: 8081
 
 # ----------------------------------------------------------------------------
+# Ingress — Production (HTTPS + Domain + Security Headers)
+# ----------------------------------------------------------------------------
+ingress:
+  enabled: true
+  name: agenthive-ingress
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/hsts: "true"
+    nginx.ingress.kubernetes.io/hsts-max-age: "31536000"
+    nginx.ingress.kubernetes.io/hsts-include-subdomains: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+  tls:
+    enabled: true
+    secretName: production-tls-secret
+    hosts:
+      - agenthive.cloud
+      - www.agenthive.cloud
+      - api.agenthive.cloud
+  hosts:
+    - host: agenthive.cloud
+      paths:
+        - path: /
+          pathType: Prefix
+          service: landing
+          port: 3000
+    - host: www.agenthive.cloud
+      paths:
+        - path: /
+          pathType: Prefix
+          service: landing
+          port: 3000
+    - host: api.agenthive.cloud
+      paths:
+        - path: /
+          pathType: Prefix
+          service: api
+          port: 3001
+
+# ----------------------------------------------------------------------------
 # ConfigMap — Production
 # ----------------------------------------------------------------------------
 configmap:
   data:
     NODE_ENV: "production"
-    DB_HOST: "172.24.146.165"
-    DB_PORT: "5432"
-    DB_NAME: "agenthive"
-    DB_USER: "agenthive"
-    REDIS_URL: "redis://:REDACTED@172.24.146.165:6379"
-    REDIS_HOST: "172.24.146.165"
-    REDIS_PORT: "6379"
-    API_URL: "https://api.agenthive.cloud"
+    CORS_ORIGIN: "https://agenthive.cloud,https://www.agenthive.cloud,https://api.agenthive.cloud"
     LOG_LEVEL: "warn"
-    OTEL_TRACES_SAMPLER_ARG: "0.05"
-    OTEL_LOG_LEVEL: "error"
-    CORS_ORIGIN: "https://agenthive.cloud,https://www.agenthive.cloud"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-gateway.monitoring:4317"
+    OTEL_SDK_DISABLED: "false"
+    OTEL_TRACES_SAMPLER_ARG: "0.1"
 
 # ----------------------------------------------------------------------------
-# Secret — Production (Native K8s Secret, managed by scripts/setup-secrets.sh)
+# Secret — Production (managed by external-secrets or setup-secrets.sh)
 # ----------------------------------------------------------------------------
 secret:
-  enabled: true
-  name: app-secrets
-  externalSecret:
-    enabled: false
+  enabled: false
 
 # ----------------------------------------------------------------------------
 # NetworkPolicy — Production
@@ -391,11 +341,15 @@ networkPolicy:
   enabled: true
 
 # ----------------------------------------------------------------------------
-# Nacos — Production (Phase 1: enabled if needed)
+# Nacos — Production
 # ----------------------------------------------------------------------------
 nacos:
   enabled: true
   replicas: 1
+  image:
+    registry: ""
+    repository: "nacos/nacos-server"
+    tag: "v2.3.0"
   resources:
     requests:
       memory: 1Gi
@@ -403,17 +357,76 @@ nacos:
     limits:
       memory: 2Gi
       cpu: 1000m
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
 
 # ----------------------------------------------------------------------------
 # RabbitMQ — Production (Phase 1: enabled if needed)
 # ----------------------------------------------------------------------------
+# Agent Runtime — Production
+agentRuntime:
+  enabled: true
+  replicas: 2
+  image:
+    repository: "namespace-alpha/agent-runtime"
+    tag: "v1.2.0"
+  service:
+    port: 8080
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 250m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  agent:
+    name: "Prod Agent"
+    role: "custom"
+    capabilities:
+      - shell
+      - code_generation
+      - code_review
+      - test
+      - build
+    maxConcurrentTasks: 2
+    heartbeatInterval: 30000
+  supervisor:
+    url: "ws://api:3001"
+  workspace:
+    path: "/workspace"
+  envFromSecret:
+    - name: LLM_API_KEY
+      key: LLM_API_KEY
+
+# OTel Collector — Production
+otelCollector:
+  enabled: true
+  namespace: monitoring
+  image: otel/opentelemetry-collector-contrib:0.96.0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# RabbitMQ — Production (disabled until develop issue resolved)
 rabbitmq:
   enabled: false
   replicas: 1
-  resources:
-    requests:
-      memory: 512Mi
-      cpu: 250m
-    limits:
-      memory: 1Gi
-      cpu: 500m
+
+# ----------------------------------------------------------------------------
+# Redis — Production
+# ----------------------------------------------------------------------------
+redis:
+  enabled: true
+  replicas: 1

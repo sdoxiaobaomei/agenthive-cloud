@@ -58,6 +58,7 @@ docs/
 
 ## 文档索引
 
+- **[Agent 协作规范](../AGENT_COLLABORATION_SPEC.md)** — 所有 AI Agent 必须遵守的协作标准
 - [架构知识库](../docs/architecture/README.md) — 编号 00-05 的架构文档
 - [快速参考](../docs/reference/quick-reference.md) — 常用命令速查
 - [踩坑记录](../docs/lessons-learned.md) — 已踩过的坑

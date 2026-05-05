@@ -24,6 +24,11 @@ export interface Task {
   priority: TaskPriority
   agentId?: string
   assignedTo?: string
+  assigned_to?: string
+  userId?: string
+  user_id?: string
+  projectId?: string
+  project_id?: string
   input?: Record<string, unknown>
   output?: Record<string, unknown>
   progress: number

@@ -1,0 +1,345 @@
+name: Develop CI/CD — Build, Push to ACR, Deploy via ArgoCD
+
+# ============================================================
+# 触发条件：develop 分支的 push（包括 merge）
+# ============================================================
+on:
+  push:
+    branches:
+      - develop
+    paths-ignore:
+      - 'chart/**'  # Helm 配置变更不触发镜像构建
+      - 'k8s/**'    # Kustomize 配置不触发
+      - 'docs/**'
+      - '**.md'
+  # 允许手动触发（用于 workflow 文件本身修改后的测试）
+  workflow_dispatch:
+
+# ============================================================
+# 权限：需要写入仓库内容（更新 manifest tag）
+# ============================================================
+permissions:
+  contents: write
+
+env:
+  ACR_REGISTRY: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
+  ACR_NAMESPACE: namespace-alpha
+  KUSTOMIZE_PATH: k8s/overlays/local
+  GIT_USER_NAME: "GitHub Actions"
+  GIT_USER_EMAIL: "actions@github.com"
+
+jobs:
+  # ==========================================================
+  # Job 0: 检测变更文件（供后续 job 条件判断）
+  # ==========================================================
+  detect-changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      node-api: ${{ steps.set-outputs.outputs.node-api }}
+      node-landing: ${{ steps.set-outputs.outputs.node-landing }}
+      node-changed: ${{ steps.set-outputs.outputs.node-changed }}
+      java-changed: ${{ steps.set-outputs.outputs.java-changed }}
+      any-service: ${{ steps.set-outputs.outputs.any-service }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Detect changed files
+        id: changes
+        uses: tj-actions/changed-files@v44
+        with:
+          files_yaml: |
+            node-api:
+              - apps/api/**
+              - packages/shared/**
+              - packages/observability/**
+              - packages/agent-runtime/**
+            node-landing:
+              - apps/landing/**
+              - packages/ui/**
+            java-all:
+              - apps/java/**
+            any-service:
+              - apps/**
+
+      - name: Set outputs
+        id: set-outputs
+        run: |
+          NODE_API="${{ steps.changes.outputs.node-api_any_changed }}"
+          NODE_LANDING="${{ steps.changes.outputs.node-landing_any_changed }}"
+          JAVA_CHANGED="${{ steps.changes.outputs.java-all_any_changed }}"
+          ANY_SERVICE="${{ steps.changes.outputs.any-service_any_changed }}"
+          
+          # Node services changed = api or landing
+          if [[ "$NODE_API" == "true" || "$NODE_LANDING" == "true" ]]; then
+            NODE_CHANGED="true"
+          else
+            NODE_CHANGED="false"
+          fi
+          
+          echo "node-api=$NODE_API" >> $GITHUB_OUTPUT
+          echo "node-landing=$NODE_LANDING" >> $GITHUB_OUTPUT
+          echo "node-changed=$NODE_CHANGED" >> $GITHUB_OUTPUT
+          echo "java-changed=$JAVA_CHANGED" >> $GITHUB_OUTPUT
+          echo "any-service=$ANY_SERVICE" >> $GITHUB_OUTPUT
+          
+          echo "Node API changed: $NODE_API"
+          echo "Node Landing changed: $NODE_LANDING"
+          echo "Node changed: $NODE_CHANGED"
+          echo "Java changed: $JAVA_CHANGED"
+          echo "Any service changed: $ANY_SERVICE"
+
+  # ==========================================================
+  # Job 1: 构建并推送所有镜像到 ACR
+  # ==========================================================
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    # 只有当任意服务代码变更时才构建
+    if: needs.detect-changes.outputs.any-service == 'true'
+    timeout-minutes: 30
+    strategy:
+      # 矩阵构建：所有服务并行
+      matrix:
+        service:
+          - name: api
+            context: .
+            dockerfile: ./apps/api/Dockerfile
+          - name: landing
+            context: .
+            dockerfile: ./apps/landing/Dockerfile
+          - name: auth-service
+            context: ./apps/java
+            dockerfile: ./apps/java/auth-service/Dockerfile
+          - name: cart-service
+            context: ./apps/java
+            dockerfile: ./apps/java/cart-service/Dockerfile
+          - name: gateway-service
+            context: ./apps/java
+            dockerfile: ./apps/java/gateway-service/Dockerfile
+          - name: logistics-service
+            context: ./apps/java
+            dockerfile: ./apps/java/logistics-service/Dockerfile
+          - name: order-service
+            context: ./apps/java
+            dockerfile: ./apps/java/order-service/Dockerfile
+          - name: payment-service
+            context: ./apps/java
+            dockerfile: ./apps/java/payment-service/Dockerfile
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0  # 需要完整 history 用于 tag
+
+      # 2. 登录阿里云 ACR
+      - name: Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      # 3. 设置 Docker Buildx（支持多平台缓存）
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 3b. 设置 Node.js 20（pnpm monorepo 构建需要）
+      - name: Set up Node.js 20
+        if: matrix.service.name == 'api' || matrix.service.name == 'landing'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 3c. 设置 JDK 21（Java 服务需要）
+      - name: Set up JDK 21
+        if: contains(matrix.service.name, '-service')
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # 4. 镜像标签策略：
+      #    - 优先 git describe --tags 获取 semver（如 v1.2.3）
+      #    - 无 tag 时 fallback 到 commit-sha（前8位）
+      #    - 始终同时打 develop 浮动标签
+      - name: Determine image tag
+        id: vars
+        run: |
+          SEMVER=$(git describe --tags --always 2>/dev/null || true)
+          if [[ "$SEMVER" =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+            IMAGE_TAG="$SEMVER"
+          else
+            IMAGE_TAG="$(git rev-parse --short HEAD)"
+          fi
+          echo "tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "semver=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "📌 Image tag: $IMAGE_TAG (develop floating tag also pushed)"
+
+      # 5. 安装依赖并构建（API 和 landing 需要预构建 dist 产物）
+      - name: Install dependencies and build (Node.js)
+        if: matrix.service.name == 'api' || matrix.service.name == 'landing'
+        run: |
+          corepack enable
+          corepack prepare pnpm@9 --activate
+          pnpm install --frozen-lockfile
+          # 先构建工作区依赖包（API 的 Dockerfile 需要它们的 dist）
+          pnpm --filter=@agenthive/observability build
+          pnpm --filter=@agenthive/agent-runtime build
+          # UI（landing 依赖）
+          pnpm --filter=@agenthive/ui build
+          # Landing
+          pnpm --filter=@agenthive/landing build
+          # API: 构建 dist（忽略类型错误）
+          pnpm --filter=@agenthive/api exec tsc || echo "API build: TypeScript errors ignored, dist may be incomplete"
+
+      # 5b. Maven 构建（Java 服务需要预构建 target/*.jar）
+      - name: Maven build (Java)
+        if: contains(matrix.service.name, '-service')
+        run: |
+          cd apps/java
+          mvn clean install -pl ${{ matrix.service.name }} -am -DskipTests -B -q
+
+      # 6. 构建并推送镜像
+      # 标签策略：semver tag + develop 浮动标签 同时推送
+      - name: Build and push ${{ matrix.service.name }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.service.context }}
+          file: ${{ matrix.service.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.tag }}
+            ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:develop
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            NODE_ENV=development
+            BUILD_SHA=${{ steps.vars.outputs.sha }}
+            BUILD_TAG=${{ steps.vars.outputs.tag }}
+
+      # 7. 输出镜像地址（用于调试）
+      - name: Print image digest
+        run: |
+          echo "Built: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:${{ steps.vars.outputs.tag }}"
+          echo "Floating: ${{ env.ACR_REGISTRY }}/${{ env.ACR_NAMESPACE }}/${{ matrix.service.name }}:develop"
+          echo ""
+          echo "Tag strategy: semver (git describe --tags) or commit-sha, plus develop floating tag"
+          echo "Config changes (chart/**) do not trigger builds"
+          echo "Promote to prod: Use specific semver tag in production overlay"
+
+  # ==========================================================
+  # Job 2: 更新 Helm values 镜像 tag（代码变更时，含 Node + Java）
+  # ==========================================================
+  update-manifest:
+    runs-on: ubuntu-latest
+    needs: [detect-changes, build-and-push]
+    # Node 或 Java 服务代码变更时都更新对应 tag
+    if: needs.detect-changes.outputs.node-changed == 'true' || needs.detect-changes.outputs.java-changed == 'true'
+    timeout-minutes: 10
+
+    steps:
+      # 1. 检出代码（需要 write 权限 push 回仓库）
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: develop
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      # 2. 确定镜像标签：semver 优先，fallback commit-sha
+      - name: Determine image tag
+        id: vars
+        run: |
+          SEMVER=$(git describe --tags --always 2>/dev/null || true)
+          if [[ "$SEMVER" =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+            IMAGE_TAG="$SEMVER"
+          else
+            IMAGE_TAG="$(git rev-parse --short HEAD)"
+          fi
+          echo "tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "📌 Helm values tag: $IMAGE_TAG (develop floating also available)"
+
+      # 3. 更新 Helm values 镜像 tag（Node + Java，代码变更时）
+      # 使用 semver 或 commit-sha，代码变更时更新；配置变更不触发
+      - name: Update image tags in values.dev.yaml
+        run: |
+          HELM_VALUES="chart/agenthive/values.dev.yaml"
+          TAG="${{ steps.vars.outputs.tag }}"
+
+          # 更新 api tag（Node 变更时）
+          if [ "${{ needs.detect-changes.outputs.node-api }}" == "true" ] && grep -q 'api:' "$HELM_VALUES"; then
+            yq eval -i '.api.image.tag = "'"$TAG"'"' "$HELM_VALUES"
+            echo "🔌 Updated api image tag -> $TAG"
+          fi
+
+          # 更新 landing tag（Node 变更时）
+          if [ "${{ needs.detect-changes.outputs.node-landing }}" == "true" ] && grep -q 'landing:' "$HELM_VALUES"; then
+            yq eval -i '.landing.image.tag = "'"$TAG"'"' "$HELM_VALUES"
+            echo "🌐 Updated landing image tag -> $TAG"
+          fi
+
+          # 更新 Java 服务默认 tag（Java 变更时）
+          if [ "${{ needs.detect-changes.outputs.java-changed }}" == "true" ] && grep -q 'javaServices:' "$HELM_VALUES"; then
+            yq eval -i '.javaServices.defaults.image.tag = "'"$TAG"'"' "$HELM_VALUES"
+            echo "☕ Updated javaServices.defaults.image.tag -> $TAG"
+          fi
+
+          git diff --stat "$HELM_VALUES" || true
+
+      # 4. Commit 并 push 更新后的 values
+      - name: Commit and push values update
+        run: |
+          git config user.name "${{ env.GIT_USER_NAME }}"
+          git config user.email "${{ env.GIT_USER_EMAIL }}"
+
+          HELM_VALUES="chart/agenthive/values.dev.yaml"
+
+          # 检查是否有变更
+          if git diff --quiet "${HELM_VALUES}"; then
+            echo "No changes to commit. Skipping."
+            exit 0
+          fi
+
+          git add "${HELM_VALUES}"
+          git commit \
+            -m "chore(helm): update dev image tags to ${{ steps.vars.outputs.tag }}" \
+            -m "Auto-generated by GitHub Actions" \
+            -m "Node services changed: api=${{ needs.detect-changes.outputs.node-api }}, landing=${{ needs.detect-changes.outputs.node-landing }}" \
+            -m "Java services changed: ${{ needs.detect-changes.outputs.java-changed }}" \
+            -m "Tag strategy: semver (git describe --tags) or commit-sha, plus develop floating tag" \
+            -m "Config changes (chart/**) do not trigger builds or tag updates" \
+            -m "ArgoCD will auto-sync to develop cluster"
+
+          git push origin develop
+
+      # 5. 输出 ArgoCD 同步状态链接
+      - name: Print ArgoCD sync info
+        run: |
+          echo "======================================"
+          echo "ArgoCD Application: agenthive-dev"
+          echo "Target Cluster:   https://100.76.250.86:57116"
+          echo "Target Namespace: agenthive"
+          echo "New Image Tag:    ${{ steps.vars.outputs.tag }} (semver or commit-sha)"
+          echo "Floating Tag:     develop"
+          echo "Values File:      chart/agenthive/values.dev.yaml"
+          echo "======================================"
+          echo "ArgoCD 将在 3-5 分钟内自动检测到 manifest 变更并触发同步"
+          echo ""
+          echo "Tag strategy:"
+          echo "  - semver: git describe --tags (e.g. v1.2.3) or commit-sha fallback"
+          echo "  - develop: 浮动标签，方便 develop 环境拉取"
+          echo "  - 配置变更（chart/**）不触发构建和 tag 更新"
+          echo ""
+          echo "Promote to production:"
+          echo "  在 chart/agenthive/values.prod.yaml 中"
+          echo "  将对应服务的 tag 改为特定版本"

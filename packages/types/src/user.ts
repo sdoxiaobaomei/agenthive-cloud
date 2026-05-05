@@ -13,9 +13,16 @@ export interface User {
   email?: string
   phone?: string
   role: UserRole | string
+  status?: string
+  passwordHash?: string
+  password_hash?: string
   avatar?: string
+  externalUserId?: string
+  external_user_id?: string
   createdAt: string
   updatedAt: string
+  created_at?: string
+  updated_at?: string
 }
 
 /** 用户偏好设置 */

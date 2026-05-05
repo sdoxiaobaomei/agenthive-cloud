@@ -549,4 +549,13 @@ npm run dev
 
 ---
 
+## Agent 协作规范
+
+> 任何接入本项目的 AI Agent 必须阅读并遵守协作规范：
+> **AGENT_COLLABORATION_SPEC.md** — 涵盖架构决策、角色权限、编码标准、质量门禁、前后端协作、DevOps、QA 测试、反模式。
+>
+> 该规范确保多 Agent 团队以同等质量持续交付。
+
+---
+
 > **Hive Mode**: *Many minds, one goal.* 🐝

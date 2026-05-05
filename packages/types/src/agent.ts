@@ -33,6 +33,10 @@ export interface Agent {
   status: AgentStatus
   avatar?: string
   description?: string
+  ownerId?: string
+  owner_id?: string
+  projectId?: string
+  project_id?: string
   config?: Record<string, unknown>
   metadata?: Record<string, unknown>
   currentTask?: {
@@ -40,7 +44,10 @@ export interface Agent {
     title: string
     progress: number
   }
+  currentTaskId?: string
+  current_task_id?: string
   podIp?: string
+  pod_ip?: string
   lastHeartbeatAt?: string
   lastRunAt?: string
   createdAt: string

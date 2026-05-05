@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agenthive-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/sdoxiaobaomei/agenthive-cloud.git
+    targetRevision: develop
+    path: chart/agenthive
+    helm:
+      valueFiles:
+        - values.dev.yaml
+  destination:
+    server: https://100.76.250.86:57116
+    namespace: agenthive
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  # Helm pre-install/pre-upgrade hooks (db-migrate-job) are mapped to ArgoCD PreSync.
+  # If the migration Job fails, the sync fails — this is the desired behavior.
+  # No extra configuration needed for standard Helm hooks.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agenthive-prod
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/sdoxiaobaomei/agenthive-cloud.git
+    targetRevision: master
+    path: chart/agenthive
+    helm:
+      valueFiles:
+        - values.prod.yaml
+  destination:
+    server: https://39.107.87.106:6443
+    namespace: agenthive
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  # Production: disable auto-sync for database-related changes to allow manual migration review.
+  # Uncomment the following to require manual approval before prod sync:
+  # syncPolicy:
+  #   automated: null

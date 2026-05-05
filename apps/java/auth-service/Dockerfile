@@ -1,43 +1,40 @@
 # syntax=docker/dockerfile:1
-# Auth Service - Optimized Spring Boot 3 Layered Build
-# Uses jarmode=layertools to split fat JAR into cacheable layers.
+# Auth Service - Multi-stage Maven Build
 
-# ============ 提取阶段 ============
-FROM eclipse-temurin:21-jre-alpine AS builder
+FROM maven:3.9-eclipse-temurin-21-alpine AS maven-builder
 WORKDIR /app
-COPY target/auth-service-*.jar app.jar
-RUN java -Djarmode=layertools -jar app.jar extract
+RUN apk add --no-cache wget
 
-# Download OpenTelemetry Java Agent for unified observability (dev/prod parity)
-# The agent is enabled/disabled at runtime via OTEL_JAVAAGENT_ENABLED env var
-COPY opentelemetry-javaagent-2.6.0.jar /app/opentelemetry-javaagent.jar
+# Copy entire apps/java workspace (includes parent pom, common modules, and service)
+COPY . .
 
-# ============ 生产阶段 ============
+# Build service with dependencies (-am = also-make, builds required common modules)
+RUN mvn clean package -pl auth-service -am -DskipTests -B -q && \
+    cd auth-service && \
+    java -Djarmode=layertools -jar target/auth-service-*.jar extract && \
+    wget -q https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.6.0/opentelemetry-javaagent.jar -O opentelemetry-javaagent.jar
+
 FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-# JVM memory settings (container-aware)
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0"
 ENV SPRING_PROFILES_ACTIVE=docker
 
-# Create non-root user
 RUN addgroup -S appgroup -g 1001 && \
     adduser -S appuser -u 1001 -G appgroup && \
     chown -R appuser:appgroup /app
 
-# Copy layers (dependencies rarely change -> cached)
-COPY --from=builder --chown=appuser:appgroup /app/dependencies/ ./
-COPY --from=builder --chown=appuser:appgroup /app/spring-boot-loader/ ./
-COPY --from=builder --chown=appuser:appgroup /app/snapshot-dependencies/ ./
-COPY --from=builder --chown=appuser:appgroup /app/application/ ./
-COPY --from=builder --chown=appuser:appgroup /app/opentelemetry-javaagent.jar ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/auth-service/dependencies/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/auth-service/spring-boot-loader/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/auth-service/snapshot-dependencies/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/auth-service/application/ ./
+COPY --from=maven-builder --chown=appuser:appgroup /app/auth-service/opentelemetry-javaagent.jar ./
 
 USER appuser
 
 EXPOSE 8081
 
-# Labels for traceability
 ARG VERSION=unknown
 ARG GIT_COMMIT=unknown
 ARG BUILD_TIME=unknown

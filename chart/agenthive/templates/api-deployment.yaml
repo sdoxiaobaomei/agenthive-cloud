@@ -74,6 +74,8 @@ spec:
               value: "6379"
             - name: REDIS_HOST
               value: "redis"
+            - name: DATABASE_URL
+              value: "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
           securityContext:
             {{- toYaml .Values.global.containerSecurityContext | nindent 12 }}
           resources:

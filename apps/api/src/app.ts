@@ -8,7 +8,6 @@ import { rateLimitMiddleware } from './middleware/rateLimit.js'
 import { trafficTracker, hostedSiteMockHandler } from './middleware/traffic.js'
 import routes from './routes/index.js'
 import logger from './utils/logger.js'
-import { setupSwagger } from './swagger.js'
 import { startBatchReporter } from './project/traffic-service.js'
 
 const app = express()
@@ -20,9 +19,6 @@ app.use(cookieParser())
 
 // 请求日志（结构化，含 trace_id）
 app.use(requestLogger())
-
-// Swagger API 文档（需在认证中间件之前挂载，避免被拦截）
-setupSwagger(app)
 
 // 认证中间件
 app.use(authMiddleware)

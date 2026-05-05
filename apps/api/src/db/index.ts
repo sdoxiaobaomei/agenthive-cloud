@@ -38,17 +38,16 @@ export const userDb = {
 
   create: async (data: Partial<User>): Promise<User> => {
     const result = await pool.query(
-      `INSERT INTO users (username, phone, email, role, avatar, password_hash, external_user_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      `INSERT INTO users (username, phone, email, role, password_hash, status) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
       [
         data.username || `user_${Math.random().toString(36).substring(2, 8)}`,
         data.phone,
-        data.email,
+        data.email || `${data.username || 'user'}@test.local`,
         data.role || 'user',
-        data.avatar,
         data.password_hash,
-        data.external_user_id,
+        'active',
       ]
     )
     return result.rows[0]
@@ -61,11 +60,10 @@ export const userDb = {
            phone = COALESCE($2, phone),
            email = COALESCE($3, email),
            role = COALESCE($4, role),
-           avatar = COALESCE($5, avatar),
-           external_user_id = COALESCE($6, external_user_id)
-       WHERE id = $7 
+           status = COALESCE($5, status)
+       WHERE id = $6 
        RETURNING *`,
-      [data.username, data.phone, data.email, data.role, data.avatar, data.external_user_id, id]
+      [data.username, data.phone, data.email, data.role, data.status, id]
     )
     return result.rows[0] || undefined
   },
@@ -100,18 +98,17 @@ export const agentDb = {
 
   create: async (data: Partial<Agent>): Promise<Agent> => {
     const result = await pool.query(
-      `INSERT INTO agents (name, role, status, description, avatar, pod_ip, config, current_task_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+      `INSERT INTO agents (name, role, status, description, config, owner_id, project_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
       [
         data.name || 'New Agent',
         data.role || 'custom',
         data.status || 'idle',
         data.description,
-        data.avatar,
-        data.pod_ip || data.podIp,
         JSON.stringify(data.config || {}),
-        data.currentTask?.id,
+        data.owner_id || null,
+        data.project_id || null,
       ]
     )
     return result.rows[0]
@@ -124,21 +121,17 @@ export const agentDb = {
            role = COALESCE($2, role),
            status = COALESCE($3, status),
            description = COALESCE($4, description),
-           avatar = COALESCE($5, avatar),
-           pod_ip = COALESCE($6, pod_ip),
-           config = COALESCE($7, config),
-           last_heartbeat_at = COALESCE($8, last_heartbeat_at)
-       WHERE id = $9 
+           config = COALESCE($5, config),
+           owner_id = COALESCE($6, owner_id)
+       WHERE id = $7 
        RETURNING *`,
       [
         data.name,
         data.role,
         data.status,
         data.description,
-        data.avatar,
-        data.podIp,
         data.config ? JSON.stringify(data.config) : undefined,
-        data.last_heartbeat_at || data.lastHeartbeatAt,
+        data.owner_id,
         id,
       ]
     )
@@ -156,7 +149,8 @@ function mapTaskRow(row: any): Task {
   return {
     ...row,
     assignedTo: row.assigned_to,
-    parentId: row.parent_id,
+    userId: row.user_id,
+    projectId: row.project_id,
     createdAt: row.created_at,
     startedAt: row.started_at,
     completedAt: row.completed_at,
@@ -206,8 +200,8 @@ export const taskDb = {
 
   create: async (data: Partial<Task>): Promise<Task> => {
     const result = await pool.query(
-      `INSERT INTO tasks (title, description, type, status, priority, progress, assigned_to, parent_id, input, output) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+      `INSERT INTO tasks (title, description, type, status, priority, progress, assigned_to, user_id, project_id, input, output) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
        RETURNING *`,
       [
         data.title || 'New Task',
@@ -217,7 +211,8 @@ export const taskDb = {
         data.priority || 'medium',
         data.progress || 0,
         isValidUUID(data.assignedTo) ? data.assignedTo : null,
-        isValidUUID(data.parentId) ? data.parentId : null,
+        isValidUUID(data.userId || data.user_id) ? (data.userId || data.user_id) : null,
+        isValidUUID(data.projectId || data.project_id) ? (data.projectId || data.project_id) : null,
         JSON.stringify(data.input || {}),
         data.output ? JSON.stringify(data.output) : null,
       ]
@@ -262,8 +257,10 @@ export const taskDb = {
   },
 
   findSubtasks: async (parentId: string): Promise<Task[]> => {
+    // DB schema 没有 parent_id，按 project_id 查询关联任务
+    if (!isValidUUID(parentId)) return []
     const result = await pool.query(
-      'SELECT * FROM tasks WHERE parent_id = $1 ORDER BY created_at DESC',
+      'SELECT * FROM tasks WHERE project_id = $1 ORDER BY created_at DESC',
       [parentId]
     )
     return result.rows.map(mapTaskRow)

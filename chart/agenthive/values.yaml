@@ -32,12 +32,24 @@ global:
         - ALL
 
 # ----------------------------------------------------------------------------
+# Container Registry Authentication (imagePullSecret)
+# ----------------------------------------------------------------------------
+registry:
+  enabled: false
+  name: registry-secret
+  server: ""
+  username: ""
+  password: ""
+  email: ""
+
+# ----------------------------------------------------------------------------
 # ServiceAccount
 # ----------------------------------------------------------------------------
 serviceAccount:
   create: true
   name: ""
   automountServiceAccountToken: false
+  imagePullSecrets: []
 
 # ----------------------------------------------------------------------------
 # Namespace
@@ -121,7 +133,7 @@ api:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 25%
-      maxUnavailable: 0
+      maxUnavailable: 1
 
   probes:
     liveness:
@@ -309,7 +321,7 @@ landing:
     type: RollingUpdate
     rollingUpdate:
       maxSurge: 25%
-      maxUnavailable: 0
+      maxUnavailable: 1
 
   probes:
     liveness:
@@ -380,7 +392,7 @@ javaServices:
   ingress:
     enabled: false
     name: agenthive-java-ingress
-    className: traefik
+    className: nginx
     annotations: {}
     tls:
       enabled: false
@@ -407,7 +419,7 @@ javaServices:
       type: RollingUpdate
       rollingUpdate:
         maxSurge: 25%
-        maxUnavailable: 0
+        maxUnavailable: 1
     jvmOptions: ""
 
     hpa:
@@ -630,8 +642,12 @@ javaServices:
 ingress:
   enabled: true
   name: agenthive-ingress
-  className: traefik
-  annotations: {}
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
   tls:
     enabled: false
     secretName: ""
@@ -639,14 +655,22 @@ ingress:
   hosts:
     - host: agenthive.local
       paths:
+        - path: /api/auth
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
         - path: /api
           pathType: Prefix
           service: gateway-service
           port: 8080
         - path: /socket.io
           pathType: Prefix
-          service: gateway-service
-          port: 8080
+          service: api
+          port: 3001
+        - path: /chat
+          pathType: Prefix
+          service: api
+          port: 3001
         - path: /
           pathType: Prefix
           service: landing
@@ -732,7 +756,7 @@ configmap:
     REQUEST_TIMEOUT: "30000"
     CACHE_TTL: "3600"
     UV_THREADPOOL_SIZE: "4"
-    CORS_ORIGIN: "http://localhost,https://localhost"
+    CORS_ORIGIN: "http://agenthive.local,http://agenthive.local:8080,http://localhost,http://localhost:3000,http://localhost:8080,http://localhost:5173,https://localhost"
     JAVA_PAYMENT_URL: "http://payment-service:8083"
     NITRO_PORT: "3000"
     LLM_BASE_URL: "https://api.kimi.com/coding/v1"
@@ -773,6 +797,8 @@ secret:
   name: app-secrets
   externalSecret:
     enabled: false
+  createEmpty: false
+  data: {}
 
 # ----------------------------------------------------------------------------
 # NetworkPolicy
@@ -828,12 +854,82 @@ nacos:
     identityKey: "agenthive"
     identityValue: "agenthive-secret-2024"
 
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+
   securityContext:
     allowPrivilegeEscalation: false
     readOnlyRootFilesystem: false
     capabilities:
       drop:
         - ALL
+
+# ----------------------------------------------------------------------------
+# Agent Runtime
+# ----------------------------------------------------------------------------
+agentRuntime:
+  enabled: false
+  name: agent-runtime
+  replicas: 1
+  image:
+    registry: ""
+    repository: agenthive/agent-runtime
+    tag: "dev"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  serviceAccount:
+    create: true
+    automountServiceAccountToken: false
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 500m
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 1
+  agent:
+    name: "K8s Agent"
+    role: "custom"
+    capabilities:
+      - shell
+      - code_generation
+      - code_review
+      - test
+      - build
+    maxConcurrentTasks: 1
+    heartbeatInterval: 30000
+  supervisor:
+    url: "ws://api:3001"
+  workspace:
+    path: "/workspace"
+  envFromSecret:
+    - name: LLM_API_KEY
+      key: LLM_API_KEY
+
+# ----------------------------------------------------------------------------
+# OTel Collector
+# ----------------------------------------------------------------------------
+otelCollector:
+  enabled: false
+  namespace: monitoring
+  image: otel/opentelemetry-collector-contrib:0.96.0
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
 
 # ----------------------------------------------------------------------------
 # RabbitMQ (inline for Phase 1)

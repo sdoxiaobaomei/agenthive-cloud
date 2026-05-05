@@ -28,8 +28,18 @@
 
     <!-- Messages -->
     <div v-if="!isCollapsed" class="messages-area" ref="messagesContainer">
+      <!-- Version Switcher -->
+      <VersionSwitcher
+        v-if="versions.length > 0"
+        :versions="versions"
+        :current-version-id="currentVersionId"
+        class="version-switcher-sticky"
+        @switch="handleVersionSwitch"
+        @create="handleCreateVersion"
+      />
+
       <!-- Empty State -->
-      <div v-if="messages.length === 0" class="empty-state">
+      <div v-if="visibleMessages.length === 0" class="empty-state">
         <div class="empty-avatar">
           <img src="/avatars/shiba_tl.png" alt="Agent" />
         </div>
@@ -39,17 +49,17 @@
         </div>
       </div>
 
-      <!-- Message List -->
+      <!-- Message List (visibleMessages: inline recommend) -->
       <div v-else class="message-list">
         <div
-          v-for="(msg, index) in messages"
+          v-for="msg in visibleMessages"
           :key="msg.id"
           class="message-wrapper"
           :class="msg.role"
         >
           <div class="message">
             <img
-              v-if="msg.role === 'assistant' || msg.role === 'agent'"
+              v-if="msg.role === 'assistant'"
               src="/avatars/shiba_be.png"
               class="message-avatar"
               alt="Agent"
@@ -71,38 +81,37 @@
               <div class="message-header">
                 <span class="message-author">{{ authorName(msg.role) }}</span>
                 <span class="message-time">{{ formatTime(msg.createdAt || msg.timestamp || '') }}</span>
+                <el-tag v-if="msg.type && msg.type !== 'message'" size="small" :type="typeTagType(msg.type)">
+                  {{ typeLabel(msg.type) }}
+                </el-tag>
               </div>
 
-              <div class="message-bubble" :class="msg.role">
-                <div v-if="msg.isLoading" class="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-                <div v-else class="message-body" v-html="renderMarkdown(msg.content)"></div>
-              </div>
-
-              <!-- Agent Progress Cards -->
-              <div v-if="msg.metadata?.tasks?.length" class="task-cards">
-                <div
-                  v-for="task in msg.metadata.tasks"
-                  :key="task.id"
-                  class="task-card"
-                  :class="task.status"
-                >
-                  <el-icon v-if="task.status === 'completed'"><CircleCheck /></el-icon>
-                  <el-icon v-else-if="task.status === 'failed'"><CircleClose /></el-icon>
-                  <el-icon v-else-if="task.status === 'running'"><Loading class="is-loading" /></el-icon>
-                  <el-icon v-else><Timer /></el-icon>
-                  <span class="task-name">{{ task.role }}: {{ task.id }}</span>
-                </div>
-              </div>
+              <!-- Component dispatch by message.type -->
+              <MessageBlock
+                v-if="msg.type === 'message' || !msg.type"
+                :message="msg"
+                :is-loading="msg.isLoading"
+              />
+              <ThinkBlock v-else-if="msg.type === 'think'" :message="msg" />
+              <SystemEventBlock v-else-if="msg.type === 'system_event'" :message="msg" />
+              <TaskBlock
+                v-else-if="msg.type === 'task'"
+                :message="msg"
+                @approve="handleApprove"
+                @decline="handleDecline"
+              />
+              <RecommendBlock
+                v-else-if="msg.type === 'recommend'"
+                :message="msg"
+                @select="handleSelectRecommend"
+                @dismiss="handleDismissRecommend"
+              />
+              <MessageBlock v-else :message="msg" />
             </div>
           </div>
         </div>
       </div>
-
-      <!-- Real-time Progress Panel -->
+    <!-- Real-time Progress Panel -->
       <div v-if="agentLogs.length > 0" class="progress-panel">
         <div class="progress-header">
           <el-icon><VideoPlay /></el-icon>
@@ -186,19 +195,12 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { io, Socket } from 'socket.io-client'
-
-interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant' | 'system' | 'agent'
-  content: string
-  createdAt?: string
-  timestamp?: string
-  isLoading?: boolean
-  metadata?: {
-    intent?: string
-    tasks?: Array<{ id: string; role: string; status: string }>
-  }
-}
+import type { ChatMessage, ChatVersion } from '~/stores/chat'
+import MessageBlock from './chat/MessageBlock.vue'
+import ThinkBlock from './chat/ThinkBlock.vue'
+import SystemEventBlock from './chat/SystemEventBlock.vue'
+import TaskBlock from './chat/TaskBlock.vue'
+import RecommendBlock from './chat/RecommendBlock.vue'
 
 import type { Project } from '~/stores/project'
 
@@ -216,12 +218,12 @@ const emit = defineEmits<{
 
 const { user } = useAuth()
 const { chat: chatApi, baseUrl, get } = useApi()
+const chatStore = useChatStore()
 const creditsStore = useCreditsStore()
 const creditsBalance = computed(() => creditsStore.balance)
 
 const messagesContainer = ref<HTMLDivElement>()
 const inputRef = ref<HTMLTextAreaElement>()
-const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
 const isLoading = ref(false)
 const isInputFocused = ref(false)
@@ -233,24 +235,69 @@ const agentLogs = ref<string[]>([])
 const estimatedCost = ref(0)
 const resolvedProjectName = ref('')
 
+// v2: use store's visibleMessages, versions, currentVersionId
+const visibleMessages = computed(() => chatStore.visibleMessages)
+const versions = computed(() => chatStore.versions)
+const currentVersionId = computed(() => chatStore.currentVersionId)
+
 let socket: Socket | null = null
 
 const authorName = (role: string) => {
   switch (role) {
     case 'assistant': return 'AI Team'
     case 'system': return 'System'
-    case 'agent': return 'Agent'
     default: return 'You'
   }
 }
 
-const renderMarkdown = (content: string): string => {
-  content = content.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre class="code-block"><code>$2</code></pre>')
-  content = content.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-  content = content.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-  content = content.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-  content = content.replace(/\n/g, '<br>')
-  return content
+// v2: message type tag mapping
+const typeTagType = (type: string): any => {
+  switch (type) {
+    case 'think': return 'info'
+    case 'task': return 'warning'
+    case 'system_event': return 'danger'
+    default: return ''
+  }
+}
+
+const typeLabel = (type: string): string => {
+  const labels: Record<string, string> = {
+    think: '思考',
+    task: '任务',
+    system_event: '系统',
+  }
+  return labels[type] || type
+}
+
+// v2: version handlers
+const handleVersionSwitch = async (versionId: string) => {
+  await chatStore.switchVersion(versionId)
+}
+
+const handleCreateVersion = async () => {
+  // P2 #12: 让用户输入版本标题
+  const defaultTitle = `版本 ${versions.value.length + 1}`
+  const title = window.prompt('请输入版本标题:', defaultTitle) || defaultTitle
+  const description = window.prompt('请输入版本描述（可选）:') || undefined
+  await chatStore.createVersion(title, description)
+}
+
+// v2: task handlers
+const handleApprove = async (taskId: string) => {
+  await chatStore.approveTask(taskId, true)
+}
+
+const handleDecline = async (taskId: string) => {
+  await chatStore.approveTask(taskId, false)
+}
+
+// v2: recommend handlers
+const handleSelectRecommend = async (optionId: string) => {
+  await chatStore.selectRecommend(optionId)
+}
+
+const handleDismissRecommend = async () => {
+  await chatStore.dismissRecommend()
 }
 
 const autoResize = () => {
@@ -314,7 +361,10 @@ const createNewSession = async () => {
     })
     if (res.success && res.data) {
       sessionId.value = res.data.id
-      messages.value = []
+      // v2: clear store messages for this session
+      chatStore.messages = chatStore.messages.filter(
+        m => m.conversationId !== res.data!.id
+      )
       agentLogs.value = []
       agentStatus.value = 'idle'
       connectWebSocket(res.data.id)
@@ -398,69 +448,38 @@ const sendMessage = async () => {
     if (!sessionId.value) return
   }
 
-  // Add user message
-  const userMsg: ChatMessage = {
-    id: `msg-${Date.now()}`,
-    role: 'user',
-    content: text,
-    createdAt: new Date().toISOString(),
-  }
-  messages.value.push(userMsg)
+  // Set current conversation in store
+  chatStore.setCurrentConversation(sessionId.value)
+
+  // v2: 用户直接输入时，自动关闭当前活跃的 recommend
+  await chatStore.dismissRecommend()
+
   inputText.value = ''
   if (inputRef.value) inputRef.value.style.height = 'auto'
-  nextTick(() => scrollToBottom())
 
-  // Add loading message
-  const loadingMsg: ChatMessage = {
-    id: `msg-${Date.now() + 1}`,
-    role: 'assistant',
-    content: '',
-    createdAt: new Date().toISOString(),
-    isLoading: true,
-  }
-  messages.value.push(loadingMsg)
   isLoading.value = true
   nextTick(() => scrollToBottom())
 
   try {
-    const res = await chatApi.sendMessage(sessionId.value, { content: text })
+    // Use store action which handles multi-message response
+    await chatStore.sendMessageWithResponse(text)
 
-    // Remove loading message
-    messages.value = messages.value.filter((m) => m.id !== loadingMsg.id)
-
-    if (res.success && res.data) {
-      const assistantMsg: ChatMessage = {
-        id: res.data.message?.id || `msg-${Date.now() + 2}`,
-        role: 'assistant',
-        content: res.data.message?.content || 'Processing your request...',
-        createdAt: new Date().toISOString(),
-        metadata: {
-          intent: res.data.intent,
-          tasks: res.data.tasks as any,
-        },
-      }
-      messages.value.push(assistantMsg)
-
-      // If tasks were created, start polling progress
-      if (res.data.tasks?.length) {
-        agentStatus.value = 'running'
-        pollProgress(sessionId.value)
-      }
-    } else {
-      messages.value.push({
-        id: `msg-${Date.now() + 2}`,
-        role: 'assistant',
-        content: 'Sorry, something went wrong. Please try again.',
-        createdAt: new Date().toISOString(),
-      })
+    // Check if tasks were created and start polling
+    const lastMsgs = chatStore.currentMessages.slice(-3)
+    const hasTask = lastMsgs.some(m => m.type === 'task')
+    if (hasTask) {
+      agentStatus.value = 'running'
+      pollProgress(sessionId.value)
     }
   } catch (error: any) {
-    messages.value = messages.value.filter((m) => m.id !== loadingMsg.id)
-    messages.value.push({
-      id: `msg-${Date.now() + 2}`,
+    chatStore.messages.push({
+      id: `msg-${Date.now()}`,
       role: 'assistant',
+      type: 'message',
       content: `Error: ${error.message || 'Failed to get response'}`,
-      createdAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      conversationId: sessionId.value,
+      metadata: {},
     })
   } finally {
     isLoading.value = false
@@ -491,7 +510,12 @@ const pollProgress = (sid: string) => {
 }
 
 const clearChat = () => {
-  messages.value = []
+  // v2: clear store messages for current session
+  if (sessionId.value) {
+    chatStore.messages = chatStore.messages.filter(
+      m => m.conversationId !== sessionId.value
+    )
+  }
   agentLogs.value = []
   agentStatus.value = 'idle'
   sessionId.value = null
@@ -525,14 +549,27 @@ const loadSessionMessages = async (sid: string) => {
   try {
     const res = await chatApi.getMessages(sid)
     if (res.success && res.data?.messages) {
-      messages.value = res.data.messages.map((msg: any) => ({
+      const loaded: ChatMessage[] = res.data.messages.map((msg: any) => ({
         id: msg.id || `msg-${Date.now()}`,
-        role: msg.role as 'user' | 'assistant' | 'system' | 'agent',
+        role: msg.role as 'user' | 'assistant' | 'system',
+        type: (msg.messageType || msg.type || 'message') as ChatMessage['type'],
         content: msg.content,
-        createdAt: msg.timestamp || msg.createdAt,
-        metadata: msg.metadata,
+        timestamp: msg.createdAt || msg.timestamp,
+        conversationId: sid,
+        versionId: msg.versionId,
+        tasks: msg.tasks,
+        options: msg.options,
+        thinkContent: msg.thinkContent || msg.metadata?.thinkContent,
+        thinkSummary: msg.thinkSummary || msg.metadata?.thinkSummary,
+        metadata: msg.metadata || {},
       }))
+      // v2: merge into store, avoid duplicates
+      const existingIds = new Set(chatStore.messages.map(m => m.id))
+      const newMessages = loaded.filter(m => !existingIds.has(m.id))
+      chatStore.messages.push(...newMessages)
     }
+    // v2: load versions for this session
+    await chatStore.loadVersions(sid)
   } catch (err: any) {
     if (import.meta.dev) {
       console.debug('[ChatPanel] Failed to load messages:', err.message)
@@ -785,6 +822,14 @@ onUnmounted(() => {
   color: #92400e;
   border-bottom-left-radius: 4px;
   font-size: 12px;
+}
+
+/* Version Switcher sticky */
+.version-switcher-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--el-bg-color);
 }
 
 /* Task Cards */
@@ -1098,4 +1143,27 @@ onUnmounted(() => {
   font-size: 12px;
   line-height: 1.5;
 }
+
+/* Message entry animation */
+.message-wrapper {
+  animation: messageSlideIn 0.3s ease-out both;
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sequential stagger for recent messages */
+.message-list .message-wrapper:nth-last-child(1) { animation-delay: 0ms; }
+.message-list .message-wrapper:nth-last-child(2) { animation-delay: 40ms; }
+.message-list .message-wrapper:nth-last-child(3) { animation-delay: 80ms; }
+.message-list .message-wrapper:nth-last-child(4) { animation-delay: 120ms; }
+.message-list .message-wrapper:nth-last-child(5) { animation-delay: 160ms; }
 </style>

@@ -7,23 +7,22 @@
 global:
   labels:
     environment: development
-
 # ----------------------------------------------------------------------------
 # Local PostgreSQL + Redis (dev only)
 # ----------------------------------------------------------------------------
 postgres:
   enabled: true
-
 redis:
   enabled: true
-
 # ----------------------------------------------------------------------------
 # API Service — Dev
 # ----------------------------------------------------------------------------
 api:
   replicas: 1
   image:
-    tag: "dev"
+    registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
+    repository: namespace-alpha/api
+    tag: "v0.1.0-dev.1-55-gc183b4c"
   resources:
     requests:
       memory: 256Mi
@@ -35,14 +34,15 @@ api:
     enabled: false
   pdb:
     enabled: false
-
 # ----------------------------------------------------------------------------
 # Landing Service — Dev
 # ----------------------------------------------------------------------------
 landing:
   replicas: 1
   image:
-    tag: "dev"
+    registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
+    repository: namespace-alpha/landing
+    tag: "v0.1.0-dev.1-57-g9840356"
   resources:
     requests:
       memory: 128Mi
@@ -54,14 +54,15 @@ landing:
     enabled: false
   pdb:
     enabled: false
-
 # ----------------------------------------------------------------------------
 # Java Services — Dev
 # ----------------------------------------------------------------------------
 javaServices:
   defaults:
     image:
-      tag: "dev"
+      registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
+      repositoryPrefix: namespace-alpha
+      tag: "845fddb"
     replicas: 1
     resources:
       requests:
@@ -79,12 +80,6 @@ javaServices:
       pdb:
         enabled: false
     auth:
-      enabled: true
-      hpa:
-        enabled: false
-      pdb:
-        enabled: false
-    user:
       enabled: true
       hpa:
         enabled: false
@@ -114,29 +109,58 @@ javaServices:
         enabled: false
       pdb:
         enabled: false
-
+  gatewayCors:
+    enabled: true
+    allowedOrigins:
+      - "http://localhost:8080"
+      - "http://localhost:3000"
+      - "http://localhost:5173"
+      - "http://agenthive.local"
+      - "http://agenthive.local:8080"
 # ----------------------------------------------------------------------------
-# Ingress — Dev (localhost only)
+# Ingress — Dev (localhost + agenthive.local)
 # ----------------------------------------------------------------------------
 ingress:
+  className: nginx
   tls:
     enabled: false
   hosts:
-    - host: agenthive.local
+    - host: localhost
       paths:
+        - path: /api/auth
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
         - path: /api
           pathType: Prefix
           service: gateway-service
           port: 8080
         - path: /socket.io
           pathType: Prefix
-          service: gateway-service
-          port: 8080
+          service: api
+          port: 3001
         - path: /
           pathType: Prefix
           service: landing
           port: 3000
-
+    - host: agenthive.local
+      paths:
+        - path: /api/auth
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /api
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /socket.io
+          pathType: Prefix
+          service: api
+          port: 3001
+        - path: /
+          pathType: Prefix
+          service: landing
+          port: 3000
 # ----------------------------------------------------------------------------
 # ConfigMap — Dev
 # ----------------------------------------------------------------------------
@@ -159,7 +183,7 @@ configmap:
     REQUEST_TIMEOUT: "30000"
     CACHE_TTL: "3600"
     UV_THREADPOOL_SIZE: "4"
-    CORS_ORIGIN: "http://localhost,https://localhost"
+    CORS_ORIGIN: "http://localhost,https://localhost,http://localhost:8080,http://localhost:3000,http://localhost:5173,http://agenthive.local,http://agenthive.local:8080"
     JAVA_PAYMENT_URL: "http://payment-service:8083"
     NITRO_PORT: "3000"
     LLM_BASE_URL: "https://api.kimi.com/coding/v1"
@@ -191,29 +215,54 @@ configmap:
     OTEL_METRICS_EXPORTER_JAVA: "otlp"
     OTEL_LOGS_EXPORTER_JAVA: "otlp"
     LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
-
 # ----------------------------------------------------------------------------
 # Secret — Dev (fallback placeholder, replace with real values)
 # ----------------------------------------------------------------------------
 secret:
-  enabled: false
+  enabled: true
   externalSecret:
     enabled: false
-
+  data:
+    DB_USER: "agenthive"
+    DB_PASSWORD: "agenthive-dev-password-2026"
+    JWT_SECRET: "2GqEvWmxu1fk2Hz3uunqZ-L0uvK_yXlrIaUl67SiPjU"
+    LLM_API_KEY: "REPLACE_ME"
+    REDIS_PASSWORD: "agenthive"
+    RABBITMQ_PASSWORD: "agenthive"
+    NACOS_PASSWORD: "nacos"
+    GRAFANA_ADMIN_PASSWORD: "REPLACE_ME"
+    INTERNAL_API_TOKEN: "REPLACE_ME"
+    WITHDRAWAL_ENCRYPT_KEY: "REPLACE_ME"
 # ----------------------------------------------------------------------------
 # NetworkPolicy — Dev
 # ----------------------------------------------------------------------------
 networkPolicy:
   enabled: false
-
 # ----------------------------------------------------------------------------
 # Nacos — Dev
 # ----------------------------------------------------------------------------
 nacos:
   enabled: true
-
 # ----------------------------------------------------------------------------
 # RabbitMQ — Dev
 # ----------------------------------------------------------------------------
 rabbitmq:
   enabled: true
+# ----------------------------------------------------------------------------
+# Registry Secret — Dev (ACR image pull authentication)
+# ----------------------------------------------------------------------------
+registry:
+  # Disabled: k3d node-level registry auth is configured via /etc/rancher/k3s/registries.yaml
+  # See scripts/dev/setup-k3d-registry.ps1
+  enabled: false
+  name: acr-regcred
+  server: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
+  username: ""
+  password: ""
+  email: ""
+# ----------------------------------------------------------------------------
+# ServiceAccount — Dev (ACR image pull authentication)
+# ----------------------------------------------------------------------------
+serviceAccount:
+  imagePullSecrets:
+    - name: acr-regcred

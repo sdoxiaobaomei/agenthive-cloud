@@ -1,0 +1,18 @@
+{{- if .Values.agentRuntime.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agenthive.prefixedName" (list . .Values.agentRuntime.name) }}
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.agentRuntime.name) }}
+    app.kubernetes.io/component: agent-runtime
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "agenthive.prefixedName" (list . .Values.agentRuntime.name) }}
+  ports:
+    - port: {{ .Values.agentRuntime.service.port }}
+      targetPort: {{ .Values.agentRuntime.service.port }}
+      name: http
+  type: {{ .Values.agentRuntime.service.type }}
+{{- end }}

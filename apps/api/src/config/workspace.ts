@@ -14,6 +14,11 @@ import path from 'path'
  */
 export const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/data/workspaces'
 
+// Removed static WORKSPACE_BASE - use getWorkspaceBase() instead
+function getWorkspaceBase(): string {
+  return WORKSPACE_BASE
+}
+
 /**
  * Get the workspace path for a given user and optional project.
  * Uses path.join for Windows/Linux cross-platform compatibility.
@@ -24,9 +29,9 @@ export const WORKSPACE_BASE = process.env.WORKSPACE_BASE || '/data/workspaces'
  */
 export function getWorkspacePath(userId: string, projectId?: string): string {
   if (projectId) {
-    return path.join(WORKSPACE_BASE, userId, projectId)
+    return path.join(getWorkspaceBase(), userId, projectId)
   }
-  return path.join(WORKSPACE_BASE, userId, 'default')
+  return path.join(getWorkspaceBase(), userId, 'default')
 }
 
 /**
@@ -36,5 +41,5 @@ export function getWorkspacePath(userId: string, projectId?: string): string {
  * @returns Absolute chat-session workspace path
  */
 export function getChatWorkspacePath(sessionId: string): string {
-  return path.join(WORKSPACE_BASE, 'chat-sessions', sessionId)
+  return path.join(getWorkspaceBase(), 'chat-sessions', sessionId)
 }
