@@ -7,16 +7,13 @@
 global:
   labels:
     environment: development
-
 # ----------------------------------------------------------------------------
 # Local PostgreSQL + Redis (dev only)
 # ----------------------------------------------------------------------------
 postgres:
   enabled: true
-
 redis:
   enabled: true
-
 # ----------------------------------------------------------------------------
 # API Service — Dev
 # ----------------------------------------------------------------------------
@@ -25,7 +22,7 @@ api:
   image:
     registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/api
-    tag: "develop-latest"
+    tag: "v0.1.0-dev.1-14-g4e492dd"
   resources:
     requests:
       memory: 256Mi
@@ -37,7 +34,6 @@ api:
     enabled: false
   pdb:
     enabled: false
-
 # ----------------------------------------------------------------------------
 # Landing Service — Dev
 # ----------------------------------------------------------------------------
@@ -58,7 +54,6 @@ landing:
     enabled: false
   pdb:
     enabled: false
-
 # ----------------------------------------------------------------------------
 # Java Services — Dev
 # ----------------------------------------------------------------------------
@@ -122,7 +117,6 @@ javaServices:
       - "http://localhost:5173"
       - "http://agenthive.local"
       - "http://agenthive.local:8080"
-
 # ----------------------------------------------------------------------------
 # Ingress — Dev (localhost + agenthive.local)
 # ----------------------------------------------------------------------------
@@ -167,7 +161,6 @@ ingress:
           pathType: Prefix
           service: landing
           port: 3000
-
 # ----------------------------------------------------------------------------
 # ConfigMap — Dev
 # ----------------------------------------------------------------------------
@@ -222,7 +215,6 @@ configmap:
     OTEL_METRICS_EXPORTER_JAVA: "otlp"
     OTEL_LOGS_EXPORTER_JAVA: "otlp"
     LOGGING_PATTERN_CONSOLE: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [trace_id=%X{trace_id},span_id=%X{span_id}] [%thread] %logger{36} - %msg%n"
-
 # ----------------------------------------------------------------------------
 # Secret — Dev (fallback placeholder, replace with real values)
 # ----------------------------------------------------------------------------
@@ -239,25 +231,21 @@ secret:
     RABBITMQ_PASSWORD: "agenthive"
     NACOS_PASSWORD: "nacos"
     GRAFANA_ADMIN_PASSWORD: "REPLACE_ME"
-
 # ----------------------------------------------------------------------------
 # NetworkPolicy — Dev
 # ----------------------------------------------------------------------------
 networkPolicy:
   enabled: false
-
 # ----------------------------------------------------------------------------
 # Nacos — Dev
 # ----------------------------------------------------------------------------
 nacos:
   enabled: true
-
 # ----------------------------------------------------------------------------
 # RabbitMQ — Dev
 # ----------------------------------------------------------------------------
 rabbitmq:
   enabled: true
-
 # ----------------------------------------------------------------------------
 # ServiceAccount — Dev (ACR image pull authentication)
 # ----------------------------------------------------------------------------
