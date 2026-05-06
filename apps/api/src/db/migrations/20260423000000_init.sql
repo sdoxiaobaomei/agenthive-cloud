@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS projects (
     type VARCHAR(50),
     tech_stack JSONB DEFAULT '[]',
     git_url VARCHAR(500),
+    repo_url VARCHAR(500),
     git_branch VARCHAR(100) DEFAULT 'main',
     workspace_path VARCHAR(500),
     last_accessed_at TIMESTAMPTZ,
