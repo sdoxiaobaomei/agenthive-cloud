@@ -300,12 +300,28 @@ ingress:
   hosts:
     - host: xiaochaitian.asia
       paths:
+        - path: /api
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /socket.io
+          pathType: ImplementationSpecific
+          service: api
+          port: 3001
         - path: /
           pathType: Prefix
           service: landing
           port: 3000
     - host: www.xiaochaitian.asia
       paths:
+        - path: /api
+          pathType: Prefix
+          service: gateway-service
+          port: 8080
+        - path: /socket.io
+          pathType: ImplementationSpecific
+          service: api
+          port: 3001
         - path: /
           pathType: Prefix
           service: landing
@@ -333,7 +349,7 @@ configmap:
     API_URL: "https://api.xiaochaitian.asia"
     GATEWAY_URL: "https://java.xiaochaitian.asia/gateway"
     NITRO_PORT: "3000"
-    CORS_ORIGIN: "https://agenthive.cloud,https://www.agenthive.cloud,https://api.agenthive.cloud"
+    CORS_ORIGIN: "https://xiaochaitian.asia,https://www.xiaochaitian.asia,https://api.xiaochaitian.asia"
     LOG_LEVEL: "warn"
     OTEL_SERVICE_NAME: "agenthive-api"
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-gateway.monitoring:4317"
@@ -348,7 +364,7 @@ configmap:
     STRUCTURED_LOGGING: "true"
     LLM_BASE_URL: "https://api.kimi.com/coding/v1"
     LLM_MODEL: "kimi-for-coding"
-    LLM_USER_AGENT: "agenthive-prod/1.0"
+    LLM_USER_AGENT: "claude-code/0.1.0"
     OLLAMA_URL: ""
     OLLAMA_MODEL: ""
     DEV_USER_ID: ""

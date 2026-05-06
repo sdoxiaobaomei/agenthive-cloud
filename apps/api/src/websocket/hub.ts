@@ -18,10 +18,16 @@ const VISITOR_TIMEOUT = 1000 * 60 * 10 // 10 分钟
 let io: SocketIOServer | null = null
 
 // 初始化 WebSocket
+function parseCorsOrigins(): string[] | boolean {
+  const raw = process.env.CORS_ORIGIN
+  if (!raw || raw === '*') return true
+  return raw.split(',').map(o => o.trim()).filter(Boolean)
+}
+
 export function initWebSocket(server: HttpServer): SocketIOServer {
   io = new SocketIOServer(server, {
     cors: {
-      origin: process.env.CORS_ORIGIN || '*',
+      origin: parseCorsOrigins(),
       methods: ['GET', 'POST'],
       credentials: true,
     },
