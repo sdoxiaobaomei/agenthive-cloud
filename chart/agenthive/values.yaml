@@ -211,6 +211,10 @@ api:
       key: CORS_ORIGIN
     - name: JAVA_PAYMENT_URL
       key: JAVA_PAYMENT_URL
+    - name: REDIS_HOST
+      key: REDIS_HOST
+    - name: REDIS_PORT
+      key: REDIS_PORT
     - name: UV_THREADPOOL_SIZE
       key: UV_THREADPOOL_SIZE
 
