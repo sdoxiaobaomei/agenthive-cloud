@@ -11,7 +11,16 @@ ALTER TABLE project_deployments ADD COLUMN IF NOT EXISTS config_json JSONB DEFAU
 ALTER TABLE project_deployments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 -- Add unique constraint required by ON CONFLICT (project_id)
-ALTER TABLE project_deployments ADD CONSTRAINT IF NOT EXISTS uq_project_deployments_project_id UNIQUE (project_id);
+-- NOTE: PostgreSQL does NOT support ADD CONSTRAINT IF NOT EXISTS
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'uq_project_deployments_project_id'
+    ) THEN
+        ALTER TABLE project_deployments ADD CONSTRAINT uq_project_deployments_project_id UNIQUE (project_id);
+    END IF;
+END $$;
 
 -- down migration
 
