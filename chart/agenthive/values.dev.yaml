@@ -62,7 +62,7 @@ javaServices:
     image:
       registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
       repositoryPrefix: namespace-alpha
-      tag: "sha-387cd18"
+      tag: "develop-latest"
     replicas: 1
     resources:
       requests:
