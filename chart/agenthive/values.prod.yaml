@@ -27,7 +27,7 @@ api:
 
   image:
     repository: "namespace-alpha/api"
-    tag: "latest"
+    tag: "55a40f0"
 
   resources:
     requests:
