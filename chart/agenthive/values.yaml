@@ -230,11 +230,17 @@ api:
 
   # initContainers moved to template (conditional on postgres.enabled)
 
-  volumes:
-    - name: tmp
-      emptyDir: {}
-    - name: workspace
-      emptyDir: {}
+  # Workspace persistence configuration
+  # For single-node clusters (k3d/k3s), local-path storage class is recommended.
+  # For multi-node clusters, use a ReadWriteMany storage class (e.g., NAS).
+  workspace:
+    persistence:
+      enabled: true
+      storageClass: ""        # Empty = use cluster default (local-path on k3d/k3s)
+      accessMode: ReadWriteOnce
+      size: 10Gi
+
+  volumes: []               # Deprecated: workspace volume is now managed by template
 
   volumeMounts:
     - name: tmp

@@ -104,10 +104,17 @@ spec:
           volumeMounts:
             {{- toYaml .Values.api.volumeMounts | nindent 12 }}
           {{- end }}
-      {{- if .Values.api.volumes }}
       volumes:
-        {{- toYaml .Values.api.volumes | nindent 8 }}
-      {{- end }}
+        - name: tmp
+          emptyDir: {}
+        {{- if .Values.api.workspace.persistence.enabled }}
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: {{ include "agenthive.apiName" . }}-workspace
+        {{- else }}
+        - name: workspace
+          emptyDir: {}
+        {{- end }}
       {{- if .Values.api.affinity }}
       affinity:
         {{- toYaml .Values.api.affinity | nindent 8 }}

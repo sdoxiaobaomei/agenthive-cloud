@@ -1,0 +1,21 @@
+{{- if and .Values.api.enabled .Values.api.workspace.persistence.enabled }}
+{{- $workspace := .Values.api.workspace.persistence }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "agenthive.apiName" . }}-workspace
+  namespace: {{ include "agenthive.namespace" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "agenthive.apiName" . }}
+    app.kubernetes.io/component: workspace
+    {{- include "agenthive.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ $workspace.accessMode }}
+  resources:
+    requests:
+      storage: {{ $workspace.size }}
+  {{- if $workspace.storageClass }}
+  storageClassName: {{ $workspace.storageClass }}
+  {{- end }}
+{{- end }}
