@@ -173,6 +173,10 @@ api:
       key: DB_NAME
     - name: DB_USER
       key: DB_USER
+    - name: REDIS_HOST
+      key: REDIS_HOST
+    - name: REDIS_PORT
+      key: REDIS_PORT
     - name: LLM_BASE_URL
       key: LLM_BASE_URL
     - name: LLM_MODEL
