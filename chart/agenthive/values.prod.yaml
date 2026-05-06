@@ -364,7 +364,7 @@ configmap:
     STRUCTURED_LOGGING: "true"
     LLM_BASE_URL: "https://api.kimi.com/coding/v1"
     LLM_MODEL: "kimi-for-coding"
-    LLM_USER_AGENT: "agenthive-prod/1.0"
+    LLM_USER_AGENT: "Claude-Code/1.0"
     OLLAMA_URL: ""
     OLLAMA_MODEL: ""
     DEV_USER_ID: ""
