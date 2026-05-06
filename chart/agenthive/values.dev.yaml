@@ -22,7 +22,7 @@ api:
   image:
     registry: crpi-89ktoa4wv8sjcdow.cn-beijing.personal.cr.aliyuncs.com
     repository: namespace-alpha/api
-    tag: "sha-387cd18"
+    tag: "v1.2.0-11-g41d64ab"
   resources:
     requests:
       memory: 256Mi
