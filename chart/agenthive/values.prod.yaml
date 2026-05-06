@@ -261,7 +261,7 @@ javaServices:
       hosts:
         - java.agenthive.cloud
     hosts:
-      - host: java.agenthive.cloud
+      - host: java.xiaochaitian.asia
         paths:
           - path: /gateway
             pathType: Prefix
@@ -294,23 +294,23 @@ ingress:
     enabled: true
     secretName: production-tls-secret
     hosts:
-      - agenthive.cloud
-      - www.agenthive.cloud
-      - api.agenthive.cloud
+      - xiaochaitian.asia
+      - www.xiaochaitian.asia
+      - api.xiaochaitian.asia
   hosts:
-    - host: agenthive.cloud
+    - host: xiaochaitian.asia
       paths:
         - path: /
           pathType: Prefix
           service: landing
           port: 3000
-    - host: www.agenthive.cloud
+    - host: www.xiaochaitian.asia
       paths:
         - path: /
           pathType: Prefix
           service: landing
           port: 3000
-    - host: api.agenthive.cloud
+    - host: api.xiaochaitian.asia
       paths:
         - path: /
           pathType: Prefix
@@ -323,11 +323,37 @@ ingress:
 configmap:
   data:
     NODE_ENV: "production"
+    DB_HOST: "172.24.146.165"
+    DB_PORT: "5432"
+    DB_NAME: "agenthive"
+    DB_USER: "agenthive"
+    REDIS_URL: "redis://172.24.146.165:6379"
+    REDIS_HOST: "172.24.146.165"
+    REDIS_PORT: "6379"
+    API_URL: "https://api.xiaochaitian.asia"
+    GATEWAY_URL: "https://java.xiaochaitian.asia/gateway"
+    NITRO_PORT: "3000"
     CORS_ORIGIN: "https://agenthive.cloud,https://www.agenthive.cloud,https://api.agenthive.cloud"
     LOG_LEVEL: "warn"
+    OTEL_SERVICE_NAME: "agenthive-api"
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector-gateway.monitoring:4317"
     OTEL_SDK_DISABLED: "false"
+    OTEL_RESOURCE_ATTRIBUTES: "service.namespace=agenthive,deployment.environment=production"
+    OTEL_TRACES_SAMPLER: "parentbased_traceidratio"
     OTEL_TRACES_SAMPLER_ARG: "0.1"
+    OTEL_LOG_LEVEL: "warn"
+    OTEL_TRACES_EXPORTER: "otlp"
+    OTEL_METRICS_EXPORTER: "otlp"
+    OTEL_LOGS_EXPORTER: "otlp"
+    STRUCTURED_LOGGING: "true"
+    LLM_BASE_URL: "https://api.kimi.com/coding/v1"
+    LLM_MODEL: "kimi-for-coding"
+    LLM_USER_AGENT: "agenthive-prod/1.0"
+    OLLAMA_URL: ""
+    OLLAMA_MODEL: ""
+    DEV_USER_ID: ""
+    JAVA_PAYMENT_URL: "http://payment-service:8083"
+    UV_THREADPOOL_SIZE: "16"
 
 # ----------------------------------------------------------------------------
 # Secret — Production (managed by external-secrets or setup-secrets.sh)
@@ -367,10 +393,10 @@ nacos:
 # ----------------------------------------------------------------------------
 # RabbitMQ — Production (Phase 1: enabled if needed)
 # ----------------------------------------------------------------------------
-# Agent Runtime — Production
+# Agent Runtime — Production (disabled until v1.3.0 stable)
 agentRuntime:
-  enabled: true
-  replicas: 2
+  enabled: false
+  replicas: 0
   image:
     repository: "namespace-alpha/agent-runtime"
     tag: "v1.2.0"

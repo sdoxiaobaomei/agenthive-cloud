@@ -97,9 +97,9 @@ spec:
             - name: SPRING_CLOUD_NACOS_CONFIG_USERNAME
               value: "nacos"
             - name: SPRING_DATA_REDIS_HOST
-              value: "redis"
+              value: {{ default "redis" (index $envOverrides "REDIS_HOST") | quote }}
             - name: SPRING_DATA_REDIS_PORT
-              value: "6379"
+              value: {{ default "6379" (index $envOverrides "REDIS_PORT") | quote }}
             - name: SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD
               valueFrom:
                 secretKeyRef:

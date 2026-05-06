@@ -70,10 +70,6 @@ spec:
                   name: {{ $.Values.secret.name }}
                   key: {{ .key }}
             {{- end }}
-            - name: REDIS_PORT
-              value: "6379"
-            - name: REDIS_HOST
-              value: "redis"
             - name: DATABASE_URL
               value: "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
           securityContext:
