@@ -400,6 +400,10 @@ nacos:
     limits:
       memory: 2Gi
       cpu: 1000m
+  pvc:
+    enabled: true
+    size: 10Gi
+    storageClass: "local-path"
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -451,7 +455,7 @@ agentRuntime:
 
 # OTel Collector — Production
 otelCollector:
-  enabled: true
+  enabled: false
   namespace: monitoring
   image: otel/opentelemetry-collector-contrib:0.96.0
   resources:
