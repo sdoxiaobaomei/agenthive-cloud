@@ -278,7 +278,7 @@ export const chatService = {
           { role: 'system', content: '你是一个意图分类器。只返回意图标识符，不要解释。' },
           { role: 'user', content: prompt },
         ],
-        { temperature: 0.1, maxTokens: 64 }
+        { temperature: 0.1, maxTokens: 64, timeoutMs: 8000 }
       )
 
       const rawIntent = result.content.trim().toLowerCase()
@@ -373,7 +373,8 @@ export const chatService = {
     try {
       const result = await llmService.complete(llmMessages, {
         temperature: 0.7,
-        maxTokens: 2048,
+        maxTokens: 1024,
+        timeoutMs: 18000,
       })
       const parsed = parseStructuredReply(result.content.trim())
       logger.info('LLM structured reply parsed', { sessionId, intent, hasThinkSummary: !!parsed.thinkSummary })

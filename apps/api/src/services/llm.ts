@@ -36,35 +36,47 @@ class OpenAIProvider implements LLMProvider {
     this.config = config
   }
 
-  async complete(messages: LLMMessage[], options: LLMCompletionOptions = {}): Promise<LLMCompletionResult> {
-    const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.config.apiKey}`,
-        'User-Agent': process.env.LLM_USER_AGENT || 'claude-code/0.1.0'
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        messages: messages.map(m => {
-          const msg: Record<string, any> = { role: m.role, content: m.content }
-          if (m.toolCalls) msg.tool_calls = m.toolCalls
-          if (m.toolResults && m.toolResults.length > 0) msg.tool_call_id = m.toolResults[0].toolCallId
-          return msg
-        }),
-        temperature: options.temperature ?? 0.7,
-        max_tokens: options.maxTokens || 4096,
-        stream: false
-      })
-    })
+  async complete(messages: LLMMessage[], options: LLMCompletionOptions & { timeoutMs?: number } = {}): Promise<LLMCompletionResult> {
+    const timeoutMs = options.timeoutMs || parseInt(process.env.LLM_REQUEST_TIMEOUT_MS || '25000', 10)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(new Error('LLM request timeout')), timeoutMs)
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`)
+    let data: any
+    try {
+      const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.config.apiKey}`,
+          'User-Agent': process.env.LLM_USER_AGENT || 'claude-code/0.1.0'
+        },
+        body: JSON.stringify({
+          model: this.config.model,
+          messages: messages.map(m => {
+            const msg: Record<string, any> = { role: m.role, content: m.content }
+            if (m.toolCalls) msg.tool_calls = m.toolCalls
+            if (m.toolResults && m.toolResults.length > 0) msg.tool_call_id = m.toolResults[0].toolCallId
+            return msg
+          }),
+          temperature: options.temperature ?? 0.7,
+          max_tokens: options.maxTokens || 4096,
+          stream: false
+        }),
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`)
+      }
+
+      data = await response.json()
+    } finally {
+      clearTimeout(timeoutId)
     }
 
-    const data = await response.json()
-    
     return {
       content: data.choices?.[0]?.message?.content || '',
       usage: {
@@ -286,7 +298,7 @@ class LLMService {
     this.provider = createProvider()
   }
 
-  async complete(messages: LLMMessage[], options?: LLMCompletionOptions): Promise<LLMCompletionResult> {
+  async complete(messages: LLMMessage[], options?: LLMCompletionOptions & { timeoutMs?: number }): Promise<LLMCompletionResult> {
     return this.provider.complete(messages, options)
   }
 
