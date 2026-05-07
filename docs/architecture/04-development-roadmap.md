@@ -56,7 +56,8 @@
 | # | 任务 | 状态 | 验收标准 | 负责人 |
 |---|------|------|----------|--------|
 | 0.4.1 | 移除 Java 配置中所有默认密码/Secret | ✅ 完成 | auth-service 和 gateway-service 的 JWT_SECRET/DB_PASSWORD fallback 已移除 | Java 团队 |
-| 0.4.2 | K8s Secrets 迁移 External Secrets Operator | ⬜ 未开始 | `01-secrets.yaml` 从 Git 移除 | DevOps |
+| 0.4.2 | K8s Secrets 迁移 **Sealed Secrets**（¥0 方案） | ⬜ 未开始 | 所有明文 Secret 退出 Git，改用 SealedSecret 资源 | DevOps |
+| 0.4.2-alt | K8s Secrets 迁移 External Secrets Operator（阿里云 KMS，付费备选） | ⬜ 未开始 | 等效方案，需阿里云 KMS 预算 | DevOps |
 | 0.4.3 | Nginx HTTPS + cert-manager | ⬜ 未开始 | TLS 强制跳转，HTTP 301 → HTTPS | DevOps |
 | 0.4.4 | PostgreSQL 自动备份策略 | ⬜ 未开始 | 每日备份 + 7 天保留 | DevOps |
 | 0.4.5 | Redis 持久化 / 云托管 | ⬜ 未开始 | AOF + RDB 或阿里云 Redis | DevOps |
@@ -215,6 +216,68 @@
 
 ---
 
+## 附录 A：K8s 密钥管理方案对比（¥0 成本优先）
+
+> 关联任务: [0.4.2](#phase-0-安全基线加固-已部分完成)
+
+### 方案总览
+
+| 方案 | 成本 | 开源 | K8s 原生 | 跨集群 | 字段级加密 | 推荐度 |
+|------|------|------|----------|--------|-----------|--------|
+| **Sealed Secrets** | ¥0 | ✅ | ✅ | ❌（集群绑定） | ❌ | ⭐⭐⭐⭐⭐ |
+| **SOPS + Age** | ¥0 | ✅ | ❌（需 CI 解密） | ✅ | ✅ | ⭐⭐⭐⭐ |
+| **External Secrets + 阿里云 KMS** | 阿里云计费 | ✅ | ✅ | ✅ | ❌ | ⭐⭐⭐（有预算时） |
+| **GitHub Secrets** | ¥0 | N/A | ❌ | ❌ | ❌ | ⭐⭐（仅 CI） |
+
+### 推荐方案：Sealed Secrets
+
+**原理**：非对称加密。K8s 集群内运行 Controller（持有私钥），开发者用 `kubeseal`（公钥）本地加密。加密后的 `SealedSecret` 资源可安全存入 Git，Controller 自动解密为普通 `Secret`。
+
+**成本**：
+- Controller：开源免费，运行在现有 K8s 集群中（无增量成本）
+- kubeseal CLI：开源免费
+- 备份：可选存入现有 MinIO/S3（无增量成本）
+
+**开发者工作流**：
+```bash
+# 1. 本地创建明文 Secret（不上传）
+kubectl create secret generic api-secrets \
+  --from-literal=JWT_SECRET=xxx --dry-run=client -o yaml \
+  | kubeseal --format yaml > k8s/base/sealed-secrets/api-secrets.yaml
+
+# 2. Git 提交加密版本
+# 3. ArgoCD 同步后自动解密为 K8s Secret
+```
+
+**灾备**：必须备份 Controller 私钥（`sealed-secrets-key` Secret），集群重建后可恢复所有密钥。
+
+```bash
+# 导出（存 1Password / 离线 U 盘）
+kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-key=active -o yaml \
+  > sealed-secrets-recovery-key.yaml
+```
+
+**局限性**：
+- 加密文件绑定目标集群公钥，**无法跨集群复用**
+- 不支持字段级加密（整份 Secret 加密）
+- 私钥丢失 = 所有密钥永久不可恢复
+
+### 备选方案：SOPS + Age
+
+**适用场景**：需要跨多个 K8s 集群复用同一份加密文件，或需要字段级加密（如只加密 Secret 中的 password 字段，保留 username 明文）。
+
+**成本**：同样 ¥0，但 CI/CD 流水线需配置 Age 私钥环境变量。
+
+### 已废弃方案
+
+| 方案 | 废弃原因 |
+|------|----------|
+| 明文 Secret 存 Git | 违反安全基线，密钥泄漏风险 |
+| `.env` 文件提交 | 历史提交中可能残留敏感信息 |
+| Base64 编码 Secret | 不是加密，只是编码，无安全价值 |
+
+---
+
 ## 变更记录
 
 | 版本 | 日期 | 变更内容 |
@@ -222,4 +285,5 @@
 | v1.1 | 2026-04-27 | P0-A 运行时验证完成（5/7 UP，order/user 镜像待 rebuild）；P0-B API 限速完成；Prometheus 监控埋点提前完成（Phase 2.2.2）；Nacos 线程/内存优化完成；Agent YAML 递归修复 |
 | v1.2 | 2026-04-27 | 全部 7 个 Java 服务 rebuild 完成，actuator/health + actuator/prometheus 验证通过；docker compose 加载 .env.dev 修复 Redis 密码传递；Phase 0 标记完成 |
 | v1.3 | 2026-04-27 | Phase 0 验收报告：有条件通过 (15/19 项通过)。核心阻塞项：0.4.1 默认密码 fallback 未移除 (JWT_SECRET, DB_PASSWORD)。建议 Phase 1 启动前修复。 |
+| v1.4 | 2026-05-07 | 更新 0.4.2 为 Sealed Secrets（¥0 方案）；新增附录 A：K8s 密钥管理方案对比（Sealed Secrets / SOPS+Age / External Secrets / GitHub Secrets） |
 | v1.0 | 2026-04-27 | 初始版本，整合 TODO.md + development-roadmap.md + 架构审视发现的问题 |
