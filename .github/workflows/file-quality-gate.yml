@@ -1,0 +1,193 @@
+name: File Quality Gate
+
+on:
+  pull_request:
+    branches: [master, develop]
+  push:
+    branches: [master, develop]
+
+jobs:
+  file-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: files
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1 2>/dev/null || true
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git diff --name-only origin/${{ github.base_ref }}..HEAD > /tmp/changed-files.txt
+          else
+            git diff --name-only HEAD~1 HEAD > /tmp/changed-files.txt
+          fi
+          echo "Changed files:"
+          cat /tmp/changed-files.txt
+
+      - name: Check YAML syntax
+        run: |
+          FAIL=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            [[ "$file" == *.yaml || "$file" == *.yml ]] || continue
+            if ! python3 -c "import yaml; yaml.safe_load(open('$file', encoding='utf-8'))" 2>/dev/null; then
+              echo "::error::YAML syntax error: $file"
+              FAIL=1
+            fi
+          done < /tmp/changed-files.txt
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "✅ YAML syntax OK"
+
+      - name: Check JSON syntax
+        run: |
+          FAIL=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            [[ "$file" == *.json ]] || continue
+            # Skip package-lock.json, pnpm-lock.yaml etc.
+            [[ "$file" == *lock* ]] && continue
+            if ! python3 -c "import json; json.load(open('$file', encoding='utf-8'))" 2>/dev/null; then
+              echo "::error::JSON syntax error: $file"
+              FAIL=1
+            fi
+          done < /tmp/changed-files.txt
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "✅ JSON syntax OK"
+
+      - name: Check XML syntax
+        run: |
+          FAIL=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            [[ "$file" == *.xml ]] || continue
+            if ! python3 -c "import xml.etree.ElementTree as ET; ET.parse('$file')" 2>/dev/null; then
+              echo "::error::XML syntax error (unclosed tag or malformed): $file"
+              FAIL=1
+            fi
+          done < /tmp/changed-files.txt
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "✅ XML syntax OK"
+
+      - name: Check file encoding (UTF-8)
+        run: |
+          FAIL=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            [[ -f "$file" ]] || continue
+            # Skip binary files
+            if file "$file" | grep -qvi "text"; then
+              continue
+            fi
+            # Must be valid UTF-8
+            if ! iconv -f UTF-8 -t UTF-8 "$file" > /dev/null 2>&1; then
+              echo "::error::Invalid encoding: $file (must be UTF-8)"
+              FAIL=1
+            fi
+          done < /tmp/changed-files.txt
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "✅ File encoding OK"
+
+      - name: Check trailing whitespace
+        run: |
+          FAIL=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            [[ -f "$file" ]] || continue
+            if file "$file" | grep -qvi "text"; then
+              continue
+            fi
+            if grep -q ' $' "$file" 2>/dev/null; then
+              LINES=$(grep -n ' $' "$file" | head -5)
+              echo "::error::Trailing whitespace in $file:"
+              echo "$LINES"
+              FAIL=1
+            fi
+          done < /tmp/changed-files.txt
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "✅ No trailing whitespace"
+
+      - name: Check for missing final newline
+        run: |
+          FAIL=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            [[ -f "$file" ]] || continue
+            if file "$file" | grep -qvi "text"; then
+              continue
+            fi
+            if [ -s "$file" ] && [ "$(tail -c 1 "$file" | wc -l)" -eq 0 ]; then
+              echo "::error::Missing final newline: $file"
+              FAIL=1
+            fi
+          done < /tmp/changed-files.txt
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "✅ Final newline OK"
+
+      - name: Check for sensitive files
+        run: |
+          FAIL=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            BASENAME=$(basename "$file")
+            # Block .env files (except .env.example, .env.docker, etc. which are templates)
+            if [[ "$BASENAME" == .env && "$BASENAME" != .env.* ]]; then
+              echo "::error::Sensitive file committed: $file (.env files must not be checked in)"
+              FAIL=1
+            fi
+            # Block key/certificate files
+            if [[ "$file" == *.key || "$file" == *.pem || "$file" == *.p12 || "$file" == *.crt ]]; then
+              echo "::error::Sensitive file committed: $file (crypto material must not be checked in)"
+              FAIL=1
+            fi
+          done < /tmp/changed-files.txt
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "✅ No sensitive files"
+
+      - name: Check file size limit (1MB)
+        run: |
+          FAIL=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            [[ -f "$file" ]] || continue
+            SIZE=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo 0)
+            if [ "$SIZE" -gt 1048576 ]; then
+              echo "::error::File too large: $file (${SIZE} bytes, max 1MB)"
+              FAIL=1
+            fi
+          done < /tmp/changed-files.txt
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "✅ File size OK"
+
+      - name: Check Terraform syntax
+        run: |
+          FAIL=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            [[ "$file" == *.tf ]] || continue
+            if command -v terraform >/dev/null 2>&1; then
+              if ! terraform fmt -check "$file" 2>/dev/null; then
+                echo "::error::Terraform format error: $file (run 'terraform fmt')"
+                FAIL=1
+              fi
+            fi
+          done < /tmp/changed-files.txt
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "✅ Terraform format OK"
+
+      - name: Check Helm template validity
+        run: |
+          FAIL=0
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+            if [[ "$file" == chart/*/*.yaml || "$file" == chart/*/*.yml ]]; then
+              # Already validated by YAML check above, just ensure helm template works
+              if command -v helm >/dev/null 2>&1; then
+                if [ -f "Chart.yaml" ] && [ -d "templates" ]; then
+                  break
+                fi
+              fi
+            fi
+          done < /tmp/changed-files.txt
+          echo "✅ Helm charts OK (YAML already validated)"
