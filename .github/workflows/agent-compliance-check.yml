@@ -21,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check ADR-1: Gateway JWT Only
+      - name: "Check ADR-1: Gateway JWT Only"
         run: |
           VIOLATIONS=$(
             grep -rniE "jwt\.verify|jsonwebtoken|JWT_SECRET" \
@@ -36,7 +36,7 @@ jobs:
           fi
           echo "✅ ADR-1: Gateway JWT Only"
 
-      - name: Check ADR-4: Agent Async Only
+      - name: "Check ADR-4: Agent Async Only"
         run: |
           VIOLATIONS=$(
             grep -rniE "spawn\s*\(|exec\s*\(|child_process" \
@@ -51,7 +51,7 @@ jobs:
           fi
           echo "✅ ADR-4: Agent Async Only"
 
-      - name: Check ADR-5: OTel Required
+      - name: "Check ADR-5: OTel Required"
         run: |
           FAIL=0
           for pkg in apps/*/package.json; do
