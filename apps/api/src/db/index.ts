@@ -1,13 +1,18 @@
 // PostgreSQL 数据访问层
+import type { pg } from 'pg'
 import { pool } from '../config/database.js'
 import type { Agent, Task, User } from '../types/index.js'
 
 // 模拟延迟（保持与原来一致的 API 响应时间体验）
 export const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms))
 
+// PostgreSQL 查询参数类型
+type QueryParams = (string | number | boolean | null | string[])
+
 // ============ Users ============
-function isInvalidUUID(err: any): boolean {
-  return err?.code === '22P02'
+function isInvalidUUID(err: unknown): boolean {
+  const pgError = err as { code?: string }
+  return pgError?.code === '22P02'
 }
 
 export const userDb = {
@@ -176,7 +181,7 @@ export const taskDb = {
 
   findAll: async (filters?: { status?: string; assignedTo?: string }): Promise<Task[]> => {
     let query = 'SELECT * FROM tasks WHERE 1=1'
-    const params: any[] = []
+    const params: QueryParams[] = []
     let paramIndex = 1
 
     if (filters?.status) {
