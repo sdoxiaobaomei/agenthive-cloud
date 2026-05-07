@@ -1,5 +1,26 @@
 // 共享类型定义
 
+import type { Request } from 'express'
+
+// ============ Express 请求类型扩展 ============
+
+/** 认证用户信息 */
+export interface AuthUser {
+  userId: string
+  username: string
+  role: string
+}
+
+/** 扩展 Express Request，携带认证用户信息 */
+export interface AuthenticatedRequest extends Request {
+  /** 本地用户 ID（数据库内部 ID） */
+  userId: string
+  /** 外部用户 ID（Gateway 透传） */
+  externalUserId?: string
+  /** 认证用户详情 */
+  user: AuthUser
+}
+
 // 用户类型
 export interface User {
   id: string

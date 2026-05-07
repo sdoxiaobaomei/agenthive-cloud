@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
+import type { AuthenticatedRequest } from '../types/index.js'
 import { resolveLocalUser } from '../services/userMapping.js'
 import { userDb } from '../db/index.js'
 import logger from '../utils/logger.js'
@@ -12,6 +13,26 @@ const PUBLIC_PATHS = [
   '/auth/sms/send',
   '/auth/refresh',
 ]
+
+/**
+ * 将用户信息注入到 req 上（类型安全）
+ */
+function setUserContext(
+  req: Request,
+  localUserId: string,
+  externalId: string | undefined,
+  username: string,
+  role: string,
+): void {
+  const authReq = req as AuthenticatedRequest
+  authReq.userId = localUserId
+  authReq.externalUserId = externalId
+  authReq.user = {
+    userId: localUserId,
+    username,
+    role,
+  }
+}
 
 /**
  * 开发环境模拟用户注入（用于本地直连调试，不走 Gateway）
@@ -31,13 +52,7 @@ async function injectDevUser(req: Request): Promise<boolean> {
       role: devUserRole,
     })
 
-    ;(req as any).userId = localUser.id
-    ;(req as any).externalUserId = devUserId
-    ;(req as any).user = {
-      userId: localUser.id,
-      username: localUser.username,
-      role: localUser.role,
-    }
+    setUserContext(req, localUser.id, devUserId, localUser.username, localUser.role)
     return true
   } catch (error) {
     logger.error('Dev user injection failed', error instanceof Error ? error : undefined)
@@ -48,13 +63,7 @@ async function injectDevUser(req: Request): Promise<boolean> {
         role: devUserRole || 'admin',
         external_user_id: devUserId,
       })
-      ;(req as any).userId = fallbackUser.id
-      ;(req as any).externalUserId = devUserId
-      ;(req as any).user = {
-        userId: fallbackUser.id,
-        username: fallbackUser.username,
-        role: fallbackUser.role,
-      }
+      setUserContext(req, fallbackUser.id, devUserId, fallbackUser.username, fallbackUser.role)
     } catch (createErr) {
       // 如果连创建都失败，记录错误并返回 false（让请求走 401）
       logger.error('Dev user fallback creation failed', createErr instanceof Error ? createErr : undefined)
@@ -78,13 +87,7 @@ async function resolveGatewayUser(req: Request): Promise<boolean> {
       role: req.headers['x-user-role'] as string | undefined,
     })
 
-    ;(req as any).userId = localUser.id
-    ;(req as any).externalUserId = externalId
-    ;(req as any).user = {
-      userId: localUser.id,
-      username: localUser.username,
-      role: localUser.role,
-    }
+    setUserContext(req, localUser.id, externalId, localUser.username, localUser.role)
     return true
   } catch (error) {
     logger.error('Gateway user resolution failed', error instanceof Error ? error : undefined)
@@ -100,8 +103,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
   // 测试环境下自动通过认证
   if (process.env.NODE_ENV === 'test') {
-    ;(req as any).userId = 'test-user-id'
-    ;(req as any).user = { userId: 'test-user-id', role: 'admin' }
+    setUserContext(req, 'test-user-id', undefined, 'test-user', 'admin')
     return next()
   }
 
@@ -126,8 +128,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 export async function optionalAuthMiddleware(req: Request, res: Response, next: NextFunction) {
   // 测试环境
   if (process.env.NODE_ENV === 'test') {
-    ;(req as any).userId = 'test-user-id'
-    ;(req as any).user = { userId: 'test-user-id', role: 'admin' }
+    setUserContext(req, 'test-user-id', undefined, 'test-user', 'admin')
     return next()
   }
 
@@ -146,12 +147,7 @@ export async function optionalAuthMiddleware(req: Request, res: Response, next: 
         username: req.headers['x-user-name'] as string | undefined,
         role: req.headers['x-user-role'] as string | undefined,
       })
-      ;(req as any).userId = localUser.id
-      ;(req as any).user = {
-        userId: localUser.id,
-        username: localUser.username,
-        role: localUser.role,
-      }
+      setUserContext(req, localUser.id, externalId, localUser.username, localUser.role)
     } catch (error) {
       logger.warn('Optional auth: gateway user resolution failed', { error: error instanceof Error ? error.message : String(error) })
     }
