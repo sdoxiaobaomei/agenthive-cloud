@@ -12,6 +12,7 @@
 |------|------|------|--------|
 | [Phase 0](#phase-0-安全基线加固-已部分完成) | 1-2 周 | 安全基线加固 | 7 |
 | [Phase 1](#phase-1-核心功能落地-p1-任务集) | 4-6 周 | 电商核心 + AI Agent 基础 | 12 |
+| [Phase 1.5](#phase-15-agent-团队协作引擎-crewruntime) | 8-10 周 | CrewRuntime 团队协作引擎 | 16 |
 | [Phase 2](#phase-2-架构拆分深化-p2-任务集) | 6-8 周 | 服务拆分 + 可观测闭环 | 7 |
 | [Phase 3](#phase-3-弹性与商业化-p3-前半) | 8-12 周 | K8s Job + 多租户 + 压测 | 5 |
 | [Phase 4](#phase-4-平台化演进-p3-后半--远期) | 12-20 周 | Workspace Pod 隔离 + AI 增强 | 4 |
@@ -105,6 +106,72 @@
 | 1.4.2 | 修复 Landing typecheck | — | 2d | ⬜ | GSAP 类型兼容或降级 |
 | 1.4.3 | 修复 Agent Runtime 类型 | — | 3d | ⬜ | 移除 `|| true` workaround |
 | 1.4.4 | Landing 单元测试基线 | — | 3d | ⬜ | Vitest + Vue Test Utils 覆盖 stores |
+
+---
+
+## Phase 1.5: Agent 团队协作引擎（CrewRuntime）
+
+> **目标**: 让 Agent Runtime 从"进程池"进化为"数字团队操作系统"——赋予 Agent **角色身份、职责边界、任务协议、质量路由、组织记忆**五层协作语义。  
+> **状态**: ⬜ 待启动  
+> **预估工时**: 8-10 周（4 个子阶段，每阶段可独立交付）  
+> **核心原则**: 不删只增、可插拔、向后兼容（`CREW_MODE` FeatureFlag 控制）  
+> **完整 RFC**: `CREW_RUNTIME_RFC.md`（外部文档，621 行详细设计）
+
+### 1.5.1 身份与边界（2 周）
+
+| # | 任务 | 依赖 | 工时 | 状态 | 产出 |
+|---|------|------|------|------|------|
+| 1.5.1.1 | RoleRegistry — 角色即契约 | 0.3.x | 5-7d | ⬜ | 支持从 `.kimi/agents/*/agent.yaml` 动态加载角色定义（frontend-dev/java-backend/node-backend/platform-devops/lead/explore） |
+| 1.5.1.2 | BoundaryGuard — 红线即架构 | 1.5.1.1 | 3-5d | ⬜ | 在 PermissionManager 之上增加职责级边界检查（角色×工具×路径三维） |
+| 1.5.1.3 | 改造 BUILTIN_AGENTS → 外部化配置 | 1.5.1.1 | 2-3d | ⬜ | 内置 Agent 定义迁移到 `src/agent/roles/`，支持运行时热加载 |
+| 1.5.1.4 | 隔离模式 stub 补全 | 0.3.x | 3-5d | ⬜ | `worktree` / `container` 隔离模式从设计态进入实现态 |
+
+**交付物**: Agent 现在有"职业身份"和"物理边界"
+
+### 1.5.2 任务协议（2 周）
+
+| # | 任务 | 依赖 | 工时 | 状态 | 产出 |
+|---|------|------|------|------|------|
+| 1.5.2.1 | TicketProtocol — 结构化任务契约 | 1.5.1.x | 5-7d | ⬜ | `Ticket` 接口（依赖拓扑/验收门控/置信阈值/生命周期状态机） |
+| 1.5.2.2 | TicketEngine — 扫描/排序/派发 | 1.5.2.1 | 5-7d | ⬜ | 扫描 `AGENTS/workspace/`、拓扑排序、按 Role 分派 Specialist |
+| 1.5.2.3 | AgentTask 兼容改造 | 1.5.2.1 | 3-5d | ⬜ | 原有 `AgentTask` 支持 `blocked` / `needs_review` 状态，向后兼容 |
+| 1.5.2.4 | TICKET.yaml / RESPONSE.yaml 读写 | 1.5.2.2 | 2-3d | ⬜ | 外部协议映射，支持人类可读的文件级任务管理 |
+
+**交付物**: 任务从"字符串指令"变成"结构化契约"
+
+### 1.5.3 编排与质量（2-3 周）
+
+| # | 任务 | 依赖 | 工时 | 状态 | 产出 |
+|---|------|------|------|------|------|
+| 1.5.3.1 | Maestro — 受缚的指挥家 | 1.5.1.x, 1.5.2.x | 7-10d | ⬜ | 需求分解/任务派发/置信度审查/知识广播/争议仲裁/上报人类，自身受 BoundaryGuard 硬性约束（禁止写 `apps/` 源码/禁止执行构建命令） |
+| 1.5.3.2 | ConfidenceEvaluator — 质量路由 | 1.5.3.1 | 5-7d | ⬜ | 客观检查（编译/类型检查/lint/安全/范围，权重 70%）+ 自评（权重 30%）混合评估 |
+| 1.5.3.3 | SelfReflectionLoop | 1.5.3.2 | 3-5d | ⬜ | Generator→Reflector→Curator 质量闭环 |
+| 1.5.3.4 | InterAgentBus — Agent 间通信 | 1.5.3.1 | 3-5d | ⬜ | 定向咨询（阻塞）+ 事件广播（非阻塞）+ 任务转派，不共享上下文避免污染 |
+
+**交付物**: 有"团队领导"和"质量门控"
+
+### 1.5.4 记忆与进化（2-3 周）
+
+| # | 任务 | 依赖 | 工时 | 状态 | 产出 |
+|---|------|------|------|------|------|
+| 1.5.4.1 | MemoryLayer + FileSystemMemoryProvider | 1.5.3.x | 5-7d | ⬜ | 映射 `.kimi/memory/` 结构（episodes/reflections/skills/shared） |
+| 1.5.4.2 | Agent 启动记忆加载协议 | 1.5.4.1 | 3-5d | ⬜ | 固定加载（<3KB 共享文档）+ 按需检索（<5KB 相关 episodes/skills） |
+| 1.5.4.3 | 任务完成后记忆沉淀协议 | 1.5.4.2 | 3-5d | ⬜ | 写 reflection → 提取 pattern → draft skill → 更新 lessons-learned |
+| 1.5.4.4 | Skill 生命周期管理 | 1.5.4.3 | 3-5d | ⬜ | draft（新发现）→ 30 天考察 / 3 次验证 → official → 过时 → archive |
+
+**交付物**: Agent 团队开始积累组织知识
+
+### 1.5.5 待决策事项（启动前确认）
+
+| # | 决策项 | 选项 | 当前倾向 |
+|---|--------|------|----------|
+| D1 | FeatureFlag 粒度 | 全局开关 / 按 Team 开关 | 待确认 |
+| D2 | Role 加载优先级冲突 | 内置覆盖外部 / 外部覆盖内置 | 待确认 |
+| D3 | BoundaryGuard 与 PermissionManager 集成 | 合并为一个系统 / 保持分层 | 待确认（推荐分层：BoundaryGuard→PermissionManager） |
+| D4 | Maestro LLM 成本优化 | 无缓存 / 结果缓存 / 降频策略 | 待确认 |
+| D5 | Skill "30 天考察期"量化标准 | 验证次数 / 置信度门槛 / 人工确认 | 待确认 |
+| D6 | 隔离模式生产可用性 | worktree 需 git 2.5+ / container 需 Docker daemon | 需确认生产环境版本 |
+| D7 | 旧 API 向后兼容 | `AgentManager.createTask()` 无缝兼容 / 显式迁移 | 待确认（推荐无缝兼容） |
 
 ---
 
@@ -285,5 +352,6 @@ kubectl get secret -n kube-system -l sealedsecrets.bitnami.com/sealed-secrets-ke
 | v1.1 | 2026-04-27 | P0-A 运行时验证完成（5/7 UP，order/user 镜像待 rebuild）；P0-B API 限速完成；Prometheus 监控埋点提前完成（Phase 2.2.2）；Nacos 线程/内存优化完成；Agent YAML 递归修复 |
 | v1.2 | 2026-04-27 | 全部 7 个 Java 服务 rebuild 完成，actuator/health + actuator/prometheus 验证通过；docker compose 加载 .env.dev 修复 Redis 密码传递；Phase 0 标记完成 |
 | v1.3 | 2026-04-27 | Phase 0 验收报告：有条件通过 (15/19 项通过)。核心阻塞项：0.4.1 默认密码 fallback 未移除 (JWT_SECRET, DB_PASSWORD)。建议 Phase 1 启动前修复。 |
+| v1.5 | 2026-05-08 | 新增 Phase 1.5：Agent 团队协作引擎（CrewRuntime），融入外部 RFC（RoleRegistry/BoundaryGuard/TicketProtocol/Maestro/ConfidenceEvaluator/MemoryLayer/InterAgentBus），含 4 子阶段 + 16 项任务 + 7 项待决策事项 |
 | v1.4 | 2026-05-07 | 更新 0.4.2 为 Sealed Secrets（¥0 方案）；新增附录 A：K8s 密钥管理方案对比（Sealed Secrets / SOPS+Age / External Secrets / GitHub Secrets） |
 | v1.0 | 2026-04-27 | 初始版本，整合 TODO.md + development-roadmap.md + 架构审视发现的问题 |
