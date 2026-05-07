@@ -2,6 +2,8 @@
 
 > 此文件为所有 Kimi Agent 提供项目级上下文。无论加载哪个 Agent 角色，此文件内容都会被注入。
 
+> ⚠️ **Agent 必读**：本文档末尾的「文档索引」中包含 `docs/agent.md`，它定义了本项目文档体系的设计原则、索引链路与检查清单。如果你感觉对「如何阅读知识库」或「当前上下文是否完整」存在疑问，**立即重新读取 `docs/agent.md`。**
+
 ---
 
 ## 项目概述
@@ -62,3 +64,4 @@ docs/
 - [架构知识库](../docs/architecture/README.md) — 编号 00-05 的架构文档
 - [快速参考](../docs/reference/quick-reference.md) — 常用命令速查
 - [踩坑记录](../docs/lessons-learned.md) — 已踩过的坑
+- **[Agent 阅读舒适区](../docs/agent.md)** — 文档体系设计原则、索引链路、快速导航与检查清单
