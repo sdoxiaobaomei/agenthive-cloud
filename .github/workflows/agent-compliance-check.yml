@@ -44,20 +44,26 @@ jobs:
         run: |
           # ADR-4: Agent 任务编排必须异步化（Redis Streams），禁止直接 spawn worker
           # 白名单: tools/(工具层允许), mcp/(MCP客户端允许), agent/isolation/(隔离工具允许)
+          # 已知技术债务(已审计，需重构):
+          #   - apps/agent-runtime/src/services/task-executor.ts:125
+          #   - AGENTS/orchestrator.ts:534
+          #   - AGENTS/adapters/runtime-adapter.ts:78
           VIOLATIONS=$(
             grep -rniE "spawn\s*\(|exec\s*\(" \
               apps/agent-runtime/src/services/ \
               apps/agent-runtime/src/agent/ \
               AGENTS/ \
               --include="*.ts" --include="*.js" 2>/dev/null | \
-            grep -viE "tools/|mcp/|isolation/" || true
+            grep -viE "tools/|mcp/|isolation/|task-executor\.ts:.*spawn|orchestrator\.ts:.*spawn|runtime-adapter\.ts:.*spawn" || true
           )
           if [ -n "$VIOLATIONS" ]; then
-            echo "::warning::ADR-4 Violation (non-blocking): Agent tasks should use Redis Streams, not direct spawn"
+            echo "::error::ADR-4 Violation: Agent tasks must use Redis Streams, not direct spawn"
             echo "$VIOLATIONS"
-            echo "Note: This is a known technical debt. Refactor required to fully comply with ADR-4."
+            echo "If this is a new tool-level spawn, add the path to the whitelist above."
+            echo "If this is task orchestration spawn, refactor to use Redis Streams."
+            exit 1
           fi
-          echo "✅ ADR-4: Agent Async Only (checked)"
+          echo "✅ ADR-4: Agent Async Only"
 
       - name: "Check ADR-5: OTel Required"
         run: |
