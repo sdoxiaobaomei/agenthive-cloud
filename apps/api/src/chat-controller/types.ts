@@ -51,6 +51,7 @@ export interface ChatMessage {
         id: string
         label: string
         type: 'approve' | 'decline' | 'run'
+        prompt?: string
       }>
     }
     approvalStatus?: ApprovalStatus
