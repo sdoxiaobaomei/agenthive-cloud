@@ -1,0 +1,108 @@
+name: Agent Compliance Gate
+
+on:
+  pull_request:
+    branches: [master, develop]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'AGENTS/**'
+      - 'k8s/**'
+      - 'chart/**'
+      - 'iac/**'
+  push:
+    branches: [master, develop]
+
+jobs:
+  compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check ADR-1: Gateway JWT Only
+        run: |
+          VIOLATIONS=$(
+            grep -rniE "jwt\.verify|jsonwebtoken|JWT_SECRET" \
+              apps/java/*/src/ \
+              apps/api/src/ \
+              --include="*.ts" --include="*.java" 2>/dev/null || true
+          )
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::ADR-1 Violation: Downstream services must NOT parse JWT"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "✅ ADR-1: Gateway JWT Only"
+
+      - name: Check ADR-4: Agent Async Only
+        run: |
+          VIOLATIONS=$(
+            grep -rniE "spawn\s*\(|exec\s*\(|child_process" \
+              apps/agent-runtime/src/ \
+              AGENTS/ \
+              --include="*.ts" --include="*.js" 2>/dev/null || true
+          )
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::ADR-4 Violation: Agent tasks must use Redis Streams, not direct spawn"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "✅ ADR-4: Agent Async Only"
+
+      - name: Check ADR-5: OTel Required
+        run: |
+          FAIL=0
+          for pkg in apps/*/package.json; do
+            APP=$(basename "$(dirname "$pkg")")
+            [[ "$APP" == "landing" || "$APP" == "web" ]] && continue
+            if ! grep -q "opentelemetry" "$pkg" 2>/dev/null; then
+              echo "::error::ADR-5 Violation: $APP missing OpenTelemetry dependency"
+              FAIL=1
+            fi
+          done
+          for pkg in packages/*/package.json; do
+            if ! grep -q "opentelemetry" "$pkg" 2>/dev/null; then
+              echo "::error::ADR-5 Violation: $(basename "$(dirname "$pkg")") missing OpenTelemetry dependency"
+              FAIL=1
+            fi
+          done
+          [ "$FAIL" -eq 0 ] || exit 1
+          echo "✅ ADR-5: OTel Required"
+
+      - name: Check Hardcoded Secrets
+        run: |
+          VIOLATIONS=$(
+            grep -rniE "(password|secret|api[_-]?key)\s*=\s*['\"][^'\"]{8,}['\"]" \
+              apps/ packages/ AGENTS/ \
+              --include="*.ts" --include="*.js" --include="*.yaml" --include="*.yml" \
+              2>/dev/null | grep -viE "example|EXAMPLE|password\s*=\s*['\"]?['\"]?|getEnv|process.env" || true
+          )
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::Hardcoded secret detected:"
+            echo "$VIOLATIONS"
+            exit 1
+          fi
+          echo "✅ No hardcoded secrets"
+
+      - name: Check Commit Message Format
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1 2>/dev/null || true
+          BASE_REF="origin/${{ github.base_ref }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            BASE_REF="HEAD~1"
+          fi
+          BAD_COMMITS=$(
+            git log "$BASE_REF"..HEAD --pretty=format:"%s" | \
+            grep -vE "^(feat|fix|docs|style|refactor|test|chore|security|perf|ci|build)(\(.+\))?: .+" || true
+          )
+          if [ -n "$BAD_COMMITS" ]; then
+            echo "::error::Non-conventional commit messages found:"
+            echo "$BAD_COMMITS"
+            echo ""
+            echo "Expected format: type(scope): description"
+            echo "Example: feat(api): add user auth endpoint"
+            exit 1
+          fi
+          echo "✅ Commit messages follow Conventional Commits"

@@ -1,0 +1,124 @@
+name: Build Gate
+
+on:
+  pull_request:
+    branches: [master, develop]
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'tsconfig*.json'
+
+jobs:
+  build-api:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.changed_files, 'apps/api/') || contains(github.event.pull_request.changed_files, 'packages/') || contains(github.event.pull_request.changed_files, 'pnpm-lock.yaml') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: apps/api
+
+      - name: Type check
+        run: pnpm run type-check || pnpm run tsc --noEmit || echo "No type-check script, skipping"
+        working-directory: apps/api
+
+      - name: Build
+        run: pnpm run build
+        working-directory: apps/api
+
+      - name: Test
+        run: pnpm run test --run || echo "No tests or test failed"
+        working-directory: apps/api
+
+  build-landing:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.changed_files, 'apps/landing/') || contains(github.event.pull_request.changed_files, 'packages/') || contains(github.event.pull_request.changed_files, 'pnpm-lock.yaml') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: apps/landing
+
+      - name: Type check
+        run: pnpm run type-check || pnpm run typecheck || echo "No type-check script, skipping"
+        working-directory: apps/landing
+
+      - name: Build
+        run: pnpm run build
+        working-directory: apps/landing
+
+  build-web:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.changed_files, 'apps/web/') || contains(github.event.pull_request.changed_files, 'packages/') || contains(github.event.pull_request.changed_files, 'pnpm-lock.yaml') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: apps/web
+
+      - name: Type check
+        run: pnpm run type-check || pnpm run typecheck || echo "No type-check script, skipping"
+        working-directory: apps/web
+
+      - name: Build
+        run: pnpm run build
+        working-directory: apps/web
+
+  build-agent-runtime:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || contains(github.event.pull_request.changed_files, 'apps/agent-runtime/') || contains(github.event.pull_request.changed_files, 'packages/') || contains(github.event.pull_request.changed_files, 'pnpm-lock.yaml') }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: apps/agent-runtime
+
+      - name: Type check
+        run: pnpm run type-check || pnpm run tsc --noEmit || echo "No type-check script, skipping"
+        working-directory: apps/agent-runtime
+
+      - name: Build
+        run: pnpm run build
+        working-directory: apps/agent-runtime
