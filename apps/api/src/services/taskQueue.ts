@@ -27,12 +27,12 @@ export async function initTaskQueue(): Promise<void> {
   try {
     await redis.xgroup('CREATE', STREAM_KEY, GROUP_NAME, '$', 'MKSTREAM')
     logger.info('Task queue consumer group created')
-  } catch (error: any) {
-    if (error.message?.includes('BUSYGROUP')) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('BUSYGROUP')) {
       logger.info('Task queue consumer group already exists')
-    } else {
-      throw error
+      return
     }
+    throw error
   }
 }
 
