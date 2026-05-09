@@ -24,6 +24,10 @@ import type {
   MessageType,
   ChatVersion,
   CreateVersionInput,
+  ChatSessionRow,
+  ChatMessageRow,
+  AgentTaskRow,
+  ChatVersionRow,
 } from './types.js'
 import type { LLMMessage } from '../services/llm.js'
 
@@ -177,7 +181,7 @@ export const chatService = {
     }
   ): Promise<ChatMessage> {
     const sets: string[] = []
-    const values: any[] = []
+    const values: (string | boolean | Record<string, unknown>)[] = []
     let paramIdx = 0
 
     if (updates.content !== undefined) {
@@ -224,7 +228,7 @@ export const chatService = {
     const { versionId, includeInvisible = false } = options
 
     const conditions = ['session_id = $1']
-    const params: any[] = [sessionId]
+    const params: (string | boolean | number)[] = [sessionId]
     let paramIdx = 1
 
     if (versionId) {
@@ -472,7 +476,7 @@ export const chatService = {
     const metadata = message.metadata || {}
     const options = metadata.recommendOptions || []
 
-    const selected = options.find((o: any) => o.id === optionId)
+    const selected = options.find(o => o.id === optionId)
     if (!selected) {
       throw new Error('Option not found')
     }
@@ -820,29 +824,29 @@ async function createTicketsForIntent(
   return tasks
 }
 
-function dbRowToSession(row: any): ChatSession {
+function dbRowToSession(row: ChatSessionRow): ChatSession {
   return {
     id: row.id,
     userId: row.user_id,
     workspaceId: row.workspace_id,
     projectId: row.project_id,
     title: row.title,
-    status: row.status,
-    sessionType: row.session_type || 'default',
+    status: row.status as ChatSession['status'],
+    sessionType: row.session_type as ChatSession['sessionType'] || 'default',
     currentVersionId: row.current_version_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
 }
 
-function dbRowToMessage(row: any): ChatMessage {
+function dbRowToMessage(row: ChatMessageRow): ChatMessage {
   const metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata
   return {
     id: row.id,
     sessionId: row.session_id,
     versionId: row.version_id,
-    role: row.role,
-    messageType: row.message_type || 'message',
+    role: row.role as ChatMessage['role'],
+    messageType: row.message_type as ChatMessage['messageType'] || 'message',
     content: row.content,
     isVisibleInHistory: row.is_visible_in_history ?? true,
     metadata,
@@ -850,13 +854,13 @@ function dbRowToMessage(row: any): ChatMessage {
   }
 }
 
-function dbRowToAgentTask(row: any): AgentTask {
+function dbRowToAgentTask(row: AgentTaskRow): AgentTask {
   return {
     id: row.id,
     sessionId: row.session_id,
     ticketId: row.ticket_id,
-    workerRole: row.worker_role,
-    status: row.status,
+    workerRole: row.worker_role as AgentTask['workerRole'],
+    status: row.status as AgentTask['status'],
     workspacePath: row.workspace_path,
     result: typeof row.result === 'string' ? JSON.parse(row.result) : row.result,
     startedAt: row.started_at,
@@ -865,7 +869,7 @@ function dbRowToAgentTask(row: any): AgentTask {
   }
 }
 
-function dbRowToVersion(row: any): ChatVersion {
+function dbRowToVersion(row: ChatVersionRow): ChatVersion {
   return {
     id: row.id,
     sessionId: row.session_id,
