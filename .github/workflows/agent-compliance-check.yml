@@ -3,14 +3,6 @@ name: Agent Compliance Gate
 on:
   pull_request:
     branches: [master, develop]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'AGENTS/**'
-      - 'k8s/**'
-      - 'chart/**'
-      - 'iac/**'
-      - '.github/workflows/**'
   push:
     branches: [master, develop]
 

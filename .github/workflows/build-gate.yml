@@ -3,14 +3,6 @@ name: Build Gate
 on:
   pull_request:
     branches: [master, develop]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'package.json'
-      - 'tsconfig*.json'
-      - '.github/workflows/build-gate.yml'
   push:
     branches: [master, develop]
 
