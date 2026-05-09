@@ -284,16 +284,16 @@ DMap["仪表板 ConfigMap"] --> GF
   - 查询：rate(llm_cost_usd_total[1h])
   - 单位：USD ($)
   - 描述：按小时聚合的 LLM 调用成本
-  
+
 - Token 用量对比（Barchart）
   - 查询：sum by (model) (rate(llm_tokens_total[1h]))
   - 分组：按模型分组
   - 描述：不同模型的 Token 消耗对比
-  
+
 - 各提供商成本占比（Piechart）
   - 查询：sum by (provider) (llm_cost_usd_total)
   - 描述：按 LLM 提供商的成本分布
-  
+
 - Agent 任务执行统计（Stat）
   - 查询：agenthive_runtime_task_total
   - 阈值颜色：green(>90% 成功率) / yellow(70-90%) / red(<70%)

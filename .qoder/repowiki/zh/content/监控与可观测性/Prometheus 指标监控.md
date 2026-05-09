@@ -328,7 +328,7 @@ groups:
           severity: critical
         annotations:
           summary: "LLM 调用错误率超过 10%"
-          
+
       - alert: AgentTaskStuck
         expr: agenthive_runtime_task_status{status="running"} > 0 and time() - agenthive_runtime_task_start_time_seconds > 3600
         for: 5m
@@ -336,7 +336,7 @@ groups:
           severity: warning
         annotations:
           summary: "Agent 任务执行超过 1 小时"
-          
+
       - alert: HighAPILatency
         expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
         for: 5m
@@ -344,7 +344,7 @@ groups:
           severity: warning
         annotations:
           summary: "API P95 延迟超过 2 秒"
-          
+
       - alert: PodMemoryNearLimit
         expr: container_memory_usage_bytes{namespace="agenthive"} / container_spec_memory_limit_bytes > 0.85
         for: 10m

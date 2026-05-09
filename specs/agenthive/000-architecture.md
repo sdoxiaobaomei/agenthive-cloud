@@ -154,7 +154,7 @@ Route Predicates                      -> Path-based routing to downstream
    - `/api/demo/**`
    - `/api/health`
    - `/actuator/**`
-   
+
    then skip JWT validation entirely (pass through to downstream).
 3. **Resolve token** (lines 65-68): Extract `Bearer <token>` from `Authorization` header using `resolveToken()`. If missing -> return 401.
 4. **Verify JWT** (lines 70-76): Using HS256 (`HmacSHA256`) with the configured secret key. Parse claims: subject (userId), username, roles.
