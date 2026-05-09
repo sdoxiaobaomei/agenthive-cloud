@@ -18,7 +18,7 @@ gh api repos/{owner}/{repo}/commits/<sha>/check-suites \
 gh api repos/{owner}/{repo}/commits/<sha>/check-runs \
   --jq '.check_runs[] | {name: .name, conclusion: .conclusion}'
 
-# 4. 查 commit status（旧式检查—这是隐藏陷阱！）
+# 4. 查 commit status（旧式检查——这是隐藏陷阱！）
 gh api repos/{owner}/{repo}/commits/<sha>/status \
   --jq '{state: .state, statuses: [.statuses[] | {context: .context, state: .state}]}'
 
@@ -206,6 +206,33 @@ gh api repos/{owner}/{repo}/statuses/<sha> \
 ```
 
 **提交完最后一条的瞬间，`mergeStateStatus` 即从 `BLOCKED` 变为 `CLEAN`。**
+
+### ⚠️ 系统性影响（PR #27 验证）
+
+经 PR #27 验证确认：**这不是偶发 bug，而是当前分支保护配置下的永久问题。**
+
+即使 workflow 文件未被修改、check 上下文名称完全匹配，`contexts` 数组始终需要 commit status——但 GitHub Actions 不创建它们。
+
+```
+确认流程：
+  PR #27（doc-only，未改任何 workflow 文件）
+    → 所有 check runs SUCCESS
+    → commit status 仍为空
+    → mergeStateStatus: BLOCKED
+    → 手动 POST 4 个 commit status
+    → 瞬间 CLEAN ✓
+```
+
+**影响范围：所有 PR 到 `develop` 都需要手动补 commit status。**
+
+### 长期方案
+
+| 方案 | 可行性 |
+|------|--------|
+| 用 `contexts: []` 尝试覆盖 | ❌ GitHub 强制从 `checks` 自动派生 `contexts`，无法清空 |
+| 分支保护去掉 `checks` 只保留 `contexts` | ❌ 失去 check run 级别的精细控制 |
+| 新增 GitHub Action 同步 check run → commit status | ✅ 推荐根治方案 |
+| 补 commit status 脚本化 | ✅ 临时方案，PR 合并前跑一次 |
 
 ---
 
