@@ -21,6 +21,21 @@ export interface AuthenticatedRequest extends Request {
   user: AuthUser
 }
 
+/**
+ * 从 Request 中安全获取用户 ID
+ * 用于逐步替换 (req as any).userId 模式
+ */
+export function getUserId(req: Request): string | undefined {
+  return (req as AuthenticatedRequest).userId
+}
+
+/**
+ * 从 Request 中获取用户 ID，如不存在则返回 'anonymous'
+ */
+export function getUserIdOrAnonymous(req: Request): string {
+  return (req as AuthenticatedRequest).userId || 'anonymous'
+}
+
 // 用户类型
 export interface User {
   id: string

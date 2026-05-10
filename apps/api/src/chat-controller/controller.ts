@@ -8,6 +8,7 @@ import { chatService } from './service.js'
 import { checkBalance } from '../services/credits.js'
 import logger from '../utils/logger.js'
 import { isValidUuid } from '../utils/validators.js'
+import { getUserId } from '../types/index.js'
 
 const createSessionSchema = z.object({
   projectId: z.string().uuid().optional(),
@@ -46,7 +47,7 @@ export const createSession = async (req: Request, res: Response) => {
       })
     }
 
-    const userId = (req as any).userId as string | undefined
+    const userId = getUserId(req)
     if (!userId) {
       return res.status(401).json({ code: 401, message: '未授权' , data: null })
     }
@@ -68,7 +69,7 @@ export const createSession = async (req: Request, res: Response) => {
 
 export const listSessions = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId as string | undefined
+    const userId = getUserId(req)
     if (!userId) {
       return res.status(401).json({ code: 401, message: '未授权' , data: null })
     }
@@ -111,7 +112,7 @@ export const sendMessage = async (req: Request, res: Response) => {
       })
     }
 
-    const userId = (req as any).userId as string | undefined
+    const userId = getUserId(req)
     if (!userId) {
       return res.status(401).json({ code: 401, message: '未授权' , data: null })
     }
@@ -274,7 +275,7 @@ export const executeTask = async (req: Request, res: Response) => {
       })
     }
 
-    const userId = (req as any).userId as string | undefined
+    const userId = getUserId(req)
     if (!userId) {
       return res.status(401).json({ code: 401, message: '未授权' , data: null })
     }
@@ -350,7 +351,7 @@ export const approveTask = async (req: Request, res: Response) => {
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
     }
 
-    const userId = (req as any).userId as string | undefined
+    const userId = getUserId(req)
     if (!userId) return res.status(401).json({ code: 401, message: '未授权', data: null })
 
     // Validate session ownership
@@ -378,7 +379,7 @@ export const selectRecommend = async (req: Request, res: Response) => {
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
     }
 
-    const userId = (req as any).userId as string | undefined
+    const userId = getUserId(req)
     if (!userId) return res.status(401).json({ code: 401, message: '未授权', data: null })
 
     // Validate session ownership
@@ -401,7 +402,7 @@ export const dismissRecommend = async (req: Request, res: Response) => {
     if (!isValidUuid(sessionId)) {
       return res.status(400).json({ code: 400, message: `会话 ID 格式错误: "${sessionId}" 不是有效的 UUID`, data: null })
     }
-    const userId = (req as any).userId as string | undefined
+    const userId = getUserId(req)
     if (!userId) return res.status(401).json({ code: 401, message: '未授权', data: null })
 
     // Validate session ownership
@@ -443,7 +444,7 @@ export const createVersion = async (req: Request, res: Response) => {
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
     }
 
-    const userId = (req as any).userId as string | undefined
+    const userId = getUserId(req)
     if (!userId) return res.status(401).json({ code: 401, message: '未授权', data: null })
 
     const version = await chatService.createVersion(sessionId, parseResult.data, userId)

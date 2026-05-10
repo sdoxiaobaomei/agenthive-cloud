@@ -9,6 +9,7 @@ import { exec } from 'child_process'
 import multer from 'multer'
 import logger from '../utils/logger.js'
 import { getWorkspacePath } from '../config/workspace.js'
+import { getUserIdOrAnonymous } from '../types/index.js'
 
 // 确保路径在工作区内（安全检查）
 function isPathSafe(workspacePath: string, targetPath: string): boolean {
@@ -31,7 +32,7 @@ function isPathSafe(workspacePath: string, targetPath: string): boolean {
 export const getWorkspaceFiles = async (req: Request, res: Response) => {
   try {
     const { projectId, path = '' } = req.query
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId as string)
     const targetPath = join(workspacePath, path as string)
     if (!isPathSafe(workspacePath, targetPath)) {
@@ -67,7 +68,7 @@ export const getWorkspaceFiles = async (req: Request, res: Response) => {
 export const getWorkspaceFileContent = async (req: Request, res: Response) => {
   try {
     const { projectId, filePath } = req.query
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     if (!filePath) {
       return res.status(400).json({ code: 400, message: '文件路径不能为空' , data: null })
     }
@@ -116,7 +117,7 @@ export const saveWorkspaceFile = async (req: Request, res: Response) => {
       })
     }
     const { projectId, filePath, content } = parseResult.data
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId)
     const targetPath = join(workspacePath, filePath)
     if (!isPathSafe(workspacePath, targetPath)) {
@@ -146,7 +147,7 @@ export const saveWorkspaceFile = async (req: Request, res: Response) => {
 export const deleteWorkspaceFile = async (req: Request, res: Response) => {
   try {
     const { projectId, filePath } = req.query
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     if (!filePath) {
       return res.status(400).json({ code: 400, message: '文件路径不能为空' , data: null })
     }
@@ -196,7 +197,7 @@ export const mkdirWorkspace = async (req: Request, res: Response) => {
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
     }
     const { projectId, path: dirPath } = parseResult.data
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId)
     const targetPath = join(workspacePath, dirPath)
     if (!isPathSafe(workspacePath, targetPath)) {
@@ -225,7 +226,7 @@ export const renameWorkspace = async (req: Request, res: Response) => {
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
     }
     const { projectId, oldPath, newPath } = parseResult.data
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId)
     const oldFullPath = join(workspacePath, oldPath)
     const newFullPath = join(workspacePath, newPath)
@@ -265,7 +266,7 @@ export const moveWorkspace = async (req: Request, res: Response) => {
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
     }
     const { projectId, sourcePath, targetPath: destPath } = parseResult.data
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId)
     const sourceFullPath = join(workspacePath, sourcePath)
     const destFullPath = join(workspacePath, destPath)
@@ -295,7 +296,7 @@ export const moveWorkspace = async (req: Request, res: Response) => {
 export const uploadWorkspaceFiles = async (req: Request, res: Response) => {
   try {
     const { projectId, path: uploadPath = '' } = req.body
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId)
     const targetDir = join(workspacePath, uploadPath)
     if (!isPathSafe(workspacePath, targetDir)) {
@@ -342,7 +343,7 @@ export const batchDeleteWorkspaceFiles = async (req: Request, res: Response) => 
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
     }
     const { projectId, paths } = parseResult.data
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId)
 
     const succeeded: string[] = []
@@ -392,7 +393,7 @@ export const batchMoveWorkspaceFiles = async (req: Request, res: Response) => {
       return res.status(400).json({ code: 400, message: '参数校验失败', details: parseResult.error.format() })
     }
     const { projectId, operations } = parseResult.data
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId)
 
     const succeeded: Array<{ sourcePath: string; targetPath: string }> = []
@@ -485,7 +486,7 @@ export const searchWorkspaceFiles = async (req: Request, res: Response) => {
     if (!query || typeof query !== 'string' || query.trim().length === 0) {
       return res.status(400).json({ code: 400, message: '搜索关键词不能为空', data: null })
     }
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId as string)
 
     const results: Array<{ name: string; path: string; type: string; size: number; modifiedAt: Date }> = []
@@ -517,7 +518,7 @@ export const downloadWorkspaceFile = async (req: Request, res: Response) => {
     if (!filePath) {
       return res.status(400).json({ code: 400, message: '文件路径不能为空', data: null })
     }
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId as string)
     const targetPath = join(workspacePath, filePath as string)
     if (!isPathSafe(workspacePath, targetPath)) {
@@ -602,7 +603,7 @@ function parseGitStatusPorcelain(stdout: string): Pick<GitStatusResult, 'modifie
 export const getWorkspaceGitStatus = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.query
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const workspacePath = getWorkspacePath(userId, projectId as string)
 
     // 检查是否是 git 仓库
