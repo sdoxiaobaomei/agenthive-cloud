@@ -268,7 +268,7 @@ describe('useChatStore - v2', () => {
       expect(store.messages[0].tasks![0].status).toBe('declined')
     })
 
-    it('loadVersions uses result.data.versions', async () => {
+    it('loadVersions uses result.data.items', async () => {
       const store = useChatStore()
       const mockVersions: ChatVersion[] = [
         {
@@ -284,7 +284,7 @@ describe('useChatStore - v2', () => {
       const { chat: chatApi } = useApi()
       ;(chatApi.listVersions as any).mockResolvedValue({
         success: true,
-        data: { versions: mockVersions, total: 1 },
+        data: { items: mockVersions, total: 1 },
       })
 
       const result = await store.loadVersions('conv-1')
@@ -294,7 +294,7 @@ describe('useChatStore - v2', () => {
       expect(result).toEqual(mockVersions)
     })
 
-    it('switchVersion uses backend returned messages directly', async () => {
+    it('switchVersion calls PATCH activate and reloads messages', async () => {
       const store = useChatStore()
       store.currentConversation = {
         id: 'conv-1',
@@ -320,8 +320,11 @@ describe('useChatStore - v2', () => {
       const { chat: chatApi } = useApi()
       ;(chatApi.switchVersion as any).mockResolvedValue({
         success: true,
+        data: switchedVersion,
+      })
+      ;(chatApi.getMessages as any).mockResolvedValue({
+        success: true,
         data: {
-          ...switchedVersion,
           messages: [mockMessage({ id: 'new1', conversationId: 'conv-1', versionId: 'v2' })],
         },
       })
