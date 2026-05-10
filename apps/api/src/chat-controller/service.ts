@@ -24,10 +24,6 @@ import type {
   MessageType,
   ChatVersion,
   CreateVersionInput,
-  ChatSessionRow,
-  ChatMessageRow,
-  AgentTaskRow,
-  ChatVersionRow,
 } from './types.js'
 import type { LLMMessage } from '../services/llm.js'
 
@@ -181,7 +177,7 @@ export const chatService = {
     }
   ): Promise<ChatMessage> {
     const sets: string[] = []
-    const values: (string | boolean | Record<string, unknown>)[] = []
+    const values: Array<string | boolean | Record<string, unknown>> = []
     let paramIdx = 0
 
     if (updates.content !== undefined) {
@@ -228,7 +224,7 @@ export const chatService = {
     const { versionId, includeInvisible = false } = options
 
     const conditions = ['session_id = $1']
-    const params: (string | boolean | number)[] = [sessionId]
+    const params: Array<string | number | boolean> = [sessionId]
     let paramIdx = 1
 
     if (versionId) {
@@ -445,13 +441,32 @@ export const chatService = {
     for (const action of payload.actions) {
       if (action.type === 'run' || action.type === 'approve') {
         logger.info('Executing approved action', { actionId: action.id, label: action.label })
-        // TODO: Integrate with actual task execution pipeline
-        // For now, mark as running in Redis
-        await redis.setex(
-          `chat:task:approved:${message.id}:${action.id}`,
-          86400,
-          JSON.stringify({ status: 'running', startedAt: Date.now() })
-        )
+        // Execute the approved action via task queue
+        const session = await this.getSession(message.sessionId)
+        if (session) {
+          const { enqueueTask } = await import('../services/taskQueue.js')
+          const taskId = generateId('task')
+          const workspacePath = getChatWorkspacePath(message.sessionId)
+          
+          await enqueueTask({
+            taskId,
+            sessionId: message.sessionId,
+            intent: 'modify_code',
+            content: action.prompt || action.label,
+            workspacePath,
+            ticketIds: [],
+            createdAt: Date.now(),
+            userId: session.userId,
+          })
+          
+          await redis.setex(
+            `chat:task:approved:${message.id}:${action.id}`,
+            86400,
+            JSON.stringify({ status: 'queued', taskId, startedAt: Date.now() })
+          )
+          
+          logger.info('Approved action enqueued for execution', { messageId: message.id, actionId: action.id, taskId })
+        }
       }
     }
   },
@@ -476,7 +491,7 @@ export const chatService = {
     const metadata = message.metadata || {}
     const options = metadata.recommendOptions || []
 
-    const selected = options.find(o => o.id === optionId)
+    const selected = options.find((o: { id: string }) => o.id === optionId)
     if (!selected) {
       throw new Error('Option not found')
     }
@@ -824,61 +839,91 @@ async function createTicketsForIntent(
   return tasks
 }
 
-function dbRowToSession(row: ChatSessionRow): ChatSession {
+interface DbRow {
+  id: string
+  user_id: string
+  workspace_id?: string | null
+  project_id?: string | null
+  title?: string
+  status: string
+  session_type?: string
+  current_version_id?: string | null
+  created_at: string
+  updated_at?: string
+  session_id?: string
+  version_id?: string | null
+  role: string
+  message_type?: string
+  content: string
+  is_visible_in_history?: boolean
+  metadata?: string | Record<string, unknown>
+  ticket_id?: string
+  worker_role?: string
+  workspace_path?: string
+  result?: string | Record<string, unknown> | null
+  started_at?: string | null
+  completed_at?: string | null
+  version_number?: number
+  description?: string | null
+  base_message_id?: string | null
+  is_active?: boolean
+}
+
+function dbRowToSession(row: DbRow): ChatSession {
   return {
     id: row.id,
     userId: row.user_id,
-    workspaceId: row.workspace_id,
-    projectId: row.project_id,
+    workspaceId: row.workspace_id ?? undefined,
+    projectId: row.project_id ?? undefined,
     title: row.title,
     status: row.status as ChatSession['status'],
-    sessionType: row.session_type as ChatSession['sessionType'] || 'default',
-    currentVersionId: row.current_version_id,
+    sessionType: (row.session_type || 'default') as ChatSession['sessionType'],
+    currentVersionId: row.current_version_id ?? undefined,
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    updatedAt: row.updated_at ?? row.created_at,
   }
 }
 
-function dbRowToMessage(row: ChatMessageRow): ChatMessage {
+function dbRowToMessage(row: DbRow): ChatMessage {
   const metadata = typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata
   return {
     id: row.id,
-    sessionId: row.session_id,
-    versionId: row.version_id,
+    sessionId: row.session_id ?? '',
+    versionId: row.version_id ?? undefined,
     role: row.role as ChatMessage['role'],
-    messageType: row.message_type as ChatMessage['messageType'] || 'message',
+    messageType: (row.message_type || 'message') as ChatMessage['messageType'],
     content: row.content,
     isVisibleInHistory: row.is_visible_in_history ?? true,
-    metadata,
+    metadata: metadata as ChatMessage['metadata'],
     createdAt: row.created_at,
   }
 }
 
-function dbRowToAgentTask(row: AgentTaskRow): AgentTask {
+function dbRowToAgentTask(row: DbRow): AgentTask {
   return {
     id: row.id,
-    sessionId: row.session_id,
-    ticketId: row.ticket_id,
-    workerRole: row.worker_role as AgentTask['workerRole'],
-    status: row.status as AgentTask['status'],
-    workspacePath: row.workspace_path,
-    result: typeof row.result === 'string' ? JSON.parse(row.result) : row.result,
-    startedAt: row.started_at,
-    completedAt: row.completed_at,
+    sessionId: row.session_id ?? '',
+    ticketId: row.ticket_id ?? '',
+    workerRole: (row.worker_role ?? 'backend') as AgentTask['workerRole'],
+    status: (row.status ?? 'pending') as AgentTask['status'],
+    workspacePath: row.workspace_path ?? '',
+    result: row.result ? (typeof row.result === 'string' ? JSON.parse(row.result) : row.result) as Record<string, unknown> : undefined,
+    startedAt: row.started_at ?? undefined,
+    completedAt: row.completed_at ?? undefined,
     createdAt: row.created_at,
   }
 }
 
-function dbRowToVersion(row: ChatVersionRow): ChatVersion {
+function dbRowToVersion(row: DbRow): ChatVersion {
   return {
     id: row.id,
-    sessionId: row.session_id,
-    versionNumber: row.version_number,
-    title: row.title,
-    description: row.description,
-    baseMessageId: row.base_message_id,
-    isActive: row.is_active,
+    sessionId: row.session_id ?? '',
+    versionNumber: row.version_number ?? 0,
+    title: row.title ?? '',
+    description: row.description ?? undefined,
+    baseMessageId: row.base_message_id ?? undefined,
+    isActive: row.is_active ?? false,
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    updatedAt: row.updated_at ?? row.created_at,
   }
 }
