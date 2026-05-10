@@ -26,7 +26,16 @@ import { Logger } from '../utils/loggerEnhanced.js'
 // 类型定义
 // ============================================================================
 
-export type AgentType = 'explore' | 'plan' | 'coder' | 'general' | 'custom'
+export type AgentType =
+  | 'explore'       // existing — read-only codebase exploration
+  | 'plan'          // existing — implementation planning
+  | 'coder'         // existing — code implementation
+  | 'general'       // existing — general-purpose
+  | 'custom'        // existing — user-defined
+  | 'frontend_gen'  // NEW — frontend code generation (Nuxt/Vue)
+  | 'supabase_gen'  // NEW — Supabase schema & migration generation
+  | 'qa_verifier'   // NEW — QA verification against project specs
+  | 'deploy_gen'    // NEW — deployment configuration generation
 export type IsolationMode = 'none' | 'worktree' | 'remote' | 'container'
 export type AgentStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
 
@@ -241,6 +250,76 @@ After completing the task:
     maxIterations: 20,
     readOnly: false,
     defaultIsolation: 'none'
+  },
+
+  frontend_gen: {
+    agentType: 'frontend_gen',
+    name: 'Frontend Generator',
+    description:
+      'Generates Nuxt 3 / Vue 3 frontend code from templates. ' +
+      'Locked to the project UI framework, no unauthorized libraries.',
+    allowedTools: [
+      'file_read', 'file_write', 'file_edit',
+      'glob', 'grep', 'bash',
+      'preview', 'template', 'web_fetch',
+    ],
+    disallowedTools: ['supabase', 'deploy', 'http'],
+    systemPrompt: '', // Replaced at runtime by the template-bound prompt (Section 2)
+    maxIterations: 30,
+    readOnly: false,
+    model: 'claude-sonnet-4-20250514',
+    defaultIsolation: 'worktree',
+  },
+
+  supabase_gen: {
+    agentType: 'supabase_gen',
+    name: 'Supabase Generator',
+    description:
+      'Generates PostgreSQL migrations, RLS policies, and TypeScript types for Supabase.',
+    allowedTools: [
+      'file_read', 'file_write', 'file_edit',
+      'glob', 'grep', 'supabase',
+    ],
+    disallowedTools: ['bash', 'http', 'preview', 'deploy'],
+    systemPrompt: '', // Injected at runtime
+    maxIterations: 20,
+    readOnly: false,
+    model: 'claude-sonnet-4-20250514',
+    defaultIsolation: 'none',
+  },
+
+  qa_verifier: {
+    agentType: 'qa_verifier',
+    name: 'QA Verifier',
+    description:
+      'Validates generated code against system prompts, accessibility rules, ' +
+      'and project conventions. Produces a VerificationReport.',
+    allowedTools: [
+      'file_read', 'glob', 'grep', 'bash', 'preview',
+    ],
+    disallowedTools: ['file_write', 'file_edit', 'supabase', 'deploy'],
+    systemPrompt: '', // Injected at runtime
+    maxIterations: 15,
+    readOnly: true,
+    model: 'claude-sonnet-4-20250514',
+    defaultIsolation: 'none',
+  },
+
+  deploy_gen: {
+    agentType: 'deploy_gen',
+    name: 'Deploy Generator',
+    description:
+      'Generates Helm charts, K8s manifests, and Dockerfiles from project config.',
+    allowedTools: [
+      'file_read', 'file_write', 'file_edit',
+      'glob', 'grep', 'bash',
+    ],
+    disallowedTools: ['supabase', 'preview', 'template', 'web_fetch'],
+    systemPrompt: '', // Injected at runtime
+    maxIterations: 20,
+    readOnly: false,
+    model: 'claude-sonnet-4-20250514',
+    defaultIsolation: 'worktree',
   }
 }
 
