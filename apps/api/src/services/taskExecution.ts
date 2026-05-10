@@ -1,11 +1,30 @@
 // Task Execution Service - 使用真实 LLM 调用
 import { broadcast } from '../websocket/hub.js'
-import { mkdir, writeFile, readFile } from 'fs/promises'
+import { mkdir, writeFile } from 'fs/promises'
 import { resolve, join } from 'path'
 import { getLLMService } from './llm.js'
-import { debitCredits, type DebitPayload } from './credits.js'
+import { debitCredits } from './credits.js'
 import { enqueueBillingRetry } from './billingRetry.js'
 import logger from '../utils/logger.js'
+
+// Task type definitions
+interface TaskInput {
+  [key: string]: unknown
+}
+
+interface TaskResultData {
+  content: string
+  resultPath: string
+  workspace: string
+  type: string
+  usage?: LLMUsage
+}
+
+interface LLMUsage {
+  promptTokens?: number
+  completionTokens?: number
+  totalTokens?: number
+}
 
 // 任务执行配置
 export interface TaskExecutionConfig {
@@ -28,9 +47,9 @@ export interface TaskInfo {
   createdAt: Date
   startedAt?: Date
   completedAt?: Date
-  result?: any
+  result?: TaskResultData
   error?: string
-  input?: any
+  input?: TaskInput
 }
 
 // 全局配置
@@ -97,21 +116,38 @@ export class TaskExecutionService {
       // 使用真实 LLM 执行任务
       const result = await this.executeWithLLM(task, workspacePath, abortController.signal)
 
+      // 检查执行结果
+      if (result === null) {
+        task.status = 'failed'
+        task.error = 'LLM execution failed'
+        task.completedAt = new Date()
+        task.progress = 100
+
+        // 广播失败
+        broadcast.taskProgress(task.id, 100, {
+          status: 'failed',
+          error: task.error,
+        })
+
+        logger.error('[TaskExecution] LLM execution failed', undefined, { taskId: task.id })
+        return task
+      }
+
       // 更新任务结果
-      task.status = result.code === 200 ? 'completed' : 'failed'
+      task.status = 'completed'
       task.result = result
       task.completedAt = new Date()
       task.progress = 100
 
       // 广播完成
       broadcast.taskProgress(task.id, 100, {
-        status: task.status,
-        result: result.code === 200 ? 'success' : 'failed',
-        output: result.data,
+        status: 'completed',
+        result: 'success',
+        output: result.content,
       })
 
       // 任务完成后扣费
-      await this.chargeForTask(task, result.data?.usage)
+      await this.chargeForTask(task, result.usage)
 
       logger.info('[TaskExecution] Task completed', { taskId: task.id, status: task.status })
 
@@ -144,7 +180,7 @@ export class TaskExecutionService {
     task: TaskInfo, 
     workspacePath: string,
     signal: AbortSignal
-  ): Promise<{ code: number; message: string; data?: any }> {
+  ): Promise<TaskResultData | null> {
     
     try {
       // 获取 LLM 服务
@@ -168,7 +204,7 @@ export class TaskExecutionService {
 
       // 流式调用 LLM
       let fullContent = ''
-      let usage: any = null
+      let usage: LLMUsage | undefined = undefined
       
       for await (const chunk of llmService.stream(messages)) {
         // 检查是否被取消
@@ -203,24 +239,16 @@ export class TaskExecutionService {
       await writeFile(resultPath, fullContent, 'utf-8')
 
       return {
-        code: 200,
-        message: 'success',
-        data: {
-          content: fullContent,
-          resultPath,
-          workspace: workspacePath,
-          type: task.type,
-          usage,
-        }
+        content: fullContent,
+        resultPath,
+        workspace: workspacePath,
+        type: task.type,
+        usage,
       }
 
     } catch (error) {
       logger.error('[TaskExecution] LLM execution failed', error as Error)
-      return {
-        code: 500,
-        message: error instanceof Error ? error.message : 'LLM execution failed',
-        data: null
-      }
+      return null
     }
   }
 
@@ -348,7 +376,7 @@ Use clear, concise language and proper formatting.`,
   }
 
   // 任务完成后扣费
-  private async chargeForTask(task: TaskInfo, usage?: { promptTokens?: number; completionTokens?: number; totalTokens?: number }): Promise<void> {
+  private async chargeForTask(task: TaskInfo, usage?: LLMUsage): Promise<void> {
     if (!task.userId) {
       logger.warn('[TaskExecution] No userId for billing', { taskId: task.id })
       return

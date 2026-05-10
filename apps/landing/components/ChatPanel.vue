@@ -93,7 +93,6 @@
                 :is-loading="msg.isLoading"
               />
               <ThinkBlock v-else-if="msg.type === 'think'" :message="msg" />
-              <SystemEventBlock v-else-if="msg.type === 'system_event'" :message="msg" />
               <TaskBlock
                 v-else-if="msg.type === 'task'"
                 :message="msg"
@@ -196,11 +195,6 @@ import {
 import { ElMessage } from 'element-plus'
 import { io, Socket } from 'socket.io-client'
 import type { ChatMessage, ChatVersion } from '~/stores/chat'
-import MessageBlock from './chat/MessageBlock.vue'
-import ThinkBlock from './chat/ThinkBlock.vue'
-import SystemEventBlock from './chat/SystemEventBlock.vue'
-import TaskBlock from './chat/TaskBlock.vue'
-import RecommendBlock from './chat/RecommendBlock.vue'
 
 import type { Project } from '~/stores/project'
 
@@ -448,32 +442,79 @@ const sendMessage = async () => {
     if (!sessionId.value) return
   }
 
-  // Set current conversation in store
-  chatStore.setCurrentConversation(sessionId.value)
-
   // v2: 用户直接输入时，自动关闭当前活跃的 recommend
   await chatStore.dismissRecommend()
 
+  // Add user message to store
+  const userMsg: ChatMessage = {
+    id: `msg-${Date.now()}`,
+    role: 'user',
+    type: 'message',
+    content: text,
+    timestamp: new Date().toISOString(),
+    conversationId: sessionId.value,
+    metadata: {},
+  }
+  chatStore.messages.push(userMsg)
   inputText.value = ''
   if (inputRef.value) inputRef.value.style.height = 'auto'
+  nextTick(() => scrollToBottom())
 
+  // Add loading message to store
+  const loadingMsg: ChatMessage = {
+    id: `msg-${Date.now() + 1}`,
+    role: 'assistant',
+    type: 'message',
+    content: '',
+    timestamp: new Date().toISOString(),
+    conversationId: sessionId.value,
+    metadata: {},
+  }
+  chatStore.messages.push(loadingMsg)
   isLoading.value = true
   nextTick(() => scrollToBottom())
 
   try {
-    // Use store action which handles multi-message response
-    await chatStore.sendMessageWithResponse(text)
+    const res = await chatApi.sendMessage(sessionId.value, { content: text, type: 'message' })
 
-    // Check if tasks were created and start polling
-    const lastMsgs = chatStore.currentMessages.slice(-3)
-    const hasTask = lastMsgs.some(m => m.type === 'task')
-    if (hasTask) {
-      agentStatus.value = 'running'
-      pollProgress(sessionId.value)
+    // Remove loading message from store
+    chatStore.messages = chatStore.messages.filter((m) => m.id !== loadingMsg.id)
+
+    if (res.success && res.data) {
+      const assistantMsg: ChatMessage = {
+        id: res.data.message?.id || `msg-${Date.now() + 2}`,
+        role: 'assistant',
+        type: 'message',
+        content: res.data.message?.content || 'Processing your request...',
+        timestamp: res.data.message?.timestamp || new Date().toISOString(),
+        conversationId: sessionId.value,
+        metadata: {
+          intent: res.data.intent,
+          tasks: res.data.tasks as any,
+        },
+      }
+      chatStore.messages.push(assistantMsg)
+
+      // If tasks were created, start polling progress
+      if (res.data.tasks?.length) {
+        agentStatus.value = 'running'
+        pollProgress(sessionId.value)
+      }
+    } else {
+      chatStore.messages.push({
+        id: `msg-${Date.now() + 2}`,
+        role: 'assistant',
+        type: 'message',
+        content: 'Sorry, something went wrong. Please try again.',
+        timestamp: new Date().toISOString(),
+        conversationId: sessionId.value,
+        metadata: {},
+      })
     }
   } catch (error: any) {
+    chatStore.messages = chatStore.messages.filter((m) => m.id !== loadingMsg.id)
     chatStore.messages.push({
-      id: `msg-${Date.now()}`,
+      id: `msg-${Date.now() + 2}`,
       role: 'assistant',
       type: 'message',
       content: `Error: ${error.message || 'Failed to get response'}`,
@@ -538,7 +579,7 @@ onMounted(() => {
 
   // 如果提供了 chatId，立即设置 session 并连接 WebSocket
   if (props.chatId) {
-    sessionId.value = props.chatId
+    setSessionId(props.chatId)
     connectWebSocket(props.chatId)
     // 加载该会话的消息历史
     loadSessionMessages(props.chatId)
@@ -552,15 +593,15 @@ const loadSessionMessages = async (sid: string) => {
       const loaded: ChatMessage[] = res.data.messages.map((msg: any) => ({
         id: msg.id || `msg-${Date.now()}`,
         role: msg.role as 'user' | 'assistant' | 'system',
-        type: (msg.messageType || msg.type || 'message') as ChatMessage['type'],
+        type: msg.type || 'message',
         content: msg.content,
-        timestamp: msg.createdAt || msg.timestamp,
+        timestamp: msg.timestamp || msg.createdAt,
         conversationId: sid,
         versionId: msg.versionId,
         tasks: msg.tasks,
         options: msg.options,
-        thinkContent: msg.thinkContent || msg.metadata?.thinkContent,
-        thinkSummary: msg.thinkSummary || msg.metadata?.thinkSummary,
+        thinkContent: msg.thinkContent,
+        thinkSummary: msg.thinkSummary,
         metadata: msg.metadata || {},
       }))
       // v2: merge into store, avoid duplicates
@@ -829,7 +870,7 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: var(--el-bg-color);
+  background: #ffffff;
 }
 
 /* Task Cards */
@@ -1143,27 +1184,4 @@ onUnmounted(() => {
   font-size: 12px;
   line-height: 1.5;
 }
-
-/* Message entry animation */
-.message-wrapper {
-  animation: messageSlideIn 0.3s ease-out both;
-}
-
-@keyframes messageSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Sequential stagger for recent messages */
-.message-list .message-wrapper:nth-last-child(1) { animation-delay: 0ms; }
-.message-list .message-wrapper:nth-last-child(2) { animation-delay: 40ms; }
-.message-list .message-wrapper:nth-last-child(3) { animation-delay: 80ms; }
-.message-list .message-wrapper:nth-last-child(4) { animation-delay: 120ms; }
-.message-list .message-wrapper:nth-last-child(5) { animation-delay: 160ms; }
 </style>

@@ -334,8 +334,20 @@ export const useChatStore = defineStore('chat', {
         this.currentConversation = conversation
         return conversation
       } catch (err: any) {
-        this.error = err.message || '创建会话失败'
-        throw err
+        // 离线模式：创建本地会话
+        const conversation: Conversation = {
+          id: `conv-${Date.now()}`,
+          title,
+          projectId,
+          agentId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          messageCount: 0,
+          isPinned: false,
+        }
+        this.conversations.unshift(conversation)
+        this.currentConversation = conversation
+        return conversation
       }
     },
 
@@ -357,7 +369,6 @@ export const useChatStore = defineStore('chat', {
       const message: ChatMessage = {
         id: `msg-${Date.now()}`,
         role,
-        type: 'message',
         content,
         timestamp: new Date().toISOString(),
         conversationId,
@@ -398,73 +409,31 @@ export const useChatStore = defineStore('chat', {
           throw new Error(result.message || '发送消息失败')
         }
 
-        const data = result.data
-        const now = new Date().toISOString()
-
-        // 1. Insert think message if present
-        if (data?.thinkMessage) {
-          const thinkMsg: ChatMessage = {
-            id: data.thinkMessage.id || `think-${Date.now()}`,
-            role: 'assistant',
-            type: 'think',
-            content: data.thinkMessage.content || '分析中...',
-            timestamp: data.thinkMessage.createdAt || data.thinkMessage.timestamp || now,
-            conversationId,
-            thinkSummary: data.thinkMessage.metadata?.thinkSummary,
-            thinkContent: data.thinkMessage.metadata?.thinkContent,
-            metadata: {
-              intent: data.intent,
-              model: 'agenthive-ai',
-            },
-          }
-          this.messages.push(thinkMsg)
+        const assistantMessage: ChatMessage = {
+          id: result.data?.message?.id || `msg-${Date.now()}-ai`,
+          role: 'assistant',
+          content: result.data?.message?.content || '处理完成',
+          timestamp: result.data?.message?.timestamp || new Date().toISOString(),
+          conversationId,
+          metadata: {
+            model: 'agenthive-ai',
+            intent: result.data?.intent,
+            tasks: result.data?.tasks,
+          },
         }
 
-        // 2. Insert assistant response
-        if (data?.message?.id) {
-          const assistantMessage: ChatMessage = {
-            id: data.message.id,
-            role: 'assistant',
-            type: 'message',
-            content: data.message.content || '处理完成',
-            timestamp: data.message.createdAt || data.message.timestamp || now,
-            conversationId,
-            metadata: {
-              model: 'agenthive-ai',
-              intent: data.intent,
-              tasks: data.tasks,
-              estimatedCost: data.estimatedCost,
-            },
-          }
-          this.messages.push(assistantMessage)
-        }
-
-        // 3. Insert task message if tasks were created
-        if (data?.tasks && data.tasks.length > 0) {
-          const taskMsg: ChatMessage = {
-            id: `task-${Date.now()}`,
-            role: 'assistant',
-            type: 'task',
-            content: '以下任务需要您的确认：',
-            timestamp: now,
-            conversationId,
-            tasks: data.tasks.map((t: any) => ({
-              id: t.id || t.ticketId,
-              title: t.task || t.title || '未命名任务',
-              description: t.description,
-              status: t.status || 'pending',
-              workerRole: t.workerRole || t.role,
-            })),
-            metadata: {
-              intent: data.intent,
-              estimatedCost: data.estimatedCost,
-            },
-          }
-          this.messages.push(taskMsg)
-        }
+        this.messages.push(assistantMessage)
 
       } catch (err: any) {
         this.error = err.message || '获取回复失败'
+        // 添加错误提示消息
+        this.messages.push({
+          id: `msg-${Date.now()}-error`,
+          role: 'system',
+          content: `错误: ${this.error}`,
+          timestamp: new Date().toISOString(),
+          conversationId: this.currentConversation!.id,
+        })
       } finally {
         this.isLoading = false
       }
@@ -503,8 +472,11 @@ export const useChatStore = defineStore('chat', {
         return this.conversations
       } catch (err: any) {
         this.error = err.message || '加载会话列表失败'
-        this.conversations = []
-        throw err
+        // 使用本地数据
+        if (this.conversations.length === 0) {
+          this.conversations = []
+        }
+        return this.conversations
       } finally {
         this.isLoading = false
       }
@@ -526,41 +498,14 @@ export const useChatStore = defineStore('chat', {
           throw new Error(result.message || '加载消息失败')
         }
 
-        const messages: ChatMessage[] = (result.data?.messages || []).map((msg: any) => {
-          const meta = msg.metadata || {}
-          const msgType = (msg.messageType || msg.type || 'message') as MessageType
-          return {
-            id: msg.id,
-            role: (msg.role as MessageRole) || 'assistant',
-            type: msgType,
-            content: msg.content,
-            timestamp: msg.createdAt || msg.timestamp,
-            conversationId,
-            versionId: msg.versionId,
-            parentId: msg.parentMessageId,
-            // think fields
-            thinkSummary: meta.thinkSummary,
-            thinkContent: meta.thinkContent,
-            // task fields
-            tasks: meta.taskPayload ? [{
-              id: msg.id,
-              title: meta.taskPayload.title,
-              description: meta.taskPayload.description,
-              status: meta.approvalStatus || 'pending',
-            }] : undefined,
-            // recommend fields
-            options: meta.recommendOptions,
-            selectedOptionId: meta.selectedOptionId,
-            metadata: {
-              intent: meta.intent,
-              model: meta.model,
-              tokens: meta.tokens,
-              processingTime: meta.processingTime,
-              estimatedCost: meta.estimatedCost,
-              files: meta.files,
-            },
-          }
-        })
+        const messages: ChatMessage[] = (result.data?.messages || []).map(msg => ({
+          id: msg.id,
+          role: msg.role as MessageRole,
+          content: msg.content,
+          timestamp: msg.timestamp,
+          conversationId,
+          metadata: msg.metadata,
+        }))
 
         // 合并新消息，避免重复
         const existingIds = new Set(this.messages.map(m => m.id))
@@ -637,6 +582,13 @@ export const useChatStore = defineStore('chat', {
         return this.fileTree
       } catch (err: any) {
         this.error = err.message || '加载文件树失败'
+        // API 失败时使用默认演示数据
+        if (!path && this.fileTree.length === 0) {
+          this.fileTree = defaultFileTree
+          if (import.meta.dev) {
+            console.warn('[ChatStore] API 不可用，使用默认演示数据')
+          }
+        }
         throw err
       } finally {
         this.isLoading = false
@@ -968,7 +920,7 @@ export const useChatStore = defineStore('chat', {
         const { chat } = useApi()
         const result = await chat.listVersions(sessionId)
         if (result.success && result.data) {
-          this.versions = result.data.versions || []
+          this.versions = result.data.items || []
         }
         return this.versions
       } catch (err: any) {
@@ -981,7 +933,7 @@ export const useChatStore = defineStore('chat', {
 
     /**
      * 切换版本
-     * 后端 PATCH 返回 version + messages，直接使用返回数据
+     * 后端 PATCH 返回 success，成功后重新加载消息
      */
     async switchVersion(versionId: string): Promise<ChatMessage[]> {
       if (!this.currentConversation) return []
@@ -990,37 +942,13 @@ export const useChatStore = defineStore('chat', {
       try {
         const { chat } = useApi()
         const result = await chat.switchVersion(sessionId, versionId)
-        if (result.success && result.data) {
+        if (result.success) {
           this.currentVersionId = versionId
-          // 后端返回 messages，直接使用
-          if (result.data.messages && result.data.messages.length > 0) {
-            const loaded: ChatMessage[] = result.data.messages.map((msg: any) => {
-              const meta = msg.metadata || {}
-              return {
-                id: msg.id,
-                role: msg.role as 'user' | 'assistant' | 'system',
-                type: (msg.messageType || msg.type || 'message') as MessageType,
-                content: msg.content,
-                timestamp: msg.createdAt || msg.timestamp,
-                conversationId: sessionId,
-                versionId: msg.versionId || versionId,
-                tasks: msg.tasks,
-                options: msg.options,
-                thinkContent: msg.thinkContent || meta.thinkContent,
-                thinkSummary: msg.thinkSummary || meta.thinkSummary,
-                metadata: {
-                  intent: meta.intent,
-                  model: meta.model,
-                  estimatedCost: meta.estimatedCost,
-                },
-              }
-            })
-            // 清除当前会话旧消息，替换为返回的 messages
-            this.messages = this.messages.filter(
-              m => m.conversationId !== sessionId
-            )
-            this.messages.push(...loaded)
-          }
+          // 清除当前会话旧消息，重新加载
+          this.messages = this.messages.filter(
+            m => m.conversationId !== sessionId
+          )
+          await this.loadMessages(sessionId)
         }
         return this.currentVersionMessages
       } catch (err: any) {

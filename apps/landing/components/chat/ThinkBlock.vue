@@ -1,17 +1,14 @@
 <template>
-  <div class="think-block" :class="{ expanded, 'has-content': hasContent }">
+  <div class="think-block" :class="{ expanded }">
     <div class="think-header" @click="toggleExpand">
-      <div class="think-badge">
-        <el-icon class="brain-icon"><Cpu /></el-icon>
-        <span class="think-label">思考</span>
-      </div>
-      <span class="think-summary">{{ summaryText }}</span>
+      <el-tag size="small" type="info" class="think-tag">思考</el-tag>
+      <span class="think-summary">{{ message.thinkSummary || 'Agent 正在思考...' }}</span>
       <el-icon class="expand-icon" :class="{ expanded }">
         <ArrowDown />
       </el-icon>
     </div>
     <transition name="expand">
-      <div v-if="expanded && hasContent" class="think-content">
+      <div v-if="expanded" class="think-content">
         <div class="think-body" v-html="renderedContent"></div>
       </div>
     </transition>
@@ -20,7 +17,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { ArrowDown, Cpu } from '@element-plus/icons-vue'
+import { ArrowDown } from '@element-plus/icons-vue'
 import { renderMarkdown } from '~/utils/renderMarkdown'
 import type { ChatMessage } from '~/stores/chat'
 
@@ -36,47 +33,21 @@ const toggleExpand = () => {
   expanded.value = !expanded.value
 }
 
-const summaryText = computed(() => {
-  return props.message.thinkSummary
-    || props.message.metadata?.thinkSummary
-    || 'Agent 正在思考...'
-})
-
-const hasContent = computed(() => {
-  const content = props.message.thinkContent
-    || props.message.metadata?.thinkContent
-    || props.message.content
-  return !!content && content !== '分析中...' && content !== '分析完成'
-})
-
 const renderedContent = computed(() => {
-  const content = props.message.thinkContent
-    || props.message.metadata?.thinkContent
-    || props.message.content
-    || ''
+  const content = props.message.thinkContent || ''
   return renderMarkdown(content)
 })
 </script>
 
 <style scoped>
 .think-block {
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border: 1px solid #e2e8f0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
   font-size: 13px;
   line-height: 1.6;
-  color: #475569;
-  transition: all 0.2s ease;
-}
-
-.think-block.has-content {
-  border-color: #cbd5e1;
-}
-
-.think-block.has-content:hover {
-  border-color: #94a3b8;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  color: #374151;
 }
 
 .think-header {
@@ -87,37 +58,8 @@ const renderedContent = computed(() => {
   user-select: none;
 }
 
-.think-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: #e0e7ff;
-  color: #4338ca;
-  font-size: 11px;
-  font-weight: 600;
+.think-tag {
   flex-shrink: 0;
-}
-
-.brain-icon {
-  font-size: 13px;
-  animation: pulse 2s infinite ease-in-out;
-}
-
-@keyframes pulse {
-  0%, 100% {
-    opacity: 0.7;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.1);
-  }
-}
-
-.think-label {
-  font-size: 11px;
 }
 
 .think-summary {
@@ -126,15 +68,14 @@ const renderedContent = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #64748b;
+  color: #6b7280;
   font-size: 12px;
 }
 
 .expand-icon {
   flex-shrink: 0;
   transition: transform 0.2s ease;
-  color: #94a3b8;
-  font-size: 14px;
+  color: #9ca3af;
 }
 
 .expand-icon.expanded {
@@ -142,22 +83,19 @@ const renderedContent = computed(() => {
 }
 
 .think-content {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e2e8f0;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e5e7eb;
 }
 
 .think-body {
   word-break: break-word;
-  color: #475569;
-  font-size: 12px;
-  line-height: 1.7;
 }
 
 /* Expand transition */
 .expand-enter-active,
 .expand-leave-active {
-  transition: all 0.25s ease;
+  transition: all 0.2s ease;
   overflow: hidden;
 }
 
@@ -171,13 +109,12 @@ const renderedContent = computed(() => {
 
 .expand-enter-to,
 .expand-leave-from {
-  max-height: 600px;
+  max-height: 500px;
   opacity: 1;
 }
 
 :deep(.think-body strong) {
   font-weight: 600;
-  color: #334155;
 }
 
 :deep(.think-body code.inline-code) {
@@ -185,21 +122,21 @@ const renderedContent = computed(() => {
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'Fira Code', monospace;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 :deep(.think-body pre.code-block) {
   background: #1e1e1e;
-  padding: 10px;
-  border-radius: 6px;
+  padding: 12px;
+  border-radius: 8px;
   overflow-x: auto;
-  margin: 6px 0;
+  margin: 8px 0;
 }
 
 :deep(.think-body pre.code-block code) {
   color: #d4d4d4;
   font-family: 'Fira Code', monospace;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 </style>

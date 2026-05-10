@@ -31,6 +31,65 @@ export interface TodoList {
   lastUpdated: number
 }
 
+// ============================================================================
+// Input/Output types (derived from Zod schemas for type-safe handler functions)
+// ============================================================================
+
+const todoInputSchema = z.object({
+  operation: z.enum(['create', 'update', 'close', 'list', 'clear'])
+    .describe('Operation to perform on the todo list'),
+  // For create
+  content: z.string().optional()
+    .describe('Content/description of the todo (for create operation)'),
+  priority: z.enum(['low', 'medium', 'high']).optional()
+    .describe('Priority level (default: medium)'),
+  parentId: z.string().optional()
+    .describe('ID of parent todo for subtasks'),
+  tags: z.array(z.string()).optional()
+    .describe('Tags for categorization'),
+  // For update/close
+  id: z.string().optional()
+    .describe('Todo ID (for update/close operations)'),
+  status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional()
+    .describe('New status (for update operation)'),
+  // For list
+  filter: z.enum(['all', 'pending', 'in_progress', 'completed', 'cancelled']).optional()
+    .describe('Filter for list operation (default: all)'),
+  // For create multiple
+  todos: z.array(z.object({
+    content: z.string(),
+    priority: z.enum(['low', 'medium', 'high']).optional()
+  })).optional()
+    .describe('Create multiple todos at once')
+})
+
+const todoOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  todos: z.array(z.object({
+    id: z.string(),
+    content: z.string(),
+    status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
+    priority: z.enum(['low', 'medium', 'high']),
+    createdAt: z.number(),
+    updatedAt: z.number(),
+    completedAt: z.number().optional(),
+    parentId: z.string().optional(),
+    subtasks: z.array(z.string()),
+    tags: z.array(z.string())
+  })).optional(),
+  summary: z.object({
+    total: z.number(),
+    pending: z.number(),
+    inProgress: z.number(),
+    completed: z.number(),
+    cancelled: z.number()
+  }).optional()
+})
+
+type TodoInput = z.infer<typeof todoInputSchema>
+type TodoOutput = z.infer<typeof todoOutputSchema>
+
 // In-memory storage (could be persisted to file/DB)
 const todoStores = new Map<string, TodoList>()
 
@@ -72,61 +131,8 @@ Use this tool to:
 The todo system helps maintain focus and provides visibility into your plan.
 Always update todos as you complete work or discover new tasks.`,
   
-  inputSchema: z.object({
-    operation: z.enum(['create', 'update', 'close', 'list', 'clear'])
-      .describe('Operation to perform on the todo list'),
-    
-    // For create
-    content: z.string().optional()
-      .describe('Content/description of the todo (for create operation)'),
-    priority: z.enum(['low', 'medium', 'high']).optional()
-      .describe('Priority level (default: medium)'),
-    parentId: z.string().optional()
-      .describe('ID of parent todo for subtasks'),
-    tags: z.array(z.string()).optional()
-      .describe('Tags for categorization'),
-    
-    // For update/close
-    id: z.string().optional()
-      .describe('Todo ID (for update/close operations)'),
-    status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional()
-      .describe('New status (for update operation)'),
-    
-    // For list
-    filter: z.enum(['all', 'pending', 'in_progress', 'completed', 'cancelled']).optional()
-      .describe('Filter for list operation (default: all)'),
-    
-    // For create multiple
-    todos: z.array(z.object({
-      content: z.string(),
-      priority: z.enum(['low', 'medium', 'high']).optional()
-    })).optional()
-      .describe('Create multiple todos at once')
-  }),
-  
-  outputSchema: z.object({
-    success: z.boolean(),
-    message: z.string(),
-    todos: z.array(z.object({
-      id: z.string(),
-      content: z.string(),
-      status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
-      priority: z.enum(['low', 'medium', 'high']),
-      createdAt: z.number(),
-      updatedAt: z.number(),
-      completedAt: z.number().optional(),
-      parentId: z.string().optional(),
-      subtasks: z.array(z.string()),
-      tags: z.array(z.string())
-    })).optional(),
-    summary: z.object({
-      total: z.number(),
-      pending: z.number(),
-      inProgress: z.number(),
-      completed: z.number(),
-      cancelled: z.number()
-    }).optional()
-  }),
+  inputSchema: todoInputSchema,
+  outputSchema: todoOutputSchema,
   
   async execute(input, context) {
     const agentId = context.agentId
@@ -195,7 +201,7 @@ Always update todos as you complete work or discover new tasks.`,
 
 // Operation handlers
 function handleCreate(
-  input: any,
+  input: Pick<TodoInput, 'content' | 'priority' | 'parentId' | 'tags' | 'todos'> & { operation: 'create' },
   todoList: TodoList,
   agentId: string
 ) {
@@ -277,7 +283,7 @@ function handleCreate(
 }
 
 function handleUpdate(
-  input: any,
+  input: Pick<TodoInput, 'id' | 'status' | 'content' | 'priority'> & { operation: 'update' },
   todoList: TodoList,
   agentId: string
 ) {
@@ -354,7 +360,7 @@ function handleUpdate(
 }
 
 function handleClose(
-  input: any,
+  input: Pick<TodoInput, 'id'> & { operation: 'close' },
   todoList: TodoList,
   agentId: string
 ) {
@@ -403,7 +409,7 @@ function handleClose(
 }
 
 function handleList(
-  input: any,
+  input: Pick<TodoInput, 'filter'> & { operation: 'list' },
   todoList: TodoList
 ) {
   const filter = input.filter || 'all'

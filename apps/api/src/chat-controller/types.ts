@@ -51,6 +51,7 @@ export interface ChatMessage {
         id: string
         label: string
         type: 'approve' | 'decline' | 'run'
+        prompt?: string
       }>
     }
     approvalStatus?: ApprovalStatus
@@ -152,4 +153,62 @@ export interface SwitchVersionInput {
 export interface IntentClassificationResult {
   intent: ChatIntent
   confidence: number
+}
+
+// ============ Database Row Types ============
+// 这些类型对应 PostgreSQL 查询返回的原始行数据
+// 用于 dbRowTo* 转换函数的类型安全
+
+/** chat_sessions 表行数据 */
+export interface ChatSessionRow {
+  id: string
+  user_id: string
+  workspace_id?: string
+  project_id?: string
+  title?: string
+  status: string
+  session_type?: string
+  current_version_id?: string
+  created_at: string
+  updated_at: string
+}
+
+/** chat_messages 表行数据 */
+export interface ChatMessageRow {
+  id: string
+  session_id: string
+  version_id?: string
+  role: string
+  message_type?: string
+  content: string
+  is_visible_in_history?: boolean
+  metadata: string | Record<string, unknown>
+  created_at: string
+}
+
+/** agent_tasks 表行数据 */
+export interface AgentTaskRow {
+  id: string
+  session_id: string
+  ticket_id: string
+  worker_role: string
+  status: string
+  workspace_path: string
+  result?: string | Record<string, unknown>
+  started_at?: string
+  completed_at?: string
+  created_at: string
+}
+
+/** chat_versions 表行数据 */
+export interface ChatVersionRow {
+  id: string
+  session_id: string
+  version_number: number
+  title: string
+  description?: string
+  base_message_id?: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }

@@ -1,59 +1,106 @@
 // PostgreSQL 数据访问层
 import { pool } from '../config/database.js'
 import type { Agent, Task, User } from '../types/index.js'
+import type {
+  UserCreateInput,
+  UserUpdateInput,
+  UserRow,
+  AgentCreateInput,
+  AgentUpdateInput,
+  AgentRow,
+  TaskCreateInput,
+  TaskUpdateInput,
+  TaskFilterInput,
+  TaskRow,
+  MappedTask,
+  ProjectCreateInput,
+  ProjectUpdateInput,
+  ProjectRow,
+  ChatSessionCreateInput,
+  ChatSessionUpdateInput,
+  ChatSessionRow,
+  ChatMessageCreateInput,
+  ChatMessageRow,
+  AgentTaskCreateInput,
+  AgentTaskUpdateInput,
+  AgentTaskRow,
+} from './types.js'
 
 // 模拟延迟（保持与原来一致的 API 响应时间体验）
 export const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms))
 
-// ============ Users ============
-function isInvalidUUID(err: any): boolean {
-  return err?.code === '22P02'
+// ============ Shared Helpers ============
+
+/** PostgreSQL error code for invalid UUID format */
+const PG_INVALID_UUID_CODE = '22P02'
+
+/** Check if a PostgreSQL error is an invalid UUID error */
+function isInvalidUUID(err: unknown): boolean {
+  return err instanceof Error && 'code' in err && (err as { code: string }).code === PG_INVALID_UUID_CODE
 }
 
+/**
+ * Execute a query by ID, returning undefined for invalid UUID format
+ * instead of throwing. Eliminates the repeated try/catch-isInvalidUUID pattern.
+ */
+async function safeQueryById<T>(
+  sql: string,
+  id: string
+): Promise<T | undefined> {
+  try {
+    const result = await pool.query(sql, [id])
+    return (result.rows[0] as T | undefined) ?? undefined
+  } catch (err) {
+    if (isInvalidUUID(err)) return undefined
+    throw err
+  }
+}
+
+/** Validate a string looks like a UUID v4 — accepts null/undefined for convenience */
+function isValidUUID(value: string | null | undefined): boolean {
+  if (!value) return false
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+}
+
+// ============ Users ============
+
 export const userDb = {
-  findById: async (id: string): Promise<User | undefined> => {
-    try {
-      const result = await pool.query('SELECT * FROM users WHERE id = $1', [id])
-      return result.rows[0] || undefined
-    } catch (err) {
-      if (isInvalidUUID(err)) return undefined
-      throw err
-    }
-  },
+  findById: (id: string): Promise<User | undefined> =>
+    safeQueryById<User>('SELECT * FROM users WHERE id = $1', id),
 
   findByPhone: async (phone: string): Promise<User | undefined> => {
     const result = await pool.query('SELECT * FROM users WHERE phone = $1', [phone])
-    return result.rows[0] || undefined
+    return (result.rows[0] as User | undefined) ?? undefined
   },
 
   findByUsername: async (username: string): Promise<User | undefined> => {
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username])
-    return result.rows[0] || undefined
+    return (result.rows[0] as User | undefined) ?? undefined
   },
 
   findByExternalId: async (externalId: string): Promise<User | undefined> => {
     const result = await pool.query('SELECT * FROM users WHERE external_user_id = $1', [externalId])
-    return result.rows[0] || undefined
+    return (result.rows[0] as User | undefined) ?? undefined
   },
 
-  create: async (data: Partial<User>): Promise<User> => {
+  create: async (data: UserCreateInput): Promise<User> => {
     const result = await pool.query(
       `INSERT INTO users (username, phone, email, role, password_hash, status) 
        VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
       [
         data.username || `user_${Math.random().toString(36).substring(2, 8)}`,
-        data.phone,
+        data.phone ?? null,
         data.email || `${data.username || 'user'}@test.local`,
         data.role || 'user',
-        data.password_hash,
+        data.password_hash ?? null,
         'active',
       ]
     )
-    return result.rows[0]
+    return result.rows[0] as User
   },
 
-  update: async (id: string, data: Partial<User>): Promise<User | undefined> => {
+  update: async (id: string, data: UserUpdateInput): Promise<User | undefined> => {
     const result = await pool.query(
       `UPDATE users 
        SET username = COALESCE($1, username),
@@ -65,38 +112,32 @@ export const userDb = {
        RETURNING *`,
       [data.username, data.phone, data.email, data.role, data.status, id]
     )
-    return result.rows[0] || undefined
+    return (result.rows[0] as User | undefined) ?? undefined
   },
 
   delete: async (id: string): Promise<boolean> => {
     const result = await pool.query('DELETE FROM users WHERE id = $1', [id])
-    return result.rowCount ? result.rowCount > 0 : false
+    return (result.rowCount ?? 0) > 0
   },
 
   getAll: async (): Promise<User[]> => {
     const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC')
-    return result.rows
+    return result.rows as User[]
   },
 }
 
 // ============ Agents ============
+
 export const agentDb = {
-  findById: async (id: string): Promise<Agent | undefined> => {
-    try {
-      const result = await pool.query('SELECT * FROM agents WHERE id = $1', [id])
-      return result.rows[0] || undefined
-    } catch (err) {
-      if (isInvalidUUID(err)) return undefined
-      throw err
-    }
-  },
+  findById: (id: string): Promise<Agent | undefined> =>
+    safeQueryById<Agent>('SELECT * FROM agents WHERE id = $1', id),
 
   findAll: async (): Promise<Agent[]> => {
     const result = await pool.query('SELECT * FROM agents ORDER BY created_at DESC')
-    return result.rows
+    return result.rows as Agent[]
   },
 
-  create: async (data: Partial<Agent>): Promise<Agent> => {
+  create: async (data: AgentCreateInput): Promise<Agent> => {
     const result = await pool.query(
       `INSERT INTO agents (name, role, status, description, config, owner_id, project_id) 
        VALUES ($1, $2, $3, $4, $5, $6, $7) 
@@ -105,16 +146,16 @@ export const agentDb = {
         data.name || 'New Agent',
         data.role || 'custom',
         data.status || 'idle',
-        data.description,
+        data.description ?? null,
         JSON.stringify(data.config || {}),
-        data.owner_id || null,
-        data.project_id || null,
+        data.owner_id ?? null,
+        data.project_id ?? null,
       ]
     )
-    return result.rows[0]
+    return result.rows[0] as Agent
   },
 
-  update: async (id: string, data: Partial<Agent>): Promise<Agent | undefined> => {
+  update: async (id: string, data: AgentUpdateInput): Promise<Agent | undefined> => {
     const result = await pool.query(
       `UPDATE agents 
        SET name = COALESCE($1, name),
@@ -135,48 +176,42 @@ export const agentDb = {
         id,
       ]
     )
-    return result.rows[0] || undefined
+    return (result.rows[0] as Agent | undefined) ?? undefined
   },
 
   delete: async (id: string): Promise<boolean> => {
     const result = await pool.query('DELETE FROM agents WHERE id = $1', [id])
-    return result.rowCount ? result.rowCount > 0 : false
+    return (result.rowCount ?? 0) > 0
   },
 }
 
-function mapTaskRow(row: any): Task {
-  if (!row) return row
+/** Map a DB task row to a Task object with camelCase aliases */
+function mapTaskRow(row: TaskRow | undefined): MappedTask | undefined {
+  if (!row) return undefined
   return {
     ...row,
     assignedTo: row.assigned_to,
     userId: row.user_id,
     projectId: row.project_id,
-    createdAt: row.created_at,
+    parentId: row.parent_id ?? undefined,
+    input: typeof row.input === 'string' ? JSON.parse(row.input) : row.input,
+    output: row.output ? (typeof row.output === 'string' ? JSON.parse(row.output) : row.output) : null,
     startedAt: row.started_at,
     completedAt: row.completed_at,
   }
 }
 
-function isValidUUID(value: string | undefined): boolean {
-  if (!value) return false
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
-}
-
 // ============ Tasks ============
+
 export const taskDb = {
-  findById: async (id: string): Promise<Task | undefined> => {
-    try {
-      const result = await pool.query('SELECT * FROM tasks WHERE id = $1', [id])
-      return mapTaskRow(result.rows[0]) || undefined
-    } catch (err) {
-      if (isInvalidUUID(err)) return undefined
-      throw err
-    }
+  findById: async (id: string): Promise<MappedTask | undefined> => {
+    const row = await safeQueryById<TaskRow>('SELECT * FROM tasks WHERE id = $1', id)
+    return mapTaskRow(row)
   },
 
-  findAll: async (filters?: { status?: string; assignedTo?: string }): Promise<Task[]> => {
+  findAll: async (filters?: TaskFilterInput): Promise<MappedTask[]> => {
     let query = 'SELECT * FROM tasks WHERE 1=1'
-    const params: any[] = []
+    const params: string[] = []
     let paramIndex = 1
 
     if (filters?.status) {
@@ -195,32 +230,32 @@ export const taskDb = {
     query += ' ORDER BY created_at DESC'
 
     const result = await pool.query(query, params)
-    return result.rows.map(mapTaskRow)
+    return result.rows.map((row: TaskRow) => mapTaskRow(row)!)
   },
 
-  create: async (data: Partial<Task>): Promise<Task> => {
+  create: async (data: TaskCreateInput): Promise<MappedTask> => {
     const result = await pool.query(
       `INSERT INTO tasks (title, description, type, status, priority, progress, assigned_to, user_id, project_id, input, output) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
        RETURNING *`,
       [
         data.title || 'New Task',
-        data.description,
+        data.description ?? null,
         data.type || 'feature',
         data.status || 'pending',
         data.priority || 'medium',
         data.progress || 0,
         isValidUUID(data.assignedTo) ? data.assignedTo : null,
-        isValidUUID(data.userId || data.user_id) ? (data.userId || data.user_id) : null,
-        isValidUUID(data.projectId || data.project_id) ? (data.projectId || data.project_id) : null,
+        isValidUUID(data.userId ?? data.user_id) ? (data.userId ?? data.user_id) : null,
+        isValidUUID(data.projectId ?? data.project_id) ? (data.projectId ?? data.project_id) : null,
         JSON.stringify(data.input || {}),
         data.output ? JSON.stringify(data.output) : null,
       ]
     )
-    return mapTaskRow(result.rows[0])
+    return mapTaskRow(result.rows[0] as TaskRow)!
   },
 
-  update: async (id: string, data: Partial<Task>): Promise<Task | undefined> => {
+  update: async (id: string, data: TaskUpdateInput): Promise<MappedTask | undefined> => {
     const result = await pool.query(
       `UPDATE tasks 
        SET title = COALESCE($1, title),
@@ -248,50 +283,43 @@ export const taskDb = {
         id,
       ]
     )
-    return mapTaskRow(result.rows[0]) || undefined
+    return mapTaskRow(result.rows[0] as TaskRow | undefined)
   },
 
   delete: async (id: string): Promise<boolean> => {
     const result = await pool.query('DELETE FROM tasks WHERE id = $1', [id])
-    return result.rowCount ? result.rowCount > 0 : false
+    return (result.rowCount ?? 0) > 0
   },
 
-  findSubtasks: async (parentId: string): Promise<Task[]> => {
-    // DB schema 没有 parent_id，按 project_id 查询关联任务
+  findSubtasks: async (parentId: string): Promise<MappedTask[]> => {
     if (!isValidUUID(parentId)) return []
     const result = await pool.query(
       'SELECT * FROM tasks WHERE project_id = $1 ORDER BY created_at DESC',
       [parentId]
     )
-    return result.rows.map(mapTaskRow)
+    return result.rows.map((row: TaskRow) => mapTaskRow(row)!)
   },
 }
 
 // ============ Projects ============
-export const projectDb = {
-  findById: async (id: string): Promise<any | undefined> => {
-    try {
-      const result = await pool.query('SELECT * FROM projects WHERE id = $1', [id])
-      return result.rows[0] || undefined
-    } catch (err) {
-      if (isInvalidUUID(err)) return undefined
-      throw err
-    }
-  },
 
-  findAll: async (userId?: string): Promise<any[]> => {
+export const projectDb = {
+  findById: (id: string): Promise<ProjectRow | undefined> =>
+    safeQueryById<ProjectRow>('SELECT * FROM projects WHERE id = $1', id),
+
+  findAll: async (userId?: string): Promise<ProjectRow[]> => {
     let query = 'SELECT * FROM projects WHERE status != $1'
-    const params: any[] = ['deleted']
+    const params: string[] = ['deleted']
     if (userId) {
       query += ' AND owner_id = $2'
       params.push(userId)
     }
     query += ' ORDER BY updated_at DESC'
     const result = await pool.query(query, params)
-    return result.rows
+    return result.rows as ProjectRow[]
   },
 
-  create: async (data: any): Promise<any> => {
+  create: async (data: ProjectCreateInput): Promise<ProjectRow> => {
     const result = await pool.query(
       `INSERT INTO projects (
          name, description, repo_url, owner_id, status,
@@ -301,21 +329,21 @@ export const projectDb = {
        RETURNING *`,
       [
         data.name,
-        data.description || null,
-        data.repo_url || null,
+        data.description ?? null,
+        data.repo_url ?? null,
         data.owner_id,
         'active',
         data.type || 'blank',
-        data.tech_stack || null,
-        data.git_url || null,
+        data.tech_stack ?? null,
+        data.git_url ?? null,
         data.git_branch || 'main',
         data.is_template ?? false,
       ]
     )
-    return result.rows[0]
+    return result.rows[0] as ProjectRow
   },
 
-  update: async (id: string, data: any): Promise<any | undefined> => {
+  update: async (id: string, data: ProjectUpdateInput): Promise<ProjectRow | undefined> => {
     const result = await pool.query(
       `UPDATE projects
        SET name = COALESCE($1, name),
@@ -347,46 +375,40 @@ export const projectDb = {
         id,
       ]
     )
-    return result.rows[0] || undefined
+    return (result.rows[0] as ProjectRow | undefined) ?? undefined
   },
 
   delete: async (id: string): Promise<boolean> => {
     const result = await pool.query('DELETE FROM projects WHERE id = $1', [id])
-    return result.rowCount ? result.rowCount > 0 : false
+    return (result.rowCount ?? 0) > 0
   },
 }
 
 // ============ Chat Sessions ============
-export const chatSessionDb = {
-  findById: async (id: string): Promise<any | undefined> => {
-    try {
-      const result = await pool.query('SELECT * FROM chat_sessions WHERE id = $1', [id])
-      return result.rows[0] || undefined
-    } catch (err) {
-      if (isInvalidUUID(err)) return undefined
-      throw err
-    }
-  },
 
-  findAllByUser: async (userId: string): Promise<any[]> => {
+export const chatSessionDb = {
+  findById: (id: string): Promise<ChatSessionRow | undefined> =>
+    safeQueryById<ChatSessionRow>('SELECT * FROM chat_sessions WHERE id = $1', id),
+
+  findAllByUser: async (userId: string): Promise<ChatSessionRow[]> => {
     const result = await pool.query(
       'SELECT * FROM chat_sessions WHERE user_id = $1 AND status = $2 ORDER BY updated_at DESC',
       [userId, 'active']
     )
-    return result.rows
+    return result.rows as ChatSessionRow[]
   },
 
-  create: async (data: any): Promise<any> => {
+  create: async (data: ChatSessionCreateInput): Promise<ChatSessionRow> => {
     const result = await pool.query(
       `INSERT INTO chat_sessions (user_id, project_id, title, status)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [data.userId, data.projectId || null, data.title || '新会话', 'active']
+      [data.userId, data.projectId ?? null, data.title || '新会话', 'active']
     )
-    return result.rows[0]
+    return result.rows[0] as ChatSessionRow
   },
 
-  update: async (id: string, data: any): Promise<any | undefined> => {
+  update: async (id: string, data: ChatSessionUpdateInput): Promise<ChatSessionRow | undefined> => {
     const result = await pool.query(
       `UPDATE chat_sessions
        SET title = COALESCE($1, title),
@@ -397,18 +419,19 @@ export const chatSessionDb = {
        RETURNING *`,
       [data.title, data.projectId, data.status, id]
     )
-    return result.rows[0] || undefined
+    return (result.rows[0] as ChatSessionRow | undefined) ?? undefined
   },
 
   delete: async (id: string): Promise<boolean> => {
     const result = await pool.query('DELETE FROM chat_sessions WHERE id = $1', [id])
-    return result.rowCount ? result.rowCount > 0 : false
+    return (result.rowCount ?? 0) > 0
   },
 }
 
 // ============ Chat Messages ============
+
 export const chatMessageDb = {
-  findBySession: async (sessionId: string, limit: number = 50, offset: number = 0): Promise<any[]> => {
+  findBySession: async (sessionId: string, limit: number = 50, offset: number = 0): Promise<ChatMessageRow[]> => {
     const result = await pool.query(
       `SELECT * FROM chat_messages
        WHERE session_id = $1
@@ -416,51 +439,45 @@ export const chatMessageDb = {
        LIMIT $2 OFFSET $3`,
       [sessionId, limit, offset]
     )
-    return result.rows.reverse()
+    return (result.rows as ChatMessageRow[]).reverse()
   },
 
-  create: async (data: any): Promise<any> => {
+  create: async (data: ChatMessageCreateInput): Promise<ChatMessageRow> => {
     const result = await pool.query(
       `INSERT INTO chat_messages (session_id, role, content, metadata)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
       [data.sessionId, data.role, data.content, JSON.stringify(data.metadata || {})]
     )
-    return result.rows[0]
+    return result.rows[0] as ChatMessageRow
   },
 }
 
 // ============ Agent Tasks ============
+
 export const agentTaskDb = {
-  findBySession: async (sessionId: string): Promise<any[]> => {
+  findBySession: async (sessionId: string): Promise<AgentTaskRow[]> => {
     const result = await pool.query(
       'SELECT * FROM agent_tasks WHERE session_id = $1 ORDER BY created_at DESC',
       [sessionId]
     )
-    return result.rows
+    return result.rows as AgentTaskRow[]
   },
 
-  findById: async (id: string): Promise<any | undefined> => {
-    try {
-      const result = await pool.query('SELECT * FROM agent_tasks WHERE id = $1', [id])
-      return result.rows[0] || undefined
-    } catch (err) {
-      if (isInvalidUUID(err)) return undefined
-      throw err
-    }
-  },
+  findById: (id: string): Promise<AgentTaskRow | undefined> =>
+    safeQueryById<AgentTaskRow>('SELECT * FROM agent_tasks WHERE id = $1', id),
 
-  create: async (data: any): Promise<any> => {
+  create: async (data: AgentTaskCreateInput): Promise<AgentTaskRow> => {
     const result = await pool.query(
       `INSERT INTO agent_tasks (session_id, ticket_id, worker_role, status, workspace_path, result)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [data.sessionId, data.ticketId, data.workerRole, data.status || 'pending', data.workspacePath, JSON.stringify(data.result || {})]
+      [data.sessionId, data.ticketId, data.workerRole, data.status || 'pending', data.workspacePath ?? null, JSON.stringify(data.result || {})]
     )
-    return result.rows[0]
+    return result.rows[0] as AgentTaskRow
   },
 
-  update: async (id: string, data: any): Promise<any | undefined> => {
+  update: async (id: string, data: AgentTaskUpdateInput): Promise<AgentTaskRow | undefined> => {
     const result = await pool.query(
       `UPDATE agent_tasks
        SET status = COALESCE($1, status),
@@ -471,11 +488,12 @@ export const agentTaskDb = {
        RETURNING *`,
       [data.status, data.result ? JSON.stringify(data.result) : undefined, data.startedAt, data.completedAt, id]
     )
-    return result.rows[0] || undefined
+    return (result.rows[0] as AgentTaskRow | undefined) ?? undefined
   },
 }
 
 // ============ Agent Logs ============
+
 export const logDb = {
   getLogs: async (agentId: string, limit: number = 100): Promise<string[]> => {
     const result = await pool.query(
@@ -485,7 +503,7 @@ export const logDb = {
        LIMIT $2`,
       [agentId, limit]
     )
-    return result.rows.map(row => row.message).reverse()
+    return result.rows.map((row: { message: string }) => row.message).reverse()
   },
 
   addLog: async (agentId: string, message: string, level: string = 'info'): Promise<void> => {

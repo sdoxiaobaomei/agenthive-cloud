@@ -648,13 +648,13 @@ export function useApi() {
     dismissRecommend: (sessionId: string, messageId: string) =>
       post<{ dismissed: boolean }>(`/api/chat/sessions/${sessionId}/messages/${messageId}/dismiss`, {}, { silent: true }),
 
-    /** 获取版本列表 — GET /versions，返回 versions */
+    /** 获取版本列表 — GET /versions，返回 items */
     listVersions: (sessionId: string) =>
-      get<{ versions: Array<{ id: string; sessionId: string; versionNumber: number; title: string; description?: string; isActive: boolean; createdAt: string }>; total: number }>(`/api/chat/sessions/${sessionId}/versions`, { silent: true }),
+      get<{ items: Array<{ id: string; sessionId: string; versionNumber: number; title: string; description?: string; isActive: boolean; createdAt: string }>; total: number }>(`/api/chat/sessions/${sessionId}/versions`, { silent: true }),
 
-    /** 切换版本 — PATCH /versions/:vId/activate，返回 version + messages */
+    /** 切换版本 — PATCH /versions/:vId/activate */
     switchVersion: (sessionId: string, versionId: string) =>
-      patch<{ id: string; sessionId: string; versionNumber: number; title: string; description?: string; isActive: boolean; createdAt: string; messages?: Array<any> }>(`/api/chat/sessions/${sessionId}/versions/${versionId}/activate`, {}, { silent: true }),
+      patch<{ id: string; sessionId: string; versionNumber: number; title: string; description?: string; isActive: boolean; createdAt: string }>(`/api/chat/sessions/${sessionId}/versions/${versionId}/activate`, {}, { silent: true }),
 
     /** 创建新版本 — POST /versions，返回直接 version 对象 */
     createVersion: (sessionId: string, data: CreateVersionParams) =>

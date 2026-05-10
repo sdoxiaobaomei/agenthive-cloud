@@ -5,6 +5,7 @@ import { agentDb, taskDb, logDb, delay } from '../utils/database.js'
 import { redisCache } from '../services/redis-cache.js'
 import { getTaskExecutionService } from '../services/taskExecution.js'
 import logger from '../utils/logger.js'
+import { getUserId, getUserIdOrAnonymous } from '../types/index.js'
 
 const createAgentSchema = z.object({
   name: z.string().min(1).max(100),
@@ -71,8 +72,8 @@ export const getAgent = async (req: Request, res: Response) => {
     }
     const tasks = await taskDb.findAll({ assignedTo: id })
     const totalTasks = tasks.length
-    const completedTasks = tasks.filter((t: any) => t.status === 'completed').length
-    const failedTasks = tasks.filter((t: any) => t.status === 'failed').length
+    const completedTasks = tasks.filter((t) => t.status === 'completed').length
+    const failedTasks = tasks.filter((t) => t.status === 'failed').length
     res.json({ code: 200, message: 'success', data: {
         agent,
         tasks,
@@ -335,7 +336,7 @@ export const createAgentTask = async (req: Request, res: Response) => {
       return res.status(404).json({ code: 404, message: 'Agent 不存在' , data: null })
     }
 
-    const userId = (req as any).userId || 'anonymous'
+    const userId = getUserIdOrAnonymous(req)
     const task = await taskDb.create({
       ...parseResult.data,
       assignedTo: id,
@@ -349,7 +350,7 @@ export const createAgentTask = async (req: Request, res: Response) => {
     const taskInfo = {
       id: task.id,
       title: task.title,
-      description: task.description,
+      description: task.description ?? undefined,
       type: task.type,
       userId,
       projectId: task.input?.projectId as string | undefined,

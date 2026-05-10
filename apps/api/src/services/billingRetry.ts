@@ -33,12 +33,12 @@ export async function initBillingRetryQueue(): Promise<void> {
   try {
     await redis.xgroup('CREATE', BILLING_STREAM_KEY, BILLING_GROUP_NAME, '$', 'MKSTREAM')
     logger.info('[BillingRetry] Consumer group created')
-  } catch (error: any) {
-    if (error.message?.includes('BUSYGROUP')) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('BUSYGROUP')) {
       logger.info('[BillingRetry] Consumer group already exists')
-    } else {
-      throw error
+      return
     }
+    throw error
   }
 }
 

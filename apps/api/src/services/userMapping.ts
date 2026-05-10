@@ -2,6 +2,7 @@
 import { userDb } from '../utils/database.js'
 import logger from '../utils/logger.js'
 import type { User } from '../types/index.js'
+import type { UserUpdateInput } from '../db/types.js'
 
 export interface ExternalUser {
   externalId: string
@@ -23,7 +24,7 @@ export async function resolveLocalUser(externalUser: ExternalUser): Promise<User
   let user = await userDb.findByExternalId(externalId)
   if (user) {
     // 同步更新可能变化的字段
-    const updates: Partial<User> = {}
+    const updates: UserUpdateInput = {}
     if (username && username !== user.username) updates.username = username
     if (email && email !== user.email) updates.email = email
     if (phone && phone !== user.phone) updates.phone = phone
