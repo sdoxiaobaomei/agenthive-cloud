@@ -149,6 +149,9 @@ import { FileEditTool } from './file/FileEditTool.js'
 import { GrepTool } from './search/GrepTool.js'
 import { BashTool } from './shell/BashTool.js'
 import { AgentTool } from './agent/AgentToolEnhanced.js'
+import { SupabaseTool } from './supabase/SupabaseTool.js'
+import { PreviewTool } from './preview/PreviewTool.js'
+import { TemplateTool } from './template/TemplateTool.js'
 import { FEATURE_FLAGS } from '../config/featureFlags.js'
 
 /**
@@ -177,6 +180,13 @@ export function registerStandardTools(
   
   // Agent 工具
   ;(registry as any).register(AgentTool)
+  
+  // Supabase 工具
+  ;(registry as any).register(SupabaseTool)
+  
+  // 预览/模板工具
+  ;(registry as any).register(PreviewTool)
+  ;(registry as any).register(TemplateTool)
   
   return registry
 }
