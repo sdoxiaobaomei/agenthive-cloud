@@ -340,7 +340,7 @@ END $$;
 
 - [ ] **类型检查通过**: `cd apps/api && npx tsc --noEmit` (Node.js) / `mvn compile` (Java)
 - [ ] **代码风格**: ESLint/Prettier 无错误
-- [ ] **文件质量预检通过**: `python scripts/ci-precheck.py` 通过（尾随空白、UTF-8 编码、文件末尾换行、YAML/JSON 语法、敏感文件、Migration 文件标记）
+- [ ] **文件质量预检通过**: `python scripts/ci-precheck.py` 通过（尾随空白/UTF-8 编码/文件末尾换行/YAML JSON 语法/敏感文件/Migration 标记；尾随空白可用 `python scripts/fix-trailing-whitespace.py` 自动修复）
 - [ ] **新功能有测试**: 单元测试覆盖核心逻辑
 - [ ] **现有测试全过**: `npm run test` / `mvn test`
 - [ ] **无安全漏洞**: 无硬编码 secret、无 SQL 注入、无 XSS

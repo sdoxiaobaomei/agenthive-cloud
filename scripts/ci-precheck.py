@@ -171,6 +171,8 @@ def check_trailing_whitespace(files: list[str]):
                 print(f"     L{lineno}: {content[:80]}{'...' if len(content) > 80 else ''}[TRAILING]")
             ok = False
     status("尾随空白", ok)
+    if not ok:
+        print("     💡 运行 python scripts/fix-trailing-whitespace.py 自动修复")
 
 
 def check_utf8_encoding(files: list[str]):
