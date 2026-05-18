@@ -431,7 +431,7 @@ export const chatService = {
     const payload = message.metadata?.taskPayload
     if (!payload) return
     logger.info('Task approved, triggering execution', { messageId: message.id, actions: payload.actions })
-    
+
     // Trigger actual task execution via the task queue
     const session = await this.getSession(message.sessionId)
     if (!session) {
@@ -626,10 +626,10 @@ export const chatService = {
       await client.query('COMMIT')
 
       const version = dbRowToVersion(result.rows[0])
-      
+
       // Fetch messages for the new version
       const { messages } = await this.getSessionMessages(sessionId, 1, 50, { versionId })
-      
+
       return { version, messages }
     } catch (error) {
       await client.query('ROLLBACK')
