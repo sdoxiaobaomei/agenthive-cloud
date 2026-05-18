@@ -90,10 +90,12 @@ describe('TaskExecution Service', () => {
       expect(result.status).toBe('completed')
       expect(result.progress).toBe(100)
       expect(result.completedAt).toBeDefined()
-      expect(result.result.code).toBe(200)
-      expect(result.result.data.content).toBe('Hello world')
+      expect(result.result).toBeDefined()
+      expect(result.result!.content).toBe('Hello world')
+      expect(result.result!.workspace).toBeDefined()
+      expect(result.result!.type).toBe('code_generation')
       expect(mockBroadcastTaskProgress).toHaveBeenCalledWith('task-001', 0, { status: 'running' })
-      expect(mockBroadcastTaskProgress).toHaveBeenCalledWith('task-001', 100, expect.any(Object))
+      expect(mockBroadcastTaskProgress).toHaveBeenCalledWith('task-001', 100, expect.objectContaining({ status: 'completed' }))
     })
 
     it('应创建工作区目录并保存结果文件', async () => {
@@ -163,8 +165,8 @@ describe('TaskExecution Service', () => {
       const result = await service.execute(task)
 
       expect(result.status).toBe('failed')
-      expect(result.result.code).toBe(500)
-      expect(result.result.message).toContain('LLM service unavailable')
+      expect(result.error).toBe('LLM execution failed')
+      expect(result.result).toBeUndefined()
       expect(mockBroadcastTaskProgress).toHaveBeenCalledWith(
         'task-001',
         expect.any(Number),

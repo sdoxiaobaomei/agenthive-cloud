@@ -238,6 +238,12 @@ export class TaskExecutionService {
       await mkdir(join(workspacePath, 'task-results'), { recursive: true })
       await writeFile(resultPath, fullContent, 'utf-8')
 
+      // 检查 LLM 是否返回了有效内容
+      if (!fullContent || fullContent.trim().length === 0) {
+        logger.warn('[TaskExecution] LLM returned empty content', { taskId: task.id })
+        return null
+      }
+
       return {
         content: fullContent,
         resultPath,
