@@ -320,6 +320,8 @@ export const chatService = {
     })
 
     await redis.setex(key('chat:task', sessionId), 86400, taskId)
+    await redis.setex(key('chat:task:intent', sessionId), 86400, intent)
+    await redis.setex(key('chat:task:tickets', sessionId), 86400, JSON.stringify(tickets.map(t => t.ticketId)))
 
     if (userId) {
       await redis.setex(key('chat:task:user', taskId), 86400, userId)
@@ -437,36 +439,37 @@ export const chatService = {
       return
     }
 
+    // Get original intent and ticketIds from Redis (stored during executeAgentTask)
+    const storedIntent = await redis.get(key('chat:task:intent', message.sessionId))
+    const intent = (storedIntent || 'chat') as ChatIntent
+    const rawTickets = await redis.get(key('chat:task:tickets', message.sessionId))
+    const ticketIds: string[] = rawTickets ? JSON.parse(rawTickets) : []
+    const workspacePath = getChatWorkspacePath(message.sessionId)
+
     // Execute each approved action
     for (const action of payload.actions) {
       if (action.type === 'run' || action.type === 'approve') {
         logger.info('Executing approved action', { actionId: action.id, label: action.label })
-        // Execute the approved action via task queue
-        const session = await this.getSession(message.sessionId)
-        if (session) {
-          const { enqueueTask } = await import('../services/taskQueue.js')
-          const taskId = generateId('task')
-          const workspacePath = getChatWorkspacePath(message.sessionId)
-          
-          await enqueueTask({
-            taskId,
-            sessionId: message.sessionId,
-            intent: 'modify_code',
-            content: action.prompt || action.label,
-            workspacePath,
-            ticketIds: [],
-            createdAt: Date.now(),
-            userId: session.userId,
-          })
-          
-          await redis.setex(
-            `chat:task:approved:${message.id}:${action.id}`,
-            86400,
-            JSON.stringify({ status: 'queued', taskId, startedAt: Date.now() })
-          )
-          
-          logger.info('Approved action enqueued for execution', { messageId: message.id, actionId: action.id, taskId })
-        }
+        const taskId = generateId('task')
+
+        await enqueueTask({
+          taskId,
+          sessionId: message.sessionId,
+          intent,
+          content: action.prompt || action.label,
+          workspacePath,
+          ticketIds,
+          createdAt: Date.now(),
+          userId: session.userId,
+        })
+
+        await redis.setex(
+          `chat:task:approved:${message.id}:${action.id}`,
+          86400,
+          JSON.stringify({ status: 'queued', taskId, startedAt: Date.now() })
+        )
+
+        logger.info('Approved action enqueued for execution', { messageId: message.id, actionId: action.id, taskId })
       }
     }
   },
