@@ -3,14 +3,6 @@ name: Build Gate
 on:
   pull_request:
     branches: [master, develop]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - 'package.json'
-      - 'tsconfig*.json'
-      - '.github/workflows/build-gate.yml'
   push:
     branches: [master, develop]
 
@@ -33,51 +25,136 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect code changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1 2>/dev/null || true
+            BASE="origin/${{ github.base_ref }}"
+          else
+            BASE="HEAD~1"
+          fi
+          if git diff --name-only "$BASE"..HEAD | grep -qE '^(apps/|packages/|pnpm-|package\.json|tsconfig)'; then
+            echo "code=true" >> $GITHUB_OUTPUT
+          else
+            echo "code=false" >> $GITHUB_OUTPUT
+            echo "📄 Docs-only change — skipping build & test"
+          fi
+
       - uses: pnpm/action-setup@v3
+        if: steps.changes.outputs.code == 'true'
         with:
           version: 9
+
       - uses: actions/setup-node@v4
+        if: steps.changes.outputs.code == 'true'
         with:
           node-version: 20
           cache: 'pnpm'
+
       - run: pnpm install --frozen-lockfile
+        if: steps.changes.outputs.code == 'true'
+
       - run: pnpm -r build
+        if: steps.changes.outputs.code == 'true'
+
       - run: pnpm run build
+        if: steps.changes.outputs.code == 'true'
         working-directory: apps/api
       - run: pnpm run migrate:up
         working-directory: apps/api
       - run: pnpm run test --run
+        if: steps.changes.outputs.code == 'true'
         working-directory: apps/api
 
   build-landing:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect code changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1 2>/dev/null || true
+            BASE="origin/${{ github.base_ref }}"
+          else
+            BASE="HEAD~1"
+          fi
+          if git diff --name-only "$BASE"..HEAD | grep -qE '^(apps/|packages/|pnpm-|package\.json|tsconfig)'; then
+            echo "code=true" >> $GITHUB_OUTPUT
+          else
+            echo "code=false" >> $GITHUB_OUTPUT
+            echo "📄 Docs-only change — skipping build"
+          fi
+
       - uses: pnpm/action-setup@v3
+        if: steps.changes.outputs.code == 'true'
         with:
           version: 9
+
       - uses: actions/setup-node@v4
+        if: steps.changes.outputs.code == 'true'
         with:
           node-version: 20
           cache: 'pnpm'
+
       - run: pnpm install --frozen-lockfile
+        if: steps.changes.outputs.code == 'true'
+
       - run: pnpm run build
+        if: steps.changes.outputs.code == 'true'
         working-directory: apps/landing
 
   build-agent-runtime:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect code changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1 2>/dev/null || true
+            BASE="origin/${{ github.base_ref }}"
+          else
+            BASE="HEAD~1"
+          fi
+          if git diff --name-only "$BASE"..HEAD | grep -qE '^(apps/|packages/|pnpm-|package\.json|tsconfig)'; then
+            echo "code=true" >> $GITHUB_OUTPUT
+          else
+            echo "code=false" >> $GITHUB_OUTPUT
+            echo "📄 Docs-only change — skipping build & test"
+          fi
+
       - uses: pnpm/action-setup@v3
+        if: steps.changes.outputs.code == 'true'
         with:
           version: 9
+
       - uses: actions/setup-node@v4
+        if: steps.changes.outputs.code == 'true'
         with:
           node-version: 20
           cache: 'pnpm'
+
       - run: pnpm install --frozen-lockfile
+        if: steps.changes.outputs.code == 'true'
+
       - run: pnpm -r build
+        if: steps.changes.outputs.code == 'true'
+
       - run: pnpm run build
+        if: steps.changes.outputs.code == 'true'
         working-directory: apps/agent-runtime
+
       - run: pnpm run test --run
+        if: steps.changes.outputs.code == 'true'
         working-directory: apps/agent-runtime
