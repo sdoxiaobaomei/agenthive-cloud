@@ -8,9 +8,9 @@ description: >
 
 # AgentHive Cloud — Agent 协作规范 v1.0
 
-> **生效日期**: 2026-05-06  
-> **适用范围**: 所有接入 AgentHive Cloud 项目的 AI Agent（Coding Agent、DevOps Agent、QA Agent、Platform Agent）  
-> **状态**: 强制执行  
+> **生效日期**: 2026-05-06
+> **适用范围**: 所有接入 AgentHive Cloud 项目的 AI Agent（Coding Agent、DevOps Agent、QA Agent、Platform Agent）
+> **状态**: 强制执行
 > **版本策略**: 每次重大架构变更或累计 5 条以上新教训时更新
 
 ---
@@ -654,6 +654,6 @@ kubectl rollout undo deployment/api -n agenthive
 
 ---
 
-> **最后更新**: 2026-05-06  
-> **维护者**: AgentHive Platform Team  
+> **最后更新**: 2026-05-06
+> **维护者**: AgentHive Platform Team
 > **变更记录**: 见 Git commit `7376b01` 及后续
