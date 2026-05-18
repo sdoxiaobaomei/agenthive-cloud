@@ -85,8 +85,8 @@ export const userDb = {
 
   create: async (data: UserCreateInput): Promise<User> => {
     const result = await pool.query(
-      `INSERT INTO users (username, phone, email, role, password_hash, status) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
+      `INSERT INTO users (username, phone, email, role, password_hash, status)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
       [
         data.username || `user_${Math.random().toString(36).substring(2, 8)}`,
@@ -102,13 +102,13 @@ export const userDb = {
 
   update: async (id: string, data: UserUpdateInput): Promise<User | undefined> => {
     const result = await pool.query(
-      `UPDATE users 
+      `UPDATE users
        SET username = COALESCE($1, username),
            phone = COALESCE($2, phone),
            email = COALESCE($3, email),
            role = COALESCE($4, role),
            status = COALESCE($5, status)
-       WHERE id = $6 
+       WHERE id = $6
        RETURNING *`,
       [data.username, data.phone, data.email, data.role, data.status, id]
     )
@@ -139,8 +139,8 @@ export const agentDb = {
 
   create: async (data: AgentCreateInput): Promise<Agent> => {
     const result = await pool.query(
-      `INSERT INTO agents (name, role, status, description, config, owner_id, project_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      `INSERT INTO agents (name, role, status, description, config, owner_id, project_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       [
         data.name || 'New Agent',
@@ -157,14 +157,14 @@ export const agentDb = {
 
   update: async (id: string, data: AgentUpdateInput): Promise<Agent | undefined> => {
     const result = await pool.query(
-      `UPDATE agents 
+      `UPDATE agents
        SET name = COALESCE($1, name),
            role = COALESCE($2, role),
            status = COALESCE($3, status),
            description = COALESCE($4, description),
            config = COALESCE($5, config),
            owner_id = COALESCE($6, owner_id)
-       WHERE id = $7 
+       WHERE id = $7
        RETURNING *`,
       [
         data.name,
@@ -235,8 +235,8 @@ export const taskDb = {
 
   create: async (data: TaskCreateInput): Promise<MappedTask> => {
     const result = await pool.query(
-      `INSERT INTO tasks (title, description, type, status, priority, progress, assigned_to, user_id, project_id, input, output) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+      `INSERT INTO tasks (title, description, type, status, priority, progress, assigned_to, user_id, project_id, input, output)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         data.title || 'New Task',
@@ -257,7 +257,7 @@ export const taskDb = {
 
   update: async (id: string, data: TaskUpdateInput): Promise<MappedTask | undefined> => {
     const result = await pool.query(
-      `UPDATE tasks 
+      `UPDATE tasks
        SET title = COALESCE($1, title),
            description = COALESCE($2, description),
            type = COALESCE($3, type),
@@ -268,7 +268,7 @@ export const taskDb = {
            input = COALESCE($8, input),
            output = COALESCE($9, output),
            completed_at = CASE WHEN $4 = 'completed' THEN CURRENT_TIMESTAMP ELSE completed_at END
-       WHERE id = $10 
+       WHERE id = $10
        RETURNING *`,
       [
         data.title,
@@ -497,9 +497,9 @@ export const agentTaskDb = {
 export const logDb = {
   getLogs: async (agentId: string, limit: number = 100): Promise<string[]> => {
     const result = await pool.query(
-      `SELECT message FROM agent_logs 
-       WHERE agent_id = $1 
-       ORDER BY created_at DESC 
+      `SELECT message FROM agent_logs
+       WHERE agent_id = $1
+       ORDER BY created_at DESC
        LIMIT $2`,
       [agentId, limit]
     )
