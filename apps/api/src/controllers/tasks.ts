@@ -133,10 +133,10 @@ export const executeTask = async (req: Request, res: Response) => {
     const taskInfo: TaskInfo = {
       id: task.id,
       title: task.title,
-      description: task.description,
+      description: task.description ?? undefined,
       type: task.type,
       userId: task.assigned_to || 'anonymous',
-      projectId: task.input?.projectId as string,
+      projectId: task.input?.projectId as string | undefined,
       status: 'pending',
       progress: 0,
       createdAt: new Date(task.created_at),

@@ -4,7 +4,7 @@
 -- Ticket: TICKET-001
 -- Description: 初始化所有核心表结构
 
--- up migration
+-- ${node-pg-migrate}-up
 
 -- 创建扩展
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -306,7 +306,7 @@ BEGIN
     END LOOP;
 END $$;
 
--- down migration
+-- ${node-pg-migrate}-down
 
 -- 完整回滚（按依赖逆序�?
 DROP TRIGGER IF EXISTS update_agent_members_updated_at ON agent_members;

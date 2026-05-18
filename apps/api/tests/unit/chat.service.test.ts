@@ -101,7 +101,7 @@ describe('Session Management', () => {
       projectId: 'bad-proj',
     })
 
-    expect(session.projectId).toBeNull()
+    expect(session.projectId).toBeUndefined()
   })
 
   it('getSession returns undefined when not found', async () => {

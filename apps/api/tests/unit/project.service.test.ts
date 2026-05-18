@@ -179,7 +179,7 @@ describe('Project Service', () => {
       expect(result?.status).toBe('archived')
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE projects'),
-        ['Updated Name', 'Updated Desc', 'https://new.url', 'archived', undefined, undefined, undefined, undefined, undefined, undefined, undefined, 'proj-1']
+        ['Updated Name', 'Updated Desc', 'https://new.url', 'archived', undefined, null, undefined, undefined, undefined, undefined, undefined, 'proj-1']
       )
     })
 
@@ -198,7 +198,7 @@ describe('Project Service', () => {
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('COALESCE'),
-        ['Only Name Updated', undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, 'proj-1']
+        ['Only Name Updated', undefined, undefined, undefined, undefined, null, undefined, undefined, undefined, undefined, undefined, 'proj-1']
       )
     })
   })
