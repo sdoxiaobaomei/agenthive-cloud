@@ -3,7 +3,7 @@
 -- Description: hosting-service.ts references access_url, config_json, updated_at
 --   and uses ON CONFLICT (project_id), but init migration never created these.
 
--- up migration
+-- ${node-pg-migrate}-up
 
 -- Add missing columns
 ALTER TABLE project_deployments ADD COLUMN IF NOT EXISTS access_url VARCHAR(500);
@@ -22,7 +22,7 @@ BEGIN
     END IF;
 END $$;
 
--- down migration
+-- ${node-pg-migrate}-down
 
 ALTER TABLE project_deployments DROP CONSTRAINT IF EXISTS uq_project_deployments_project_id;
 ALTER TABLE project_deployments DROP COLUMN IF EXISTS updated_at;
