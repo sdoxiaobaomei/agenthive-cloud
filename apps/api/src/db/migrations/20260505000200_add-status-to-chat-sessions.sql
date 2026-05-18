@@ -4,7 +4,7 @@
 --   chat_sessions.status for list/filter/archive operations, but the init
 --   migration never created this column.
 
--- up migration
+-- ${node-pg-migrate}-up
 
 ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active'
   CHECK (status IN ('active', 'archived', 'deleted'));
@@ -12,6 +12,6 @@ ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'a
 -- Backfill existing rows
 UPDATE chat_sessions SET status = 'active' WHERE status IS NULL;
 
--- down migration
+-- ${node-pg-migrate}-down
 
 ALTER TABLE chat_sessions DROP COLUMN IF EXISTS status;

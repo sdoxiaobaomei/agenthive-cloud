@@ -20,6 +20,7 @@ const mockAddMessage = vi.fn()
 const mockClassifyIntent = vi.fn()
 const mockExecuteAgentTask = vi.fn()
 const mockGenerateReply = vi.fn()
+const mockUpdateMessage = vi.fn()
 
 vi.mock('../../src/chat-controller/service.js', () => ({
   chatService: {
@@ -34,6 +35,7 @@ vi.mock('../../src/chat-controller/service.js', () => ({
     createVersion: (...args: any[]) => mockCreateVersion(...args),
     switchVersion: (...args: any[]) => mockSwitchVersion(...args),
     listVersions: (...args: any[]) => mockListVersions(...args),
+    updateMessage: (...args: any[]) => mockUpdateMessage(...args),
   },
 }))
 
@@ -80,6 +82,7 @@ beforeEach(() => {
   mockClassifyIntent.mockReset()
   mockExecuteAgentTask.mockReset()
   mockGenerateReply.mockReset()
+  mockUpdateMessage.mockReset()
 })
 
 // ========== createSession ==========
@@ -103,40 +106,41 @@ describe('createSession', () => {
 describe('sendMessage', () => {
   it('returns 404 when session not found', async () => {
     mockGetSession.mockResolvedValue(undefined)
-    const req = mockReq({ params: { id: 'sess-1' }, body: { content: 'hi' } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001' }, body: { content: 'hi' } })
     const res = mockRes()
     await sendMessage(req, res)
     expect(res.status).toHaveBeenCalledWith(404)
   })
 
   it('returns 401 without userId', async () => {
-    const req = mockReq({ params: { id: 'sess-1' }, body: { content: 'hi' }, userId: undefined })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001' }, body: { content: 'hi' }, userId: undefined })
     const res = mockRes()
     await sendMessage(req, res)
     expect(res.status).toHaveBeenCalledWith(401)
   })
 
   it('handles recommend messageType without agent task', async () => {
-    mockGetSession.mockResolvedValue({ id: 'sess-1', currentVersionId: 'v-1' })
+    mockGetSession.mockResolvedValue({ id: '00000000-0000-0000-0000-000000000001', currentVersionId: 'v-1' })
     mockAddMessage.mockResolvedValue({ id: 'm-rec', messageType: 'recommend' })
 
-    const req = mockReq({ params: { id: 'sess-1' }, body: { content: 'choose', messageType: 'recommend', metadata: { recommendOptions: [{ id: '1', label: 'A', prompt: 'do A' }] } } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001' }, body: { content: 'choose', messageType: 'recommend', metadata: { recommendOptions: [{ id: '1', label: 'A', prompt: 'do A' }] } } })
     const res = mockRes()
     await sendMessage(req, res)
 
-    expect(mockAddMessage).toHaveBeenCalledWith('sess-1', 'user', 'choose', expect.objectContaining({ messageType: 'recommend', versionId: 'v-1' }))
-    expect(mockAddMessage).toHaveBeenCalledWith('sess-1', 'assistant', '', expect.objectContaining({ messageType: 'recommend', isVisibleInHistory: false }))
+    expect(mockAddMessage).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', 'user', 'choose', expect.objectContaining({ messageType: 'recommend', versionId: 'v-1' }))
+    expect(mockAddMessage).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', 'assistant', '', expect.objectContaining({ messageType: 'recommend', isVisibleInHistory: false }))
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 200 }))
   })
 
   it('triggers agent task for non-chat intent', async () => {
-    mockGetSession.mockResolvedValue({ id: 'sess-1', currentVersionId: undefined })
+    mockGetSession.mockResolvedValue({ id: '00000000-0000-0000-0000-000000000001', currentVersionId: undefined })
     mockAddMessage.mockResolvedValue({ id: 'm-1' })
     mockClassifyIntent.mockResolvedValue({ intent: 'create_project' })
     mockExecuteAgentTask.mockResolvedValue([{ ticketId: 'T-1', workerRole: 'backend', status: 'pending' }])
-    mockGenerateReply.mockResolvedValue('Creating project...')
+    mockGenerateReply.mockResolvedValue({ content: 'Creating project...', thinkSummary: 'Need to create a project', thinkContent: 'The user wants to create a new project' })
+    mockUpdateMessage.mockResolvedValue({ id: 'm-think', content: '分析完成', metadata: { intent: 'create_project' } })
 
-    const req = mockReq({ params: { id: 'sess-1' }, body: { content: 'create a project' } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001' }, body: { content: 'create a project' } })
     const res = mockRes()
     await sendMessage(req, res)
 
@@ -149,13 +153,13 @@ describe('sendMessage', () => {
   })
 
   it('returns 402 when credits insufficient', async () => {
-    mockGetSession.mockResolvedValue({ id: 'sess-1' })
+    mockGetSession.mockResolvedValue({ id: '00000000-0000-0000-0000-000000000001' })
     mockAddMessage.mockResolvedValue({ id: 'm-1' })
     mockClassifyIntent.mockResolvedValue({ intent: 'create_project' })
     const { checkBalance } = await import('../../src/services/credits.js')
     vi.mocked(checkBalance).mockResolvedValueOnce({ sufficient: false, balance: 0, estimatedCost: 50 })
 
-    const req = mockReq({ params: { id: 'sess-1' }, body: { content: 'create a project' } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001' }, body: { content: 'create a project' } })
     const res = mockRes()
     await sendMessage(req, res)
 
@@ -167,18 +171,18 @@ describe('sendMessage', () => {
 describe('approveTask', () => {
   it('approves a task successfully', async () => {
     mockApproveTask.mockResolvedValue({ id: 'm-1', metadata: { approvalStatus: 'approved' } })
-    mockGetSession.mockResolvedValue({ id: 'sess-1', userId: 'test-user' })
-    const req = mockReq({ params: { id: 'sess-1', messageId: 'm-1' }, body: { action: 'approve', reason: 'go ahead' } })
+    mockGetSession.mockResolvedValue({ id: '00000000-0000-0000-0000-000000000001', userId: 'test-user' })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001', messageId: 'm-1' }, body: { action: 'approve', reason: 'go ahead' } })
     const res = mockRes()
     await approveTask(req, res)
 
-    expect(mockGetSession).toHaveBeenCalledWith('sess-1')
-    expect(mockApproveTask).toHaveBeenCalledWith('m-1', 'sess-1', 'approve', 'go ahead')
+    expect(mockGetSession).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001')
+    expect(mockApproveTask).toHaveBeenCalledWith('m-1', '00000000-0000-0000-0000-000000000001', 'approve', 'go ahead')
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 200 }))
   })
 
   it('returns 401 without userId', async () => {
-    const req = mockReq({ params: { id: 'sess-1', messageId: 'm-1' }, body: { action: 'approve' }, userId: undefined })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001', messageId: 'm-1' }, body: { action: 'approve' }, userId: undefined })
     const res = mockRes()
     await approveTask(req, res)
     expect(res.status).toHaveBeenCalledWith(401)
@@ -186,7 +190,7 @@ describe('approveTask', () => {
 
   it('returns 404 when session not found', async () => {
     mockGetSession.mockResolvedValue(undefined)
-    const req = mockReq({ params: { id: 'sess-1', messageId: 'm-1' }, body: { action: 'approve' } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001', messageId: 'm-1' }, body: { action: 'approve' } })
     const res = mockRes()
     await approveTask(req, res)
     expect(res.status).toHaveBeenCalledWith(404)
@@ -197,19 +201,19 @@ describe('approveTask', () => {
 describe('selectRecommend', () => {
   it('selects an option', async () => {
     mockSelectRecommend.mockResolvedValue({ id: 'm-rec', metadata: { selectedOptionId: 'opt-1' } })
-    mockGetSession.mockResolvedValue({ id: 'sess-1', userId: 'test-user' })
-    const req = mockReq({ params: { id: 'sess-1', messageId: 'm-rec' }, body: { optionId: 'opt-1' } })
+    mockGetSession.mockResolvedValue({ id: '00000000-0000-0000-0000-000000000001', userId: 'test-user' })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001', messageId: 'm-rec' }, body: { optionId: 'opt-1' } })
     const res = mockRes()
     await selectRecommend(req, res)
 
-    expect(mockGetSession).toHaveBeenCalledWith('sess-1')
-    expect(mockSelectRecommend).toHaveBeenCalledWith('m-rec', 'sess-1', 'opt-1')
+    expect(mockGetSession).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001')
+    expect(mockSelectRecommend).toHaveBeenCalledWith('m-rec', '00000000-0000-0000-0000-000000000001', 'opt-1')
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 200 }))
   })
 
   it('returns 404 when session not found', async () => {
     mockGetSession.mockResolvedValue(undefined)
-    const req = mockReq({ params: { id: 'sess-1', messageId: 'm-rec' }, body: { optionId: 'opt-1' } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001', messageId: 'm-rec' }, body: { optionId: 'opt-1' } })
     const res = mockRes()
     await selectRecommend(req, res)
     expect(res.status).toHaveBeenCalledWith(404)
@@ -220,19 +224,19 @@ describe('selectRecommend', () => {
 describe('dismissRecommend', () => {
   it('marks recommend as invisible through service layer', async () => {
     mockDismissRecommend.mockResolvedValue(true)
-    mockGetSession.mockResolvedValue({ id: 'sess-1', userId: 'test-user' })
-    const req = mockReq({ params: { id: 'sess-1', messageId: 'm-rec' } })
+    mockGetSession.mockResolvedValue({ id: '00000000-0000-0000-0000-000000000001', userId: 'test-user' })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001', messageId: 'm-rec' } })
     const res = mockRes()
     await dismissRecommend(req, res)
 
-    expect(mockGetSession).toHaveBeenCalledWith('sess-1')
-    expect(mockDismissRecommend).toHaveBeenCalledWith('m-rec', 'sess-1')
+    expect(mockGetSession).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001')
+    expect(mockDismissRecommend).toHaveBeenCalledWith('m-rec', '00000000-0000-0000-0000-000000000001')
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 200 }))
   })
 
   it('returns 404 when session not found', async () => {
     mockGetSession.mockResolvedValue(undefined)
-    const req = mockReq({ params: { id: 'sess-1', messageId: 'm-rec' } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001', messageId: 'm-rec' } })
     const res = mockRes()
     await dismissRecommend(req, res)
     expect(res.status).toHaveBeenCalledWith(404)
@@ -243,11 +247,11 @@ describe('dismissRecommend', () => {
 describe('Version Management', () => {
   it('listVersions returns versions array', async () => {
     mockListVersions.mockResolvedValue([{ id: 'v-1', versionNumber: 1 }])
-    const req = mockReq({ params: { id: 'sess-1' } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001' } })
     const res = mockRes()
     await listVersions(req, res)
 
-    expect(mockListVersions).toHaveBeenCalledWith('sess-1')
+    expect(mockListVersions).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001')
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
       code: 200,
       data: expect.objectContaining({ versions: expect.any(Array) }),
@@ -255,7 +259,7 @@ describe('Version Management', () => {
   })
 
   it('createVersion validates input', async () => {
-    const req = mockReq({ params: { id: 'sess-1' }, body: { title: '' } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001' }, body: { title: '' } })
     const res = mockRes()
     await createVersion(req, res)
     expect(res.status).toHaveBeenCalledWith(400)
@@ -263,11 +267,11 @@ describe('Version Management', () => {
 
   it('createVersion succeeds with valid input', async () => {
     mockCreateVersion.mockResolvedValue({ id: 'v-2', versionNumber: 2, title: 'feat-1' })
-    const req = mockReq({ params: { id: 'sess-1' }, body: { title: 'feat-1' } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001' }, body: { title: 'feat-1' } })
     const res = mockRes()
     await createVersion(req, res)
 
-    expect(mockCreateVersion).toHaveBeenCalledWith('sess-1', { title: 'feat-1' }, 'test-user')
+    expect(mockCreateVersion).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', { title: 'feat-1' }, 'test-user')
     expect(res.status).toHaveBeenCalledWith(201)
   })
 
@@ -276,11 +280,11 @@ describe('Version Management', () => {
       version: { id: 'v-3', isActive: true },
       messages: [{ id: 'm-1', content: 'hi' }],
     })
-    const req = mockReq({ params: { id: 'sess-1', versionId: 'v-3' } })
+    const req = mockReq({ params: { id: '00000000-0000-0000-0000-000000000001', versionId: 'v-3' } })
     const res = mockRes()
     await switchVersion(req, res)
 
-    expect(mockSwitchVersion).toHaveBeenCalledWith('sess-1', 'v-3')
+    expect(mockSwitchVersion).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001', 'v-3')
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
       code: 200,
       data: expect.objectContaining({

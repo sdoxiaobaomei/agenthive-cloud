@@ -3,14 +3,6 @@ name: Agent Compliance Gate
 on:
   pull_request:
     branches: [master, develop]
-    paths:
-      - 'apps/**'
-      - 'packages/**'
-      - 'AGENTS/**'
-      - 'k8s/**'
-      - 'chart/**'
-      - 'iac/**'
-      - '.github/workflows/**'
   push:
     branches: [master, develop]
 
@@ -22,7 +14,24 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect code changes
+        id: changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch origin "${{ github.base_ref }}" --depth=1 2>/dev/null || true
+            BASE="origin/${{ github.base_ref }}"
+          else
+            BASE="HEAD~1"
+          fi
+          if git diff --name-only "$BASE"..HEAD | grep -qE '^(apps/|packages/|AGENTS/|k8s/|chart/|iac/)'; then
+            echo "code=true" >> $GITHUB_OUTPUT
+          else
+            echo "code=false" >> $GITHUB_OUTPUT
+            echo "Docs-only change - skipping compliance checks"
+          fi
+
       - name: "Check ADR-1: Gateway JWT Only"
+        if: steps.changes.outputs.code == 'true'
         run: |
           # ADR-1: 只有 Gateway 层解析 JWT，下游服务只认 X-User-Id header
           # 白名单: gateway-service(网关), auth-service(认证中心), test文件, logger工具
@@ -41,6 +50,7 @@ jobs:
           echo "✅ ADR-1: Gateway JWT Only"
 
       - name: "Check ADR-4: Agent Async Only"
+        if: steps.changes.outputs.code == 'true'
         run: |
           # ADR-4: Agent 任务编排必须异步化（Redis Streams），禁止直接 spawn worker
           # 白名单: tools/(工具层允许), mcp/(MCP客户端允许), agent/isolation/(隔离工具允许)
@@ -66,6 +76,7 @@ jobs:
           echo "✅ ADR-4: Agent Async Only"
 
       - name: "Check ADR-5: OTel Required"
+        if: steps.changes.outputs.code == 'true'
         run: |
           # ADR-5: 运行中的后端服务必须接入 OTel
           FAIL=0
@@ -81,6 +92,7 @@ jobs:
           echo "✅ ADR-5: OTel Required"
 
       - name: Check Hardcoded Secrets
+        if: steps.changes.outputs.code == 'true'
         run: |
           VIOLATIONS=$(
             grep -rniE "(password|secret|api[_-]?key)\s*=\s*['\"][^'\"]{8,}['\"]" \
@@ -96,8 +108,9 @@ jobs:
           echo "✅ No hardcoded secrets"
 
       - name: Check Commit Message Format
+        if: steps.changes.outputs.code == 'true'
         run: |
-          git fetch origin ${{ github.base_ref }} --depth=1 2>/dev/null || true
+          git fetch origin ${{ github.base_ref }} --depth=100 2>/dev/null || true
           BASE_REF="origin/${{ github.base_ref }}"
           if [ "${{ github.event_name }}" = "push" ]; then
             BASE_REF="HEAD~1"
