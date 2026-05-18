@@ -97,7 +97,7 @@ jobs:
 
       - name: Check Commit Message Format
         run: |
-          git fetch origin ${{ github.base_ref }} --depth=1 2>/dev/null || true
+          git fetch origin ${{ github.base_ref }} --depth=100 2>/dev/null || true
           BASE_REF="origin/${{ github.base_ref }}"
           if [ "${{ github.event_name }}" = "push" ]; then
             BASE_REF="HEAD~1"
