@@ -30,11 +30,13 @@ if sys.platform == "win32":
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MIGRATIONS_DIR = os.path.join(PROJECT_ROOT, "apps", "api", "src", "db", "migrations")
 MIGRATION_NAME_RE = re.compile(r"^\d{14}_[a-z0-9-]+\.sql$")
-MIGRATION_DOWN_MARKER = "${node-pg-migrate}-down"
+MIGRATION_DOWN_MARKER_RE = re.compile(r'^--\s*\$\{node-pg-migrate\}-down', re.MULTILINE)
 
-# 敏感文件名模式（不含 .env.template / .env.example / .env.docker 等模板）
+# 敏感文件名模式（.env 及 .env.*，模板文件加入白名单排除）
+SENSITIVE_WHITELIST = {".env.example", ".env.template", ".env.docker"}
 SENSITIVE_PATTERNS = [
-    re.compile(r"\.env$"),          # .env (不含扩展名的模板)
+    re.compile(r"\.env$"),          # .env
+    re.compile(r"\.env\."),         # .env.local / .env.production 等
     re.compile(r"\.key$"),
     re.compile(r"\.pem$"),
     re.compile(r"\.p12$"),
@@ -260,6 +262,8 @@ def check_sensitive_files(files: list[str]):
     ok = True
     for filepath in files:
         basename = os.path.basename(filepath)
+        if basename in SENSITIVE_WHITELIST:
+            continue
         for pattern in SENSITIVE_PATTERNS:
             if pattern.search(basename):
                 rel_path = os.path.relpath(filepath, PROJECT_ROOT)
@@ -305,7 +309,7 @@ def check_migration_files():
             print(f"  ❌ 无法读取: {filename}")
             down_ok = False
             continue
-        if MIGRATION_DOWN_MARKER not in content:
+        if not MIGRATION_DOWN_MARKER_RE.search(content):
             print(f"  ❌ 缺少 down 标记: {filename}")
             print(f"     需要: -- ${{node-pg-migrate}}-down")
             down_ok = False
@@ -335,10 +339,6 @@ def main():
     parser.add_argument(
         "--all", action="store_true",
         help="检查所有文件，不限于变更"
-    )
-    parser.add_argument(
-        "--changed", action="store_true", default=True,
-        help="仅检查变更文件 (默认)"
     )
     parser.add_argument(
         "--migrations-only", action="store_true",
