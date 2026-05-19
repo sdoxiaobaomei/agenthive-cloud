@@ -67,6 +67,10 @@ jobs:
         if: steps.changes.outputs.code == 'true'
         working-directory: apps/api
 
+      - run: pnpm run migrate:up
+        if: steps.changes.outputs.code == 'true'
+        working-directory: apps/api
+
       - run: pnpm run test --run
         if: steps.changes.outputs.code == 'true'
         working-directory: apps/api
