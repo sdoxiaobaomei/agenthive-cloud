@@ -23,6 +23,8 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+    env:
+      DATABASE_URL: postgresql://agenthive:dev@localhost:5432/agenthive
     steps:
       - uses: actions/checkout@v4
         with:
