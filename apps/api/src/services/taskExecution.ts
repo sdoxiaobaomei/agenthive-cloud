@@ -166,7 +166,7 @@ export class TaskExecutionService {
       })
 
       logger.error('[TaskExecution] Task failed', error as Error, { taskId: task.id })
-      
+
       return task
 
     } finally {
@@ -177,21 +177,21 @@ export class TaskExecutionService {
 
   // 使用 LLM 执行任务
   private async executeWithLLM(
-    task: TaskInfo, 
+    task: TaskInfo,
     workspacePath: string,
     signal: AbortSignal
   ): Promise<TaskResultData | null> {
-    
+
     try {
       // 获取 LLM 服务
       const llmService = getLLMService()
-      
+
       // 构建系统提示词
       const systemPrompt = this.getSystemPrompt(task.type, workspacePath)
-      
+
       // 构建用户提示词
       const userPrompt = this.buildUserPrompt(task, workspacePath)
-      
+
       // 构建消息
       const messages = [
         { role: 'system' as const, content: systemPrompt },
@@ -205,27 +205,27 @@ export class TaskExecutionService {
       // 流式调用 LLM
       let fullContent = ''
       let usage: LLMUsage | undefined = undefined
-      
+
       for await (const chunk of llmService.stream(messages)) {
         // 检查是否被取消
         if (signal.aborted) {
           throw new Error('Task cancelled')
         }
-        
+
         if (chunk.content) {
           fullContent += chunk.content
         }
-        
+
         if (chunk.usage) {
           usage = chunk.usage
         }
-        
+
         // 更新进度（模拟）
         if (task.progress < 80) {
           task.progress += 5
-          broadcast.taskProgress(task.id, task.progress, { 
+          broadcast.taskProgress(task.id, task.progress, {
             step: 'generating',
-            contentLength: fullContent.length 
+            contentLength: fullContent.length
           })
         }
       }
@@ -330,18 +330,18 @@ Use clear, concise language and proper formatting.`,
   // 构建用户提示词
   private buildUserPrompt(task: TaskInfo, workspacePath: string): string {
     let prompt = `Task: ${task.title}\n\n`
-    
+
     if (task.description) {
       prompt += `Description: ${task.description}\n\n`
     }
-    
+
     prompt += `Task Type: ${task.type}\n`
     prompt += `Workspace: ${workspacePath}\n`
-    
+
     if (task.input && Object.keys(task.input).length > 0) {
       prompt += `\nAdditional Input:\n${JSON.stringify(task.input, null, 2)}\n`
     }
-    
+
     return prompt
   }
 

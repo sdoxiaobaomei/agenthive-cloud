@@ -53,9 +53,9 @@ export interface User {
 }
 
 // Agent 角色类型
-export type AgentRole = 
-  | 'director' 
-  | 'scrum_master' 
+export type AgentRole =
+  | 'director'
+  | 'scrum_master'
   | 'tech_lead'
   | 'backend_dev'
   | 'frontend_dev'
@@ -64,7 +64,7 @@ export type AgentRole =
   | 'custom'
 
 // Agent 状态类型
-export type AgentStatus = 
+export type AgentStatus =
   | 'idle'
   | 'starting'
   | 'working'
@@ -98,19 +98,19 @@ export interface Agent {
 }
 
 // 任务状态类型
-export type TaskStatus = 
-  | 'pending' 
-  | 'assigned' 
-  | 'running' 
-  | 'completed' 
-  | 'failed' 
+export type TaskStatus =
+  | 'pending'
+  | 'assigned'
+  | 'running'
+  | 'completed'
+  | 'failed'
   | 'cancelled'
 
 // 任务优先级类型
-export type TaskPriority = 
-  | 'low' 
-  | 'medium' 
-  | 'high' 
+export type TaskPriority =
+  | 'low'
+  | 'medium'
+  | 'high'
   | 'critical'
 
 // 任务类型
