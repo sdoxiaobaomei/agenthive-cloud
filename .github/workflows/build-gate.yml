@@ -25,6 +25,11 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://agenthive:dev@localhost:5432/agenthive
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_NAME: agenthive
+      DB_USER: agenthive
+      DB_PASSWORD: dev
     steps:
       - uses: actions/checkout@v4
         with:
@@ -67,7 +72,7 @@ jobs:
         if: steps.changes.outputs.code == 'true'
         working-directory: apps/api
 
-      - run: pnpm run migrate:up
+      - run: npx tsx scripts/setup-test-db.ts
         if: steps.changes.outputs.code == 'true'
         working-directory: apps/api
 
