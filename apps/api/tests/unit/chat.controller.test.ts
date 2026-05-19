@@ -50,12 +50,13 @@ import {
   switchVersion,
 } from '../../src/chat-controller/controller.js'
 
+// 测试用的 mock 请求对象，兼容 AuthenticatedRequest 类型
 function mockReq(options: { body?: any; params?: any; query?: any; userId?: string } = {}) {
   return {
     body: options.body || {},
     params: options.params || {},
     query: options.query || {},
-    userId: 'userId' in options ? options.userId : 'test-user',
+    get userId() { return ('userId' in options) ? options.userId : 'test-user' },
   } as any
 }
 

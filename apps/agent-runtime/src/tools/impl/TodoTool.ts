@@ -1,6 +1,6 @@
 /**
  * Todo Tool - inspired by Claude Code
- * 
+ *
  * Allows agents to track tasks and progress within a conversation.
  * Useful for:
  * - Breaking down complex tasks into subtasks
@@ -30,6 +30,65 @@ export interface TodoList {
   version: number
   lastUpdated: number
 }
+
+// ============================================================================
+// Input/Output types (derived from Zod schemas for type-safe handler functions)
+// ============================================================================
+
+const todoInputSchema = z.object({
+  operation: z.enum(['create', 'update', 'close', 'list', 'clear'])
+    .describe('Operation to perform on the todo list'),
+  // For create
+  content: z.string().optional()
+    .describe('Content/description of the todo (for create operation)'),
+  priority: z.enum(['low', 'medium', 'high']).optional()
+    .describe('Priority level (default: medium)'),
+  parentId: z.string().optional()
+    .describe('ID of parent todo for subtasks'),
+  tags: z.array(z.string()).optional()
+    .describe('Tags for categorization'),
+  // For update/close
+  id: z.string().optional()
+    .describe('Todo ID (for update/close operations)'),
+  status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional()
+    .describe('New status (for update operation)'),
+  // For list
+  filter: z.enum(['all', 'pending', 'in_progress', 'completed', 'cancelled']).optional()
+    .describe('Filter for list operation (default: all)'),
+  // For create multiple
+  todos: z.array(z.object({
+    content: z.string(),
+    priority: z.enum(['low', 'medium', 'high']).optional()
+  })).optional()
+    .describe('Create multiple todos at once')
+})
+
+const todoOutputSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  todos: z.array(z.object({
+    id: z.string(),
+    content: z.string(),
+    status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
+    priority: z.enum(['low', 'medium', 'high']),
+    createdAt: z.number(),
+    updatedAt: z.number(),
+    completedAt: z.number().optional(),
+    parentId: z.string().optional(),
+    subtasks: z.array(z.string()),
+    tags: z.array(z.string())
+  })).optional(),
+  summary: z.object({
+    total: z.number(),
+    pending: z.number(),
+    inProgress: z.number(),
+    completed: z.number(),
+    cancelled: z.number()
+  }).optional()
+})
+
+type TodoInput = z.infer<typeof todoInputSchema>
+type TodoOutput = z.infer<typeof todoOutputSchema>
 
 // In-memory storage (could be persisted to file/DB)
 const todoStores = new Map<string, TodoList>()
@@ -71,86 +130,33 @@ Use this tool to:
 
 The todo system helps maintain focus and provides visibility into your plan.
 Always update todos as you complete work or discover new tasks.`,
-  
-  inputSchema: z.object({
-    operation: z.enum(['create', 'update', 'close', 'list', 'clear'])
-      .describe('Operation to perform on the todo list'),
-    
-    // For create
-    content: z.string().optional()
-      .describe('Content/description of the todo (for create operation)'),
-    priority: z.enum(['low', 'medium', 'high']).optional()
-      .describe('Priority level (default: medium)'),
-    parentId: z.string().optional()
-      .describe('ID of parent todo for subtasks'),
-    tags: z.array(z.string()).optional()
-      .describe('Tags for categorization'),
-    
-    // For update/close
-    id: z.string().optional()
-      .describe('Todo ID (for update/close operations)'),
-    status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']).optional()
-      .describe('New status (for update operation)'),
-    
-    // For list
-    filter: z.enum(['all', 'pending', 'in_progress', 'completed', 'cancelled']).optional()
-      .describe('Filter for list operation (default: all)'),
-    
-    // For create multiple
-    todos: z.array(z.object({
-      content: z.string(),
-      priority: z.enum(['low', 'medium', 'high']).optional()
-    })).optional()
-      .describe('Create multiple todos at once')
-  }),
-  
-  outputSchema: z.object({
-    success: z.boolean(),
-    message: z.string(),
-    todos: z.array(z.object({
-      id: z.string(),
-      content: z.string(),
-      status: z.enum(['pending', 'in_progress', 'completed', 'cancelled']),
-      priority: z.enum(['low', 'medium', 'high']),
-      createdAt: z.number(),
-      updatedAt: z.number(),
-      completedAt: z.number().optional(),
-      parentId: z.string().optional(),
-      subtasks: z.array(z.string()),
-      tags: z.array(z.string())
-    })).optional(),
-    summary: z.object({
-      total: z.number(),
-      pending: z.number(),
-      inProgress: z.number(),
-      completed: z.number(),
-      cancelled: z.number()
-    }).optional()
-  }),
-  
+
+  inputSchema: todoInputSchema,
+  outputSchema: todoOutputSchema,
+
   async execute(input, context) {
     const agentId = context.agentId
     const todoList = getTodoStore(agentId)
     const logger = new Logger('TodoTool')
-    
+
     logger.debug(`Todo operation: ${input.operation}`, { agentId })
-    
+
     switch (input.operation) {
       case 'create':
         return handleCreate(input, todoList, agentId)
-        
+
       case 'update':
         return handleUpdate(input, todoList, agentId)
-        
+
       case 'close':
         return handleClose(input, todoList, agentId)
-        
+
       case 'list':
         return handleList(input, todoList)
-        
+
       case 'clear':
         return handleClear(todoList, agentId)
-        
+
       default:
         return {
           success: false,
@@ -159,7 +165,7 @@ Always update todos as you complete work or discover new tasks.`,
         }
     }
   },
-  
+
   renderToolUseMessage(input) {
     switch (input.operation) {
       case 'create':
@@ -179,29 +185,29 @@ Always update todos as you complete work or discover new tasks.`,
         return `Todo operation: ${input.operation}`
     }
   },
-  
+
   renderToolResultMessage(result) {
     if (!result.success) {
       return `Failed: ${result.message}`
     }
-    
+
     if (result.summary) {
       return `Todos: ${result.summary.completed}/${result.summary.total} completed (${result.summary.inProgress} in progress, ${result.summary.pending} pending)`
     }
-    
+
     return result.message
   }
 })
 
 // Operation handlers
 function handleCreate(
-  input: any,
+  input: TodoInput,
   todoList: TodoList,
   agentId: string
 ) {
   const now = Date.now()
   const createdTodos: Todo[] = []
-  
+
   // Handle batch creation
   if (input.todos && input.todos.length > 0) {
     for (const todoInput of input.todos) {
@@ -216,10 +222,10 @@ function handleCreate(
         subtasks: [],
         tags: input.tags || []
       }
-      
+
       todoList.todos.push(todo)
       createdTodos.push(todo)
-      
+
       // Add as subtask to parent if specified
       if (input.parentId) {
         const parent = todoList.todos.find(t => t.id === input.parentId)
@@ -242,10 +248,10 @@ function handleCreate(
       subtasks: [],
       tags: input.tags || []
     }
-    
+
     todoList.todos.push(todo)
     createdTodos.push(todo)
-    
+
     // Add as subtask to parent if specified
     if (input.parentId) {
       const parent = todoList.todos.find(t => t.id === input.parentId)
@@ -261,14 +267,14 @@ function handleCreate(
       todos: todoList.todos
     }
   }
-  
+
   todoList.version++
   todoList.lastUpdated = now
   setTodoStore(agentId, todoList)
-  
+
   return {
     success: true,
-    message: createdTodos.length === 1 
+    message: createdTodos.length === 1
       ? `Created todo: ${createdTodos[0].content.substring(0, 50)}`
       : `Created ${createdTodos.length} todos`,
     todos: createdTodos,
@@ -277,7 +283,7 @@ function handleCreate(
 }
 
 function handleUpdate(
-  input: any,
+  input: TodoInput,
   todoList: TodoList,
   agentId: string
 ) {
@@ -288,7 +294,7 @@ function handleUpdate(
       todos: todoList.todos
     }
   }
-  
+
   const todo = todoList.todos.find(t => t.id === input.id)
   if (!todo) {
     return {
@@ -297,18 +303,18 @@ function handleUpdate(
       todos: todoList.todos
     }
   }
-  
+
   const now = Date.now()
-  
+
   if (input.status) {
     todo.status = input.status
-    
+
     if (input.status === 'completed') {
       todo.completedAt = now
-    } else if (input.status !== 'completed' && todo.completedAt) {
+    } else if (todo.completedAt) {
       delete todo.completedAt
     }
-    
+
     // If marking as in_progress, check if parent should also be in_progress
     if (input.status === 'in_progress' && todo.parentId) {
       const parent = todoList.todos.find(t => t.id === todo.parentId)
@@ -317,7 +323,7 @@ function handleUpdate(
         parent.updatedAt = now
       }
     }
-    
+
     // If marking as completed, check if all siblings are completed
     if (input.status === 'completed' && todo.parentId) {
       const parent = todoList.todos.find(t => t.id === todo.parentId)
@@ -331,20 +337,20 @@ function handleUpdate(
       }
     }
   }
-  
+
   if (input.content) {
     todo.content = input.content
   }
-  
+
   if (input.priority) {
     todo.priority = input.priority
   }
-  
+
   todo.updatedAt = now
   todoList.version++
   todoList.lastUpdated = now
   setTodoStore(agentId, todoList)
-  
+
   return {
     success: true,
     message: `Updated todo ${input.id} (status: ${todo.status})`,
@@ -354,7 +360,7 @@ function handleUpdate(
 }
 
 function handleClose(
-  input: any,
+  input: TodoInput,
   todoList: TodoList,
   agentId: string
 ) {
@@ -365,7 +371,7 @@ function handleClose(
       todos: todoList.todos
     }
   }
-  
+
   const todo = todoList.todos.find(t => t.id === input.id)
   if (!todo) {
     return {
@@ -374,12 +380,12 @@ function handleClose(
       todos: todoList.todos
     }
   }
-  
+
   const now = Date.now()
   todo.status = 'completed'
   todo.completedAt = now
   todo.updatedAt = now
-  
+
   // Mark all subtasks as completed
   for (const subtaskId of todo.subtasks) {
     const subtask = todoList.todos.find(t => t.id === subtaskId)
@@ -389,11 +395,11 @@ function handleClose(
       subtask.updatedAt = now
     }
   }
-  
+
   todoList.version++
   todoList.lastUpdated = now
   setTodoStore(agentId, todoList)
-  
+
   return {
     success: true,
     message: `Closed todo: ${todo.content.substring(0, 50)}`,
@@ -403,16 +409,16 @@ function handleClose(
 }
 
 function handleList(
-  input: any,
+  input: TodoInput,
   todoList: TodoList
 ) {
   const filter = input.filter || 'all'
-  
+
   let filtered = todoList.todos
   if (filter !== 'all') {
     filtered = todoList.todos.filter(t => t.status === filter)
   }
-  
+
   // Sort by priority and creation date
   const priorityOrder = { high: 0, medium: 1, low: 2 }
   filtered.sort((a, b) => {
@@ -421,12 +427,12 @@ function handleList(
     }
     return b.createdAt - a.createdAt
   })
-  
+
   const summary = calculateSummary(todoList)
-  
+
   return {
     success: true,
-    message: filtered.length === 0 
+    message: filtered.length === 0
       ? 'No todos found'
       : `Found ${filtered.length} ${filter !== 'all' ? filter + ' ' : ''}todos`,
     todos: filtered,
@@ -443,7 +449,7 @@ function handleClear(
   todoList.version++
   todoList.lastUpdated = Date.now()
   setTodoStore(agentId, todoList)
-  
+
   return {
     success: true,
     message: `Cleared ${count} todos`,

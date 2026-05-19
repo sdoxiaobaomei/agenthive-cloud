@@ -1,5 +1,41 @@
 // 共享类型定义
 
+import type { Request } from 'express'
+
+// ============ Express 请求类型扩展 ============
+
+/** 认证用户信息 */
+export interface AuthUser {
+  userId: string
+  username: string
+  role: string
+}
+
+/** 扩展 Express Request，携带认证用户信息 */
+export interface AuthenticatedRequest extends Request {
+  /** 本地用户 ID（数据库内部 ID） */
+  userId: string
+  /** 外部用户 ID（Gateway 透传） */
+  externalUserId?: string
+  /** 认证用户详情 */
+  user: AuthUser
+}
+
+/**
+ * 从 Request 中安全获取用户 ID
+ * 用于逐步替换 (req as any).userId 模式
+ */
+export function getUserId(req: Request): string | undefined {
+  return (req as AuthenticatedRequest).userId
+}
+
+/**
+ * 从 Request 中获取用户 ID，如不存在则返回 'anonymous'
+ */
+export function getUserIdOrAnonymous(req: Request): string {
+  return (req as AuthenticatedRequest).userId || 'anonymous'
+}
+
 // 用户类型
 export interface User {
   id: string
@@ -17,9 +53,9 @@ export interface User {
 }
 
 // Agent 角色类型
-export type AgentRole = 
-  | 'director' 
-  | 'scrum_master' 
+export type AgentRole =
+  | 'director'
+  | 'scrum_master'
   | 'tech_lead'
   | 'backend_dev'
   | 'frontend_dev'
@@ -28,7 +64,7 @@ export type AgentRole =
   | 'custom'
 
 // Agent 状态类型
-export type AgentStatus = 
+export type AgentStatus =
   | 'idle'
   | 'starting'
   | 'working'
@@ -62,19 +98,19 @@ export interface Agent {
 }
 
 // 任务状态类型
-export type TaskStatus = 
-  | 'pending' 
-  | 'assigned' 
-  | 'running' 
-  | 'completed' 
-  | 'failed' 
+export type TaskStatus =
+  | 'pending'
+  | 'assigned'
+  | 'running'
+  | 'completed'
+  | 'failed'
   | 'cancelled'
 
 // 任务优先级类型
-export type TaskPriority = 
-  | 'low' 
-  | 'medium' 
-  | 'high' 
+export type TaskPriority =
+  | 'low'
+  | 'medium'
+  | 'high'
   | 'critical'
 
 // 任务类型

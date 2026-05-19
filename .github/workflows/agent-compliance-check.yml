@@ -117,7 +117,7 @@ jobs:
           fi
           BAD_COMMITS=$(
             git log "$BASE_REF"..HEAD --pretty=format:"%s" --no-merges | \
-            grep -vE "^(feat|fix|docs|style|refactor|test|chore|security|perf|ci|build)(\(.+\))?: .+" || true
+            grep -vE "^(feat|fix|docs|style|refactor|test|chore|security|perf|ci|build|improve)(\(.+\))?: .+" || true
           )
           if [ -n "$BAD_COMMITS" ]; then
             echo "::error::Non-conventional commit messages found:"

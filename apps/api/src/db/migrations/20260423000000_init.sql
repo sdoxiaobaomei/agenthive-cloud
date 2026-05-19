@@ -6,8 +6,7 @@
 
 -- ${node-pg-migrate}-up
 
--- 创建扩展
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- PG16 has gen_random_uuid() built-in, no pgcrypto extension needed
 
 -- ============================================================================
 -- 用户�?

@@ -8,9 +8,9 @@ description: >
 
 # AgentHive Cloud — Agent 协作规范 v1.0
 
-> **生效日期**: 2026-05-06  
-> **适用范围**: 所有接入 AgentHive Cloud 项目的 AI Agent（Coding Agent、DevOps Agent、QA Agent、Platform Agent）  
-> **状态**: 强制执行  
+> **生效日期**: 2026-05-06
+> **适用范围**: 所有接入 AgentHive Cloud 项目的 AI Agent（Coding Agent、DevOps Agent、QA Agent、Platform Agent）
+> **状态**: 强制执行
 > **版本策略**: 每次重大架构变更或累计 5 条以上新教训时更新
 
 ---
@@ -340,6 +340,7 @@ END $$;
 
 - [ ] **类型检查通过**: `cd apps/api && npx tsc --noEmit` (Node.js) / `mvn compile` (Java)
 - [ ] **代码风格**: ESLint/Prettier 无错误
+- [ ] **文件质量预检通过**: `python scripts/ci-precheck.py` 通过（尾随空白/UTF-8 编码/文件末尾换行/YAML JSON 语法/敏感文件/Migration 标记；尾随空白可用 `python scripts/fix-trailing-whitespace.py` 自动修复）
 - [ ] **新功能有测试**: 单元测试覆盖核心逻辑
 - [ ] **现有测试全过**: `npm run test` / `mvn test`
 - [ ] **无安全漏洞**: 无硬编码 secret、无 SQL 注入、无 XSS
@@ -653,6 +654,6 @@ kubectl rollout undo deployment/api -n agenthive
 
 ---
 
-> **最后更新**: 2026-05-06  
-> **维护者**: AgentHive Platform Team  
+> **最后更新**: 2026-05-06
+> **维护者**: AgentHive Platform Team
 > **变更记录**: 见 Git commit `7376b01` 及后续
